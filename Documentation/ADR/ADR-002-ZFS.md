@@ -21,7 +21,7 @@ La réinstallation a été faite le 2026-09-02, avant toute donnée critique.
 Utiliser ZFS comme stockage principal.
 
 - **Système, VM et LXC** : pool `rpool` sur le SSD NVMe 2 To.
-- **Données** (futur) : pool `tank`, VDEV miroir sur les deux IronWolf Pro 8 To.
+- **Données** : pool `tank`, VDEV miroir sur les deux IronWolf Pro 8 To.
 
 ## Raisons
 
@@ -43,6 +43,7 @@ Utiliser ZFS comme stockage principal.
 ## Conséquences
 
 - Proxmox a été réinstallé sur ZFS. L'ancienne installation ext4/LVM n'existe plus.
-- `rpool` est décrit dans [Stockage.md](../Stockage.md).
-- Le miroir IronWolf n'est pas encore créé. Un miroir n'est pas une sauvegarde : une copie indépendante reste nécessaire ([Sauvegardes.md](../Sauvegardes.md)).
+- `rpool` et `tank` sont décrits dans [Stockage.md](../Stockage.md).
+- `tank` existe ; aucun dataset de service n'y est créé tant qu'un besoin réel n'apparaît pas.
+- Un miroir n'est pas une sauvegarde : une copie indépendante reste nécessaire ([Sauvegardes.md](../Sauvegardes.md)).
 - Les identifiants Linux (`/dev/sda`, `/dev/sdb`) ne doivent pas servir à identifier les disques : utiliser les numéros de série (voir [Materiel.md](../Materiel.md)).

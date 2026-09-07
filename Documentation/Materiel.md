@@ -26,11 +26,11 @@
 
 # Répartition du stockage
 
-| Support | Utilisation prévue |
-|---------|--------------------|
-| SSD NVMe 2 To | Proxmox, VM, conteneurs, ISO, snapshots |
-| HDD 1 | ZFS Mirror |
-| HDD 2 | ZFS Mirror |
+| Support | Utilisation |
+|---------|-------------|
+| SSD NVMe 2 To | `rpool` : Proxmox, VM, conteneurs, ISO |
+| HDD 1 | `tank` (miroir ZFS) |
+| HDD 2 | `tank` (miroir ZFS) |
 
 ---
 
@@ -127,8 +127,8 @@
 
 | Position | Port SATA | Linux (installation) | Numéro de série | Modèle | Usage |
 |----------|-----------|----------------------|-----------------|---------|-------|
-| HDD1 | SATA1 | /dev/sda | <numéro-de-série-hdd1> | ST8000NT001-3LZ101 | Futur miroir ZFS |
-| HDD2 | SATA2 | /dev/sdb | <numéro-de-série-hdd2> | ST8000NT001-3LZ101 | Futur miroir ZFS |
+| HDD1 | SATA1 | /dev/sda | <numéro-de-série-hdd1> | ST8000NT001-3LZ101 | `tank` (miroir ZFS) |
+| HDD2 | SATA2 | /dev/sdb | <numéro-de-série-hdd2> | ST8000NT001-3LZ101 | `tank` (miroir ZFS) |
 
 > Les identifiants Linux (`/dev/sda`, `/dev/sdb`) peuvent changer.
 > Les numéros de série sont les identifiants permanents des disques.

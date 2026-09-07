@@ -78,13 +78,13 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| Architecture ZFS | 🟡 |
-| RAID1 / Mirror | 🔲 |
+| Architecture ZFS | 🟢 |
+| RAID1 / Mirror | 🟡 |
 | SMART | 🔲 |
 | Scrub  | 🔲 |
 | Remplacement d'un disque | 🔲 |
 | S.M.A.R.T | 🟡 |
-| Pools ZFS | 🟡 |
+| Pools ZFS | 🟢 |
 | VDEV | 🟡 |
 | Datasets | 🟡 |
 | Checksums | 🟡 |

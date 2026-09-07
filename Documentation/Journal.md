@@ -441,8 +441,39 @@ Il est préférable de perdre une heure au début d'un projet qu'une semaine plu
 
 ## Prochaine étape
 
-- Mettre en œuvre les sauvegardes et tester une restauration.
-- Créer le pool de données (miroir IronWolf).
+- Mettre en œuvre les sauvegardes Proxmox et tester une restauration.
+
+---
+
+# 2026-09-07 — Sprint 9 : Pool `tank`
+
+## Objectif
+
+Créer le pool de données ZFS en miroir sur les deux IronWolf, distinct de `rpool`.
+
+## Réalisé
+
+- Pool `tank` : VDEV miroir, 2×8 To.
+- Séparation confirmée : `rpool` = infrastructure, `tank` = données.
+- Aucun dataset de service créé : un dataset n'apparaît que s'il y a un besoin réel (snapshots, quotas, propriétés, frontière logique). Sinon, un répertoire suffit.
+- Documentation : hiérarchie ZFS, VDEV, bonnes pratiques (un VDEV ne se transforme pas après création).
+
+## Vérifications
+
+- ✅ `tank` créé.
+- ✅ `rpool` inchangé (Proxmox + LXC cloudflare).
+- ✅ `tank` vide (pas de dataset anticipé).
+- ⬜ Sauvegardes Proxmox non mises en œuvre.
+
+## Compétences acquises
+
+- Création d'un pool ZFS en miroir.
+- Distinction dataset / répertoire.
+- Structure des VDEV figée à la création.
+
+## Prochaine étape
+
+Sauvegardes Proxmox, puis les services (datasets au moment du besoin).
 
 ---
 
@@ -455,3 +486,4 @@ Il est préférable de perdre une heure au début d'un projet qu'une semaine plu
 | 2026-08-29 | Sprint 4 : étude ZFS (théorie). |
 | 2026-08-31 | Sprints 5–6 : LXC, Cloudflare Tunnel, Access, MFA. |
 | 2026-09-02 | Sprints 7–8 : stratégie de sauvegarde, incident IP, réinstall ZFS. |
+| 2026-09-07 | Sprint 9 : pool `tank` (miroir 2×8 To). |

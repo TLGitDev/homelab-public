@@ -127,10 +127,18 @@ Une panne ou une faille dans un service ne doit pas impacter le reste de l'infra
 
 Ce principe s'applique à plusieurs niveaux :
 
-- redondance disque prévue sur les données (miroir IronWolf) — le système est aujourd'hui sur un seul NVMe ;
+- redondance disque sur les données (`tank`, miroir IronWolf) — le système (`rpool`) reste sur un seul NVMe ;
 - plusieurs couches de sécurité (détail dans [Cloudflare.md](Cloudflare.md)) ;
 - isolation des services dans des conteneurs distincts ;
 - sauvegardes indépendantes du stockage principal ([Sauvegardes.md](Sauvegardes.md)).
+
+## Ne créer une ressource que lorsqu'un besoin réel apparaît
+
+Dataset, machine virtuelle, conteneur, réseau, utilisateur : rien n'est créé « au cas où ».
+
+L'architecture émerge des besoins plutôt que d'être anticipée sans justification. Cela limite la complexité et facilite l'évolution.
+
+Détail pour ZFS (dataset vs répertoire) : [Stockage.md](Stockage.md).
 
 ## Dépôts officiels
 
@@ -162,13 +170,13 @@ Tout accès est refusé tant qu'une règle ne l'autorise pas explicitement. Poli
 
 # Stockage
 
-Le SSD NVMe est réservé au système Proxmox, aux VM, aux LXC et aux ISO (démarrage rapide, faible latence).
+Le SSD NVMe (`rpool`) est réservé à l'infrastructure : Proxmox, VM, LXC, ISO.
 
-Les deux IronWolf sont réservés aux données, médias et sauvegardes locales. Ils seront un miroir ZFS (`tank`).
+Les deux IronWolf (`tank`, miroir ZFS) sont réservés aux données : services, sauvegardes, documents, médias. Aucun dataset de service n'y est créé tant qu'un besoin réel n'existe pas.
 
-Les données système et les données utilisateur sont volontairement séparées : meilleures performances applicatives, administration plus simple, évolution indépendante des deux espaces.
+Les deux espaces évoluent indépendamment.
 
-Détail (ZFS, `rpool`, datasets) : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md).
+Détail : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md).
 
 ---
 
@@ -247,11 +255,11 @@ Applications
 - ✅ Cloudflare Access
 - ✅ MFA
 - ✅ ZFS (`rpool`)
-- ⬜ Sauvegardes (stratégie écrite, pas encore exécutée)
+- ✅ ZFS (`tank`, miroir 2×8 To)
+- ⬜ Sauvegardes Proxmox (stratégie écrite, pas encore exécutée)
 
 ## Infrastructure
 
-- ⬜ Pool ZFS de données (2×8 To)
 - ⬜ Mise en œuvre des sauvegardes
 - ⬜ Tests de restauration
 - ⬜ Onduleur
@@ -268,4 +276,4 @@ Applications
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich
-- ⬜ Site labo.example
+- ⬜ Site personnel

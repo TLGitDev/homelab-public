@@ -74,7 +74,7 @@ Espace de stockage ZFS constitué d'un ou plusieurs VDEV. Il contient des datase
 
 ### Dataset
 
-Système de fichiers indépendant à l'intérieur d'un pool, avec ses propres propriétés (compression, quotas, snapshots).
+Système de fichiers indépendant à l'intérieur d'un pool, avec ses propres propriétés (compression, quotas, snapshots, montage). L'espace est pris dynamiquement dans le pool : pas de taille fixée à l'avance comme une partition. On ne crée un dataset que s'il y a un besoin distinct (sinon un répertoire suffit).
 
 ### Checksum
 

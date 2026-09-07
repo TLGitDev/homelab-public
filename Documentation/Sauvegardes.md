@@ -46,7 +46,7 @@ Toute modification est immédiatement répliquée sur les deux disques.
 
 Le RAID améliore la **disponibilité**, pas la sauvegarde.
 
-Aujourd'hui : `rpool` n'a pas de miroir (un seul NVMe). Le miroir est prévu sur le pool de données `tank`.
+Aujourd'hui : `rpool` n'a pas de miroir (un seul NVMe). `tank` est un miroir de deux HDD. Le miroir de `tank` n'est pas une sauvegarde.
 
 ## Snapshots
 
@@ -69,10 +69,10 @@ C'est le dernier niveau de protection.
 # Stratégie retenue
 
 ```
-Couche 1    ZFS (checksums ; miroir IronWolf à venir)
+Couche 1    ZFS (checksums ; miroir IronWolf sur `tank`)
                 ↓
-            Protège contre la corruption silencieuse,
-            et plus tard contre la panne d'un HDD.
+            Protège contre la corruption silencieuse
+            et contre la panne d'un HDD de données.
 
 Couche 2    Snapshots ZFS
                 ↓

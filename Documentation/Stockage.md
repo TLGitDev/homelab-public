@@ -7,196 +7,62 @@
 
 ---
 
-# Objectif
+# Architecture de stockage
 
-Disposer d'un stockage :
+Le stockage est séparé selon les usages.
 
-- fiable ;
-- performant ;
-- évolutif ;
-- capable de détecter et corriger les corruptions de données.
+## rpool — infrastructure
 
----
+Support : NVMe 2 To (VDEV single).
 
-# Séparation physique
+Utilisation : Proxmox VE, machines virtuelles, conteneurs LXC, système.
 
-```
-NVMe 2 To
-    ↓
-rpool
-    ↓
-Proxmox, LXC, VM, ISO
-```
+Ce pool est dédié à l'infrastructure.
 
-Deux HDD IronWolf Pro 8 To formeront plus tard un second pool, dédié aux données.
+## tank — données
 
-| Support | Usage |
-|---------|-------|
-| NVMe | système Proxmox, LXC, VM, ISO, Kubernetes (futur) |
-| HDD (pool `tank`, à créer) | sauvegardes, médias, documents, données utilisateurs |
+Support : deux HDD IronWolf Pro 8 To.
 
-Cette séparation permet de meilleures performances pour les applications, une administration plus simple, et une évolution indépendante des deux espaces.
+Configuration : VDEV miroir (Mirror).
 
-Les identifiants Linux (`/dev/sda`, `/dev/sdb`) peuvent changer. Les numéros de série sont les identifiants permanents des disques.
+Utilisation : données des services, sauvegardes, documents, médias.
+
+Ce pool est dédié aux données.
+
+Les identifiants Linux (`/dev/sda`, `/dev/sdb`) peuvent changer. Les numéros de série sont les identifiants permanents : [Materiel.md](Materiel.md).
 
 ---
 
-# Architecture classique vs ZFS
-
-Une architecture Linux classique sépare plusieurs composants, chacun indépendant :
+# Hiérarchie ZFS
 
 ```
-Disques
-    ↓
-RAID (matériel ou logiciel)
-    ↓
-LVM (optionnel)
-    ↓
-Système de fichiers (ext4, xfs…)
-```
-
-ZFS regroupe plusieurs fonctions dans une seule technologie. Le système de fichiers connaît l'organisation physique des données, ce qui lui permet de vérifier leur intégrité.
-
-```
-Disques
+Disque physique
     ↓
 VDEV
     ↓
-POOL
+Pool
     ↓
-DATASETS
+Dataset
     ↓
 Fichiers
 ```
 
-ZFS n'est pas uniquement un système de fichiers. Il regroupe :
-
-- la gestion des disques ;
-- la redondance (Mirror, RAIDZ…) ;
-- le système de fichiers ;
-- les snapshots ;
-- les checksums ;
-- la compression.
-
-Toutes ces fonctionnalités sont conçues pour fonctionner ensemble.
-
----
-
-# VDEV
-
-Un VDEV (Virtual Device) est un groupe de disques. C'est l'unité de protection des données.
+Exemple (pool de données) :
 
 ```
-1 disque  →  Single VDEV
-2 disques →  Mirror VDEV
-4 disques →  RAIDZ1 VDEV
-```
-
-Un pool peut contenir plusieurs VDEV. Le pool répartit les écritures entre les VDEV. Les données ne sont **pas** dupliquées entre les VDEV : chaque donnée n'est protégée qu'à l'intérieur de son VDEV.
-
-```
-Pool
-├── VDEV Mirror
-│     ├── HDD1
-│     └── HDD2
-└── VDEV Mirror
-      ├── HDD3
-      └── HDD4
-```
-
-Si un VDEV entier est perdu, le pool devient inutilisable. Le VDEV est donc l'unité de fiabilité de ZFS.
-
----
-
-# Pools
-
-Le pool est l'espace de stockage présenté à ZFS. Il est constitué d'un ou plusieurs VDEV. Il ne stocke pas directement les fichiers : il contient des datasets. Il agrège la capacité de tous les VDEV.
-
----
-
-# Datasets
-
-Un dataset est un système de fichiers indépendant à l'intérieur d'un pool. Ce n'est pas un simple dossier. Chaque dataset a ses propres propriétés : compression, quotas, snapshots, permissions, montage.
-
-Exemple d'organisation future sur `tank` :
-
-```
+sda
+sdb
+    ↓
+Mirror
+    ↓
 tank
-├── media
-├── photos
-├── sauvegardes
-└── vm
+    ↓
+tank/vaultwarden   ← dataset créé seulement quand le service existe
+    ↓
+Base SQLite
 ```
 
-Chaque dataset peut être administré indépendamment.
-
-`cloudflared` n'est pas un dataset. C'est un ensemble de fichiers à l'intérieur du dataset du conteneur (`rpool/data/subvol-100-disk-0` = système de fichiers du LXC 100).
-
----
-
-# RAID et ZFS
-
-Le RAID fait fonctionner plusieurs disques comme un seul.
-
-- RAID1 : miroir
-- RAID5 : parité
-- RAID6 : double parité
-- RAID10 : miroir + striping
-
-ZFS n'utilise pas un RAID matériel. Il implémente ses propres mécanismes.
-
-Plusieurs VDEV miroir ressemblent à un RAID10, mais ZFS conserve une connaissance complète des disques et des données. C'est cette intégration qui permet les checksums, les snapshots, la réparation automatique et le scrub.
-
-Un miroir protège contre la panne d'un disque. Ce n'est pas une sauvegarde : [Sauvegardes.md](Sauvegardes.md).
-
----
-
-# Checksum
-
-Chaque bloc possède un checksum. À la lecture, ZFS relit le bloc, recalcule le checksum, et le compare à celui enregistré. S'ils diffèrent, le bloc est corrompu.
-
-Le checksum détecte une corruption silencieuse. Il ne répare pas à lui seul.
-
----
-
-# Self-healing
-
-Sur un VDEV miroir :
-
-```
-HDD1  Checksum ❌
-HDD2  Checksum ✅
-```
-
-ZFS lit la copie saine, puis réécrit le bloc corrompu. La réparation est transparente.
-
----
-
-# Scrub
-
-Le scrub relit l'intégralité du pool : vérifier tous les checksums, détecter les corruptions silencieuses, réparer lorsqu'une copie saine existe.
-
-C'est une maintenance préventive. Sur un homelab, il est généralement planifié une fois par mois.
-
----
-
-# Organisation logique
-
-```
-Matériel
-    ↓
-Disque physique
-    ↓
-Pool ZFS
-    ↓
-Dataset
-    ↓
-Système de fichiers
-    ↓
-Applications
-```
-
-Exemple actuel :
+Exemple actuel (infrastructure) :
 
 ```
 NVMe
@@ -210,11 +76,147 @@ Debian
 cloudflared
 ```
 
+`cloudflared` n'est pas un dataset. C'est un ensemble de fichiers dans le dataset du LXC 100 (`rpool/data/subvol-100-disk-0`).
+
+Les applications ne manipulent jamais directement les disques. Elles utilisent les datasets du pool. Le pool est le niveau d'administration principal.
+
 ---
 
-# État actuel : `rpool`
+# VDEV
 
-Pool ZFS sur le NVMe. Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02, avant toute donnée critique ([Journal.md](Journal.md), sprint 8).
+Le VDEV (Virtual Device) est l'unité fondamentale de stockage dans ZFS. C'est l'unité de protection des données.
+
+Un VDEV peut être :
+
+- un disque (single) ;
+- plusieurs disques en miroir ;
+- plusieurs disques en RAIDZ.
+
+```
+1 disque  →  Single VDEV     (rpool aujourd'hui)
+2 disques →  Mirror VDEV     (tank aujourd'hui)
+4 disques →  RAIDZ1 VDEV
+```
+
+Un pool est constitué d'un ou plusieurs VDEV. Le pool répartit les écritures entre les VDEV. Les données ne sont **pas** dupliquées entre les VDEV : chaque donnée n'est protégée qu'à l'intérieur de son VDEV.
+
+Si un VDEV entier est perdu, le pool devient inutilisable.
+
+```
+Pool
+    ↓
+Mirror
+    ↓
+sda
+sdb
+```
+
+---
+
+# Pool
+
+Un pool est un espace de stockage logique, créé à partir d'un ou plusieurs VDEV. Il ne stocke pas directement les fichiers : il contient des datasets. Il agrège la capacité de tous les VDEV.
+
+---
+
+# Dataset
+
+Un dataset est un système de fichiers indépendant à l'intérieur d'un pool. Ce n'est pas un simple dossier.
+
+Propriétés possibles : compression, snapshots, quotas, points de montage, permissions.
+
+Les datasets utilisent dynamiquement l'espace disponible du pool. Contrairement aux partitions classiques, leur taille n'est pas définie à l'avance.
+
+Chaque dataset peut être administré indépendamment.
+
+---
+
+# Organisation des données
+
+Les datasets ne sont créés que lorsqu'un besoin réel apparaît.
+
+Critères :
+
+- politique de snapshots différente ;
+- quotas différents ;
+- propriétés ZFS différentes ;
+- frontière logique dans l'architecture.
+
+En l'absence de besoin particulier, un simple répertoire est privilégié.
+
+`tank` n'a donc pas de datasets de service pour l'instant. Ils apparaîtront avec Vaultwarden, Immich, etc.
+
+---
+
+# Mirror ZFS
+
+Le miroir fournit deux copies identiques des données.
+
+Il assure :
+
+- la continuité de service en cas de panne d'un disque ;
+- une seconde copie pour la réparation automatique.
+
+Le miroir n'assure pas lui-même l'intégrité. C'est ZFS qui calcule les checksums, détecte les corruptions, et utilise la seconde copie pour réparer (self-healing).
+
+Ce n'est pas une sauvegarde : [Sauvegardes.md](Sauvegardes.md).
+
+ZFS n'utilise pas un RAID matériel. Un ensemble de VDEV miroir ressemble à un RAID10, mais ZFS conserve une connaissance complète des disques et des données.
+
+---
+
+# Checksums
+
+À chaque écriture, ZFS calcule un checksum. À la lecture, il le recalcule.
+
+Si les deux valeurs diffèrent : corruption détectée.
+
+Si une copie valide existe (miroir ou RAIDZ) : ZFS lit la bonne copie, la renvoie à l'application, et répare automatiquement la copie corrompue.
+
+Sans copie saine, le checksum détecte mais ne répare pas.
+
+---
+
+# Scrub
+
+Vérification complète d'un pool : relire toutes les données, vérifier les checksums, détecter les corruptions silencieuses, réparer lorsque c'est possible.
+
+Opération préventive. Sur un homelab, généralement une fois par mois.
+
+---
+
+# Bonnes pratiques
+
+Les pools sont créés une seule fois. La structure des VDEV doit être réfléchie **avant** la création.
+
+- il est facile d'ajouter un nouveau VDEV à un pool ;
+- il n'est pas possible de transformer librement un VDEV existant après sa création (passer de single à miroir, changer un RAIDZ, etc.).
+
+Le choix d'architecture se fait donc avant toute mise en production.
+
+---
+
+# État actuel
+
+```
+Infrastructure
+
+rpool
+└── Proxmox
+    └── LXC cloudflare
+
+Données
+
+tank
+└── (vide)
+```
+
+| Pool | Support | VDEV | Rôle |
+|------|---------|------|------|
+| `rpool` | NVMe 2 To | single | Système, VM, LXC |
+| `tank` | 2× IronWolf 8 To | mirror | Données (aucun dataset de service pour l'instant) |
+
+`rpool` en détail :
 
 ```
 rpool
@@ -225,31 +227,4 @@ rpool
 └── var-lib-vz                → ISO, templates, sauvegardes, imports
 ```
 
-| Dataset | Rôle |
-|---------|------|
-| `rpool/ROOT/pve-1` | Système Proxmox |
-| `rpool/data` | Disques des VM et LXC |
-| `rpool/var-lib-vz` | Stockage local Proxmox (ISO, templates, sauvegardes) |
-
-Les VM et LXC restent sur le SSD NVMe.
-
-`rpool` est un VDEV single (un seul disque). Pas de miroir système aujourd'hui.
-
----
-
-# Futur : `tank`
-
-```
-IronWolf 1
-        │
-IronWolf 2
-        │
-        ▼
-Mirror VDEV
-        │
-        ▼
-Pool ZFS : tank
-        │
-        ▼
-Datasets
-```
+Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02 ([Journal.md](Journal.md), sprint 8). Pool `tank` créé le 2026-09-07 (sprint 9).

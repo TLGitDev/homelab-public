@@ -36,7 +36,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Hyperviseur | Proxmox VE sur ZFS (`rpool`), IP `<ip-pve>` |
 | Accès distant | Cloudflare Tunnel + Access + MFA |
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
-| Pool de données | À créer (miroir ZFS sur les deux IronWolf) |
+| Pool de données | `tank` créé (miroir 2×8 To), aucun dataset de service |
 | Sauvegardes | Stratégie définie, pas encore mise en œuvre |
 
 ---
@@ -51,7 +51,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Architecture.md](Architecture.md) | Principes, schéma actuel, feuille de route |
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, dépôts, systemd |
-| [Stockage.md](Stockage.md) | ZFS : cours, `rpool`, futur `tank` |
+| [Stockage.md](Stockage.md) | ZFS : cours, `rpool`, `tank` |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |

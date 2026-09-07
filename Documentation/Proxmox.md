@@ -61,14 +61,16 @@ Source de vérité pour les IP du homelab.
 ```
 Datacenter
 └── Node (pve)
-    └── rpool (ZFS)
+    ├── rpool (ZFS, NVMe)
+    └── tank (ZFS, miroir HDD)
 ```
 
 ## Stockage
 
-ZFS `rpool` sur le NVMe. Arbre des datasets, cours ZFS et futur pool `tank` : [Stockage.md](Stockage.md).
+- `rpool` : infrastructure (Proxmox, VM, LXC) sur le NVMe.
+- `tank` : données, miroir des deux IronWolf. Aucun dataset de service pour l'instant.
 
-Les VM et LXC restent sur le SSD NVMe.
+Détail : [Stockage.md](Stockage.md).
 
 ## Dépôts
 
