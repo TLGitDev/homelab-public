@@ -3,7 +3,7 @@
 > Principes et état de conception.
 >
 > Ce fichier ne décrit pas les manipulations ([Journal.md](Journal.md)), le matériel ([Materiel.md](Materiel.md)), ni les cours détaillés.
-> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). IP et nœud : [Proxmox.md](Proxmox.md).
+> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). IP et nœud : [Proxmox.md](Proxmox.md).
 > L'index de toute la documentation est dans [README.md](README.md).
 
 ---
@@ -21,6 +21,17 @@ Construire une infrastructure fiable ne consiste pas à éviter les pannes, mais
 Ordre de travail :
 
 > Comprendre → Manipuler → Vérifier → Documenter → Automatiser
+
+Pour chaque nouvelle technologie :
+
+1. Comprendre le problème qu'elle résout.
+2. Comprendre son architecture.
+3. Identifier les concepts fondamentaux.
+4. Observer son fonctionnement.
+5. Passer à la pratique.
+6. Documenter ce qui a été appris.
+
+Les commandes viennent en dernier. L'objectif est de comprendre les mécanismes plutôt que de mémoriser des procédures.
 
 ---
 
@@ -236,6 +247,16 @@ Applications
 
 ---
 
+# Plateforme
+
+Kubernetes est la plateforme visée pour les applications (Vaultwarden, Paperless, Immich…). **Pas encore déployé.**
+
+Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
+
+Étude : [Kubernetes.md](Kubernetes.md).
+
+---
+
 # Décisions
 
 - [ADR-001](ADR/ADR-001-Proxmox.md) — Proxmox VE
@@ -267,7 +288,7 @@ Applications
 
 ## Plateforme
 
-- ⬜ Kubernetes
+- ⬜ Kubernetes (théorie documentée, cluster non installé)
 - ⬜ Caddy
 
 ## Services

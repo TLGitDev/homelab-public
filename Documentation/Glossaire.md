@@ -28,6 +28,44 @@ Conteneur exécuté avec des privilèges réduits afin d'améliorer la sécurit�
 
 ---
 
+## Kubernetes
+
+Cours : [Kubernetes.md](Kubernetes.md).
+
+### API Server
+
+Source de vérité du cluster. Toutes les ressources y sont enregistrées. Le YAML ne sert qu'à modifier cette source.
+
+### Réconciliation
+
+Boucle des contrôleurs : lire l'état désiré, observer l'état réel, corriger uniquement les écarts, recommencer.
+
+### Pod
+
+Unité minimale d'exécution. Un ou plusieurs conteneurs qui partagent IP, réseau, volumes et cycle de vie. Jetable : il peut être recréé à tout moment.
+
+### Deployment
+
+Décrit l'état désiré d'une application (répliques, image, mise à jour). Chaîne : Deployment → ReplicaSet → Pods.
+
+### Service
+
+Identité réseau stable devant des Pods à IP éphémère. Sélection par labels.
+
+### Label
+
+Métadonnée qui relie les ressources (ex. `app: vaultwarden`) sans les coupler fortement.
+
+### Sidecar
+
+Conteneur d'assistance dans le même Pod que l'application (logs, proxy, sync).
+
+### ConfigMap / Secret
+
+Configuration non sensible (ConfigMap) ou informations sensibles (Secret), stockées comme ressources du cluster.
+
+---
+
 ## Réseau
 
 ### Bridge Linux (`vmbr0`)

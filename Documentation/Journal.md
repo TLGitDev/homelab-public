@@ -477,6 +477,36 @@ Sauvegardes Proxmox, puis les services (datasets au moment du besoin).
 
 ---
 
+# 2026-09-16 — Sprint 10 : Étude de Kubernetes
+
+## Objectif
+
+Comprendre le problème que Kubernetes résout, son modèle déclaratif et ses ressources, avant toute installation.
+
+## Réalisé
+
+- Chaîne Linux nu → Docker → Kubernetes (orchestration, pas un remplacement de Docker).
+- État désiré vs état réel, réconciliation, API Server comme source de vérité.
+- Contrôleurs, watches, work queues : système orienté état, pas événements.
+- Ressources : Pod, Deployment, ReplicaSet, Service, labels, sidecar.
+- Méthode d'apprentissage rappelée : commandes en dernier.
+
+## Vérifications
+
+- ✅ Théorie documentée dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Aucun cluster installé.
+
+## Compétences acquises
+
+- Concepts Kubernetes (🟡, pas encore mis en œuvre).
+- Distinguer Docker (isolation) et Kubernetes (orchestration).
+
+## Prochaine étape
+
+Pratiquer Kubernetes (cluster) lorsque la plateforme sera justifiée, sans anticiper de ressources inutiles.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -487,3 +517,4 @@ Sauvegardes Proxmox, puis les services (datasets au moment du besoin).
 | 2026-08-31 | Sprints 5–6 : LXC, Cloudflare Tunnel, Access, MFA. |
 | 2026-09-02 | Sprints 7–8 : stratégie de sauvegarde, incident IP, réinstall ZFS. |
 | 2026-09-07 | Sprint 9 : pool `tank` (miroir 2×8 To). |
+| 2026-09-16 | Sprint 10 : étude Kubernetes (théorie). |

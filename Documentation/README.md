@@ -54,6 +54,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Stockage.md](Stockage.md) | ZFS : cours, `rpool`, `tank` |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
+| [Kubernetes.md](Kubernetes.md) | Cours Kubernetes (pas encore déployé) |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 

@@ -97,11 +97,29 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| Docker | 🔲 |
+| Docker | 🟡 |
 | Docker Compose | 🔲 |
 | Volumes | 🔲 |
 | Réseaux Docker | 🔲 |
 | Mise à jour de conteneurs | 🔲 |
+
+---
+
+# Kubernetes
+
+| Compétence | Niveau |
+|------------|--------|
+| Pourquoi Kubernetes (vs Linux / Docker) | 🟡 |
+| Modèle déclaratif | 🟡 |
+| Réconciliation | 🟡 |
+| API Server | 🟡 |
+| Pod | 🟡 |
+| Deployment / ReplicaSet | 🟡 |
+| Service | 🟡 |
+| Labels | 🟡 |
+| Ingress | 🔲 |
+| Volumes persistants | 🔲 |
+| Cluster (installation) | 🔲 |
 
 ---
 
