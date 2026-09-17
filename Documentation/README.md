@@ -1,4 +1,6 @@
-# Homelab
+# Homelab — documentation
+
+Index des documents. Vue d'ensemble du dépôt : [README.md](../README.md) à la racine.
 
 ## Présentation
 
