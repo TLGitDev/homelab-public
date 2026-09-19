@@ -507,6 +507,33 @@ Pratiquer Kubernetes (cluster) lorsque la plateforme sera justifiée, sans antic
 
 ---
 
+# 2026-09-19 — Sprint 11 : Ressources Kubernetes (Pod, ReplicaSet, Deployment)
+
+## Objectif
+
+Clarifier qui fait quoi, qui réagit à quel événement, et comment les objets sont liés.
+
+## Réalisé
+
+- Pod / ReplicaSet / Deployment : rôle, responsabilités, limites.
+- Service (ClusterIP), labels, selectors, EndpointSlice.
+- Schémas Deployment → Pod et Service → EndpointSlice.
+- Table « qui réagit à quoi » (y compris EndpointSlice).
+- `ownerReferences` : Kubernetes ne relie pas les objets par leur nom.
+- Taints / tolerations ; K3s sans taint control-plane (cluster 1 nœud).
+- Premiers exercices : Pods jetables, découplage, labels, réconciliation.
+
+## Vérifications
+
+- ✅ Documenté dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Cluster **homelab** non installé (exercices à part).
+
+## Prochaine étape
+
+Poursuivre la pratique, sans déployer Kubernetes sur le homelab tant que ce n'est pas justifié.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -518,3 +545,4 @@ Pratiquer Kubernetes (cluster) lorsque la plateforme sera justifiée, sans antic
 | 2026-09-02 | Sprints 7–8 : stratégie de sauvegarde, incident IP, réinstall ZFS. |
 | 2026-09-07 | Sprint 9 : pool `tank` (miroir 2×8 To). |
 | 2026-09-16 | Sprint 10 : étude Kubernetes (théorie). |
+| 2026-09-19 | Sprint 11 : ressources K8s, Service, EndpointSlice, taints. |

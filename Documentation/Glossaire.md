@@ -44,13 +44,33 @@ Boucle des contrôleurs : lire l'état désiré, observer l'état réel, corrige
 
 Unité minimale d'exécution. Un ou plusieurs conteneurs qui partagent IP, réseau, volumes et cycle de vie. Jetable : il peut être recréé à tout moment.
 
+### ReplicaSet
+
+Garantit N Pods identiques : les crée, les recrée s'ils disparaissent, en supprime s'il y en a trop. Ne gère pas les mises à jour de version.
+
 ### Deployment
 
-Décrit l'état désiré d'une application (répliques, image, mise à jour). Chaîne : Deployment → ReplicaSet → Pods.
+Cycle de vie de l'application : ReplicaSet, rolling update, rollback, nombre de réplicas. Ne crée jamais les Pods directement.
+
+### OwnerReference
+
+Lien de propriété réel entre objets (`metadata.ownerReferences`). Kubernetes ne relie pas les ressources par leur nom.
 
 ### Service
 
-Identité réseau stable devant des Pods à IP éphémère. Sélection par labels.
+Identité réseau stable (ClusterIP) devant des Pods à IP éphémère. Ne lance pas les Pods. Sélection par labels.
+
+### Selector
+
+Règle qui sélectionne les ressources portant certains labels (ex. `app: nginx`).
+
+### EndpointSlice
+
+Liste des Pods actuellement joignables pour un Service. Maintenue par le EndpointSlice Controller, pas par le Service lui-même.
+
+### Taint / Toleration
+
+Un taint sur un Node interdit d'y planifier des Pods, sauf ceux qui ont une toleration correspondante.
 
 ### Label
 

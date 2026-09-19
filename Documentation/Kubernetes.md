@@ -118,13 +118,30 @@ Kubernetes est **orienté état** (state-driven), pas orienté événements (eve
 
 # Ressources
 
-Chaque ressource répond à une question précise.
+Kubernetes n'est pas une application monolithique. Il est composé de ressources spécialisées. Chacune a une **responsabilité unique** et délègue le reste. Cette séparation est un principe fondamental.
+
+Le développeur décrit ce qu'il souhaite. Les contrôleurs maintiennent cet état :
+
+```
+État désiré
+        │
+        ▼
+Une ressource décrit un besoin
+        │
+        ▼
+Un Controller réconcilie
+        │
+        ▼
+État réel
+```
 
 | Ressource | Responsabilité |
 |-----------|----------------|
-| Pod | Exécuter une application |
-| Deployment | Maintenir le nombre de Pods souhaité |
-| Service | Fournir une identité réseau stable |
+| Pod | Exécuter les conteneurs |
+| ReplicaSet | Garantir N Pods identiques |
+| Deployment | Gérer le cycle de vie de l'application |
+| Service | Identité réseau stable |
+| EndpointSlice | Liste des Pods actuellement joignables |
 | Ingress | Exposer les Services vers l'extérieur |
 | Persistent Volume | Fournir un stockage persistant |
 | Secret | Stocker des informations sensibles |
@@ -132,48 +149,218 @@ Chaque ressource répond à une question précise.
 
 ## Pod
 
-Unité minimale d'exécution. Un ou plusieurs conteneurs, qui partagent : la même IP, le même namespace réseau, des volumes communs, le même cycle de vie.
+**Rôle** — plus petite unité de déploiement. Exécute un ou plusieurs conteneurs qui partagent la même IP, le même réseau, les mêmes volumes.
 
-Un Pod est **jetable** (ephemeral) : il peut être détruit puis recréé à tout moment.
+**Responsable de :**
 
-Règle : un Pod = une responsabilité. Deux applications au cycle de vie indépendant → deux Pods (Vaultwarden et PostgreSQL séparés). Un sidecar (logs, proxy, sync) partage le Pod de l'application principale : même réseau, mêmes volumes, même cycle de vie.
+- lancer les conteneurs ;
+- leur fournir un environnement d'exécution (dont une IP) ;
+- partager le réseau et les volumes entre les conteneurs du Pod.
+
+**Ne fait pas :**
+
+- ne se recrée pas automatiquement ;
+- ne gère pas les mises à jour ;
+- ne doit pas être manipulé directement.
+
+Un Pod est **jetable**. Lorsqu'il est supprimé, il est considéré comme perdu.
+
+Règle : un Pod = une responsabilité. Deux applications au cycle de vie indépendant → deux Pods (Vaultwarden et PostgreSQL séparés). Un sidecar (logs, proxy, sync) partage le Pod de l'application principale.
+
+## ReplicaSet
+
+**Rôle** — garantir qu'il existe toujours N Pods identiques.
+
+Il ne connaît qu'une chose : *je dois maintenir exactement N Pods.*
+
+**Responsable de :**
+
+- créer les Pods ;
+- recréer les Pods supprimés ;
+- supprimer les Pods en trop.
+
+**Ne fait pas :**
+
+- ne gère pas les mises à jour applicatives ;
+- ne décide pas du nombre de Pods souhaité (c'est le Deployment).
 
 ## Deployment
 
-Décrit l'état désiré d'une application : nombre de répliques, image, stratégie de mise à jour.
+**Rôle** — gérer le cycle de vie d'une application.
 
-Il ne crée pas les Pods directement :
+**Responsable de :**
+
+- créer les ReplicaSets ;
+- effectuer les rolling updates ;
+- effectuer les rollbacks ;
+- modifier le nombre de réplicas souhaité.
+
+**Ne fait pas :**
+
+- ne crée jamais directement les Pods.
+
+Le Deployment délègue entièrement la gestion des Pods au ReplicaSet.
 
 ```
 Deployment
-    ↓
+        │
+        │  définit l'état désiré
+        ▼
 ReplicaSet
-    ↓
-Pods
+        │
+        │  garantit qu'il existe toujours N Pods
+        ▼
+Pod
+        │
+        │  exécute les conteneurs
+        ▼
+Container(s)
 ```
 
 ## Service
 
-Les Pods ont une IP éphémère. Le Service fournit une identité réseau **stable**. Les autres applications parlent au Service, pas aux Pods.
+**Problème** — les Pods sont éphémères. Recréé, un Pod change de nom et d'IP. On ne peut pas communiquer directement avec lui.
 
-Le Service sélectionne les Pods via des labels.
+**Solution** — le Service fournit une identité réseau stable (ClusterIP, constante). Les applications parlent au Service, jamais aux Pods. Les Pods peuvent être recréés sans impact sur les clients.
+
+**Responsable de :**
+
+- fournir une adresse IP stable ;
+- exposer un point d'entrée unique ;
+- répartir les requêtes entre plusieurs Pods.
+
+**Ne fait pas :**
+
+- ne lance pas de Pods ;
+- ne surveille pas les Pods ;
+- ne connaît pas directement leurs adresses IP.
+
+Le Service ne connaît pas les Pods. Il connaît uniquement les **labels** qu'il recherche.
 
 ## Labels
 
-Métadonnées pour décrire et relier les ressources, avec un couplage faible.
+Paires clé/valeur attachées aux ressources. Langage commun de Kubernetes : on retrouve des objets **sans connaître leur nom**.
 
 ```yaml
 labels:
-  app: vaultwarden
+  app: nginx
+  environment: production
+  tier: frontend
 ```
 
-Usages : associer un Service à des Pods, sélectionner des ressources, organiser le cluster.
+Utilisés notamment par : Services, ReplicaSets, Deployments, Scheduler, Network Policies, Prometheus, ArgoCD.
+
+## Selector
+
+Un selector sélectionne les ressources qui portent certains labels.
+
+```yaml
+selector:
+  app: nginx
+```
+
+## EndpointSlice
+
+Le Service ne maintient pas lui-même la liste des Pods. Cette responsabilité appartient au **EndpointSlice Controller**.
+
+Lorsqu'un Pod apparaît ou disparaît : le contrôleur met à jour les EndpointSlices. Le Service continue de fonctionner sans modification.
+
+---
+
+# Hiérarchie (réseau inclus)
+
+```
+Deployment
+        │
+        │  crée
+        ▼
+ReplicaSet
+        │
+        │  garantit le nombre de Pods
+        ▼
+Pod
+        │
+        │  possède des labels
+        ▼
+Service
+        │
+        │  sélectionne les Pods via les labels
+        ▼
+EndpointSlice
+        │
+        ▼
+Liste des Pods actuellement disponibles
+```
+
+La propriété Deployment → ReplicaSet → Pod est dans `metadata.ownerReferences`. Les noms (`nginx` → `nginx-7b9867795` → `nginx-7b9867795-vkmtr`) ne sont qu'une convention. Détail : section suivante.
+
+---
+
+# Qui réagit à quoi ?
+
+Les événements ne sont pas la source de vérité. Ils indiquent qu'une ressource a probablement changé. Chaque contrôleur relit ensuite l'état depuis l'API Server.
+
+| Événement | Responsable |
+|-----------|-------------|
+| Un Pod est supprimé | ReplicaSet |
+| Le nombre de Pods désiré change | Deployment |
+| Une nouvelle version de l'image est déployée | Deployment |
+| Un Pod correspondant apparaît | EndpointSlice Controller |
+| Un Pod correspondant disparaît | EndpointSlice Controller |
+| Un client appelle un Service | Service + EndpointSlice |
+| Un Node tombe | Scheduler + contrôleurs (selon le contexte) |
+| Un Pod devient indisponible sans disparaître | kubelet (selon la nature du problème) |
+
+---
+
+# Qui est propriétaire de qui ?
+
+Kubernetes ne se base **jamais** sur les noms pour relier les objets. La relation réelle est `metadata.ownerReferences`.
+
+```
+Deployment
+        │  OwnerReference
+        ▼
+ReplicaSet
+        │  OwnerReference
+        ▼
+Pod
+```
+
+Les noms ressemblent à une hiérarchie, ce n'est qu'une **convention** :
+
+```
+nginx
+    ↓
+nginx-7b9867795
+    ↓
+nginx-7b9867795-vkmtr
+```
+
+---
+
+# Taints et tolerations
+
+Un **taint** est une règle sur un Node : certains Pods ne doivent pas y être planifiés.
+
+```
+node-role.kubernetes.io/control-plane:NoSchedule
+```
+
+Un Pod n'est planifié sur ce Node que s'il a une **toleration** correspondante. Sans toleration, le Scheduler évite le Node.
+
+K3s n'applique aucun taint sur le control-plane par défaut, afin de permettre l'exécution des applications sur un cluster à un seul nœud.
 
 ---
 
 # Principes
 
+Observés dans la théorie et les premiers exercices :
+
+- **Les Pods sont jetables.** Un Pod peut disparaître à tout moment. L'application doit continuer à fonctionner.
+- **Les ressources sont découplées.** Aucune ressource ne connaît l'ensemble du système. Chacune n'a que ce qui concerne sa responsabilité.
+- **Les labels remplacent les noms.** On ne recherche presque jamais un objet par son nom.
+- **Tout repose sur la réconciliation.** Les ressources décrivent un état désiré. Les contrôleurs observent l'état réel et corrigent les écarts.
 - **Déclaratif** — décrire le résultat attendu.
-- **Faible couplage** — API Server et labels.
-- **Réconciliation** — corriger l'écart état désiré / état réel.
 - **Responsabilité unique** — chaque ressource a un rôle identifié.
+

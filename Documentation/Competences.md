@@ -115,8 +115,11 @@
 | API Server | 🟡 |
 | Pod | 🟡 |
 | Deployment / ReplicaSet | 🟡 |
+| OwnerReferences | 🟡 |
 | Service | 🟡 |
+| Selector / EndpointSlice | 🟡 |
 | Labels | 🟡 |
+| Taints / Tolerations | 🟡 |
 | Ingress | 🔲 |
 | Volumes persistants | 🔲 |
 | Cluster (installation) | 🔲 |
