@@ -84,6 +84,18 @@ Conteneur d'assistance dans le même Pod que l'application (logs, proxy, sync).
 
 Configuration non sensible (ConfigMap) ou informations sensibles (Secret), stockées comme ressources du cluster.
 
+### PersistentVolumeClaim (PVC)
+
+Besoin de stockage exprimé par l'application (capacité, mode d'accès, StorageClass). Ne crée pas le volume.
+
+### StorageClass
+
+Politique de provisionnement : comment Kubernetes crée un volume (ZFS, NFS, Ceph, cloud…).
+
+### PersistentVolume (PV)
+
+Volume réellement disponible, associé à un PVC. Peut représenter un dataset ZFS, du NFS, etc.
+
 ---
 
 ## Réseau

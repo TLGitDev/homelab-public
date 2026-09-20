@@ -121,7 +121,8 @@
 | Labels | 🟡 |
 | Taints / Tolerations | 🟡 |
 | Ingress | 🔲 |
-| Volumes persistants | 🔲 |
+| PVC / PV / StorageClass | 🟡 |
+| Volumes persistants | 🟡 |
 | Cluster (installation) | 🔲 |
 
 ---

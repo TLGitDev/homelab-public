@@ -143,7 +143,9 @@ Un Controller réconcilie
 | Service | Identité réseau stable |
 | EndpointSlice | Liste des Pods actuellement joignables |
 | Ingress | Exposer les Services vers l'extérieur |
-| Persistent Volume | Fournir un stockage persistant |
+| PersistentVolumeClaim | Exprimer un besoin de stockage |
+| StorageClass | Politique de création des volumes |
+| PersistentVolume | Représenter un volume réellement disponible |
 | Secret | Stocker des informations sensibles |
 | ConfigMap | Stocker la configuration non sensible |
 
@@ -353,14 +355,156 @@ K3s n'applique aucun taint sur le control-plane par défaut, afin de permettre l
 
 ---
 
+# Stockage
+
+Comme pour le réseau (Service), Kubernetes sépare l'exécution de l'application de la gestion de ses données.
+
+Les Pods sont éphémères. Ils peuvent être supprimés, recréés ou déplacés à tout moment. **Les données ne doivent jamais appartenir au Pod.**
+
+## Le problème
+
+Un Pod a son propre système de fichiers (`/etc`, `/var`, `/tmp`, `/app`…). Tout ce qui y est écrit disparaît avec le Pod.
+
+```
+Pod PostgreSQL
+        ↓
+Base de données
+        ↓
+Suppression du Pod
+        ↓
+Toutes les données sont perdues
+```
+
+Incompatible avec une application persistante.
+
+## Principe
+
+Le stockage est **extérieur** au Pod. Le Pod ne possède pas les données : il utilise un volume fourni par Kubernetes.
+
+```
+         Pod
+    ┌────────────┐
+    │ PostgreSQL │
+    └─────┬──────┘
+          │
+          ▼
+   Volume persistant
+          │
+          ▼
+       Données
+```
+
+Le Pod peut disparaître. Le volume continue d'exister.
+
+## PersistentVolumeClaim (PVC)
+
+**Rôle** — exprimer un besoin de stockage (capacité, mode d'accès, StorageClass). Le PVC décrit l'état désiré. Il ne crée pas le volume.
+
+**Responsable de :**
+
+- demander une capacité ;
+- décrire les besoins de l'application.
+
+**Ne fait pas :**
+
+- ne crée pas lui-même le volume ;
+- ne connaît pas l'infrastructure sous-jacente ;
+- ne connaît pas le chemin physique des données.
+
+## StorageClass
+
+**Rôle** — décrire **comment** Kubernetes doit créer un volume (politique de provisionnement).
+
+Exemples : créer un dataset ZFS, un partage NFS, un volume Ceph, un disque cloud.
+
+**Responsable de :** définir la méthode et les paramètres de création.
+
+**Ne fait pas :** ne contient aucune donnée, ne représente aucun volume, ne connaît pas les applications.
+
+## PersistentVolume (PV)
+
+**Rôle** — représenter un volume **réellement disponible** (dataset ZFS, NFS, Ceph, EBS…).
+
+**Responsable de :** représenter ce volume et être associé à un PVC.
+
+**Ne fait pas :** ne décide pas quand créer un volume, ne connaît pas les applications.
+
+## Dynamic provisioning
+
+L'application crée un PVC (« je veux 20 Go »). Kubernetes trouve une StorageClass. Celle-ci crée automatiquement un PV, ensuite lié au PVC. Le développeur n'a pas à connaître l'emplacement physique.
+
+```
+Application
+      │
+      ▼
+PersistentVolumeClaim
+      │  « Je veux 20 Go »
+      ▼
+StorageClass
+      │  « Voici comment créer un volume »
+      ▼
+PersistentVolume
+      │  représente le stockage réel
+      ▼
+Dataset ZFS / NFS / Ceph / Cloud
+```
+
+## Séparation des responsabilités
+
+| Ressource | Responsable de | Ne fait pas |
+|-----------|----------------|-------------|
+| Pod | Exécuter les conteneurs | Stocker durablement les données |
+| PVC | Décrire le besoin de stockage | Créer le volume |
+| StorageClass | Décrire comment créer un volume | Stocker des données |
+| PV | Représenter un volume disponible | Décider quand il doit être créé |
+
+Même philosophie que le reste de Kubernetes :
+
+| Besoin | Exprime le besoin | Satisfait le besoin |
+|--------|-------------------|---------------------|
+| Exécuter une application | Deployment | ReplicaSet + Pod |
+| Communiquer | Service | EndpointSlice Controller |
+| Stocker des données | PVC | StorageClass + PV |
+
+Dans les trois cas : le développeur décrit ce qu'il souhaite ; Kubernetes décide comment le satisfaire.
+
+---
+
+# Vue d'ensemble
+
+Les ressources que l'on **écrit** (Deployment, Service, PVC) sont déclaratives : elles expriment un besoin. Celles **en dessous** (ReplicaSet, EndpointSlice, PersistentVolume…) sont créées ou maintenues par Kubernetes. C'est l'idée la plus fondamentale du système.
+
+```
+                           Développeur
+                                │
+                                ▼
+                     Décrit un état désiré
+                                │
+        ┌───────────────┬───────────────┬───────────────┐
+        ▼               ▼               ▼
+  Deployment          Service          PVC
+        │               │               │
+        ▼               ▼               ▼
+  ReplicaSet     EndpointSlice      StorageClass
+        │                               │
+        ▼                               ▼
+       Pod                     PersistentVolume
+        │                               │
+        └───────────────┬───────────────┘
+                        ▼
+                 Infrastructure
+```
+
+---
+
 # Principes
 
-Observés dans la théorie et les premiers exercices :
+Observés dans la théorie et les premiers déploiements :
 
-- **Les Pods sont jetables.** Un Pod peut disparaître à tout moment. L'application doit continuer à fonctionner.
-- **Les ressources sont découplées.** Aucune ressource ne connaît l'ensemble du système. Chacune n'a que ce qui concerne sa responsabilité.
-- **Les labels remplacent les noms.** On ne recherche presque jamais un objet par son nom.
-- **Tout repose sur la réconciliation.** Les ressources décrivent un état désiré. Les contrôleurs observent l'état réel et corrigent les écarts.
-- **Déclaratif** — décrire le résultat attendu.
-- **Responsabilité unique** — chaque ressource a un rôle identifié.
+- **Les Pods sont jetables.** Ils peuvent être supprimés ou recréés à tout moment. Aucune donnée importante dedans.
+- **Les Services sont permanents.** Identité réseau stable. On parle au Service, jamais au Pod.
+- **Les volumes sont permanents.** Ils survivent aux Pods. Jamais d'écriture critique dans le filesystem du Pod.
+- **Les ressources sont spécialisées.** Chacune a une responsabilité unique et délègue le reste.
+- **Les labels relient les ressources.** On ne se retrouve presque jamais par le nom, plutôt par labels et selectors.
+- **Tout repose sur l'état désiré.** Le développeur décrit un objectif. Les contrôleurs réconcilient.
 

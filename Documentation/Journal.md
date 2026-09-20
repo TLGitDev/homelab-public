@@ -534,6 +534,30 @@ Poursuivre la pratique, sans déployer Kubernetes sur le homelab tant que ce n'e
 
 ---
 
+# 2026-09-20 — Sprint 12 : Stockage Kubernetes (PVC, PV, StorageClass)
+
+## Objectif
+
+Comprendre pourquoi les données ne doivent pas appartenir au Pod, et quelles ressources expriment / satisfont un besoin de stockage.
+
+## Réalisé
+
+- Filesystem du Pod = éphémère ; volume extérieur = persistant.
+- PVC (besoin), StorageClass (comment créer), PV (volume réel), provisionnement dynamique.
+- Parallèle Deployment / Service / PVC : le développeur déclare, Kubernetes concrétise.
+- Schéma d'ensemble : ressources écrites vs ressources maintenues par le cluster.
+
+## Vérifications
+
+- ✅ Documenté dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Cluster homelab non installé.
+
+## Prochaine étape
+
+Continuer les déploiements d'exercice (volumes) sans anticiper Kubernetes sur le homelab.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -546,3 +570,4 @@ Poursuivre la pratique, sans déployer Kubernetes sur le homelab tant que ce n'e
 | 2026-09-07 | Sprint 9 : pool `tank` (miroir 2×8 To). |
 | 2026-09-16 | Sprint 10 : étude Kubernetes (théorie). |
 | 2026-09-19 | Sprint 11 : ressources K8s, Service, EndpointSlice, taints. |
+| 2026-09-20 | Sprint 12 : stockage K8s (PVC, PV, StorageClass). |
