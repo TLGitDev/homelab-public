@@ -558,6 +558,58 @@ Continuer les déploiements d'exercice (volumes) sans anticiper Kubernetes sur l
 
 ---
 
+# 2026-09-21 — Sprint 13 : Anatomie des manifestes
+
+## Objectif
+
+Lire un YAML Kubernetes comme une description d'état désiré, pas comme un script.
+
+## Réalisé
+
+- Structure commune : `apiVersion`, `kind`, `metadata`, `spec`.
+- `spec.template` = modèle de Pod, pas un Pod.
+- `containerPort` décrit, n'ouvre pas ; ports nommés pour découpler les Services.
+- Hash du template → nouveau ReplicaSet (rolling update / rollback).
+- Deux impacts : suppression d'un Pod (ReplicaSet) vs changement de template (Deployment).
+- Garbage collection via ownerReferences : on supprime la racine.
+- Cycle d'une requête : DNS → Service (ClusterIP) → EndpointSlice → Pod.
+
+## Vérifications
+
+- ✅ Documenté dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Cluster homelab non installé.
+
+## Prochaine étape
+
+Poursuivre les exercices, sans déployer Kubernetes sur le homelab tant que ce n'est pas justifié.
+
+---
+
+# 2026-09-21 — Sprint 14 : ConfigMap, Secret et composition d'une application
+
+## Objectif
+
+Séparer le « comment lancer » (Deployment) de la configuration (ConfigMap / Secret).
+
+## Réalisé
+
+- ConfigMap vs Secret ; Secret = Base64, pas un coffre-fort.
+- Injection par le kubelet (env ou fichiers), jamais de lecture directe par le Pod.
+- Exemple Vaultwarden (valeurs sensibles non versionnées).
+- Schéma de composition : Deployment, ReplicaSet, Pod, Service, PVC, ConfigMap, Secret.
+- Cinq principes de clôture des fondamentaux.
+
+## Vérifications
+
+- ✅ Documenté dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Cluster homelab non installé.
+
+## Prochaine étape
+
+Poursuivre les exercices. Kubernetes sur le homelab seulement s'il est justifié.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -571,3 +623,5 @@ Continuer les déploiements d'exercice (volumes) sans anticiper Kubernetes sur l
 | 2026-09-16 | Sprint 10 : étude Kubernetes (théorie). |
 | 2026-09-19 | Sprint 11 : ressources K8s, Service, EndpointSlice, taints. |
 | 2026-09-20 | Sprint 12 : stockage K8s (PVC, PV, StorageClass). |
+| 2026-09-21 | Sprint 13 : anatomie des manifestes, GC, cycle d'une requête. |
+| 2026-09-21 | Sprint 14 : ConfigMap, Secret, composition d'une application. |

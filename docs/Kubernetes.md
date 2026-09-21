@@ -98,6 +98,62 @@ Les fichiers YAML servent uniquement à **modifier** cette source de vérité. U
 
 ---
 
+# Anatomie d'un manifeste
+
+Toutes les ressources suivent la même structure.
+
+```yaml
+apiVersion: ...
+kind: ...
+metadata:
+  ...
+spec:
+  ...
+```
+
+| Champ | Rôle |
+|-------|------|
+| `apiVersion` | Version de l'API pour interpréter la ressource (rétrocompatibilité). |
+| `kind` | Type : Deployment, Service, Pod, PersistentVolumeClaim, Secret… |
+| `metadata` | Identité : `name`, `namespace`, `labels`, `annotations`, `ownerReferences`, UID. N'influence pas directement le comportement. |
+| `spec` | État désiré. Différent selon le `kind` (réplicas et template pour un Deployment, ports et selectors pour un Service, capacité et StorageClass pour un PVC). |
+
+## Template du Pod
+
+`spec.template` **n'est pas un Pod**. C'est le modèle de fabrication d'un futur Pod. Le ReplicaSet s'en sert pour créer les Pods.
+
+Le template reprend la structure d'un Pod :
+
+```yaml
+template:
+  metadata:
+    labels:
+      ...
+  spec:
+    containers:
+      ...
+```
+
+## Containers
+
+`containers` est une **liste**. Un Pod peut en contenir plusieurs : même IP, mêmes volumes, même cycle de vie — une seule unité de déploiement.
+
+## containerPort
+
+`containerPort` **n'ouvre pas le port**. Il décrit le port sur lequel l'application écoute. Utilisé par les Services, les probes, l'observabilité. Le conteneur fonctionnerait sans ce champ : c'est une description, pas une config réseau.
+
+Les ports peuvent être **nommés** pour réduire le couplage :
+
+```yaml
+ports:
+  - name: http
+    containerPort: 80
+```
+
+Un Service peut alors utiliser `targetPort: http` au lieu de `80`. Le numéro peut changer sans modifier les Services.
+
+---
+
 # Contrôleurs
 
 Ensemble de contrôleurs indépendants, chacun une responsabilité : Deployment, ReplicaSet, Service, Job, StatefulSet, etc.
@@ -269,6 +325,52 @@ Lorsqu'un Pod apparaît ou disparaît : le contrôleur met à jour les EndpointS
 
 ---
 
+# Cycle de vie d'une requête
+
+Le client ne parle jamais au Pod. Il passe par le DNS du cluster, puis le Service, puis la liste à jour des Pods.
+
+```
+Application cliente
+        │
+        ▼
+DNS Kubernetes
+nginx.default.svc.cluster.local
+        │
+        ▼
+Service
+IP virtuelle (10.43.x.x)
+        │
+        ▼
+EndpointSlice
+Liste des Pods disponibles
+        │
+        ▼
+Pod
+10.42.x.x
+```
+
+`10.43.x.x` et `10.42.x.x` sont des plages typiques (ex. K3s : ClusterIP vs Pod). Ce ne sont pas les IP du LAN homelab.
+
+## Mise à jour des endpoints
+
+Le Service ne modifie **jamais** directement la liste des Pods. C'est l'EndpointSlice Controller.
+
+```
+Pod supprimé
+        ↓
+ReplicaSet
+        ↓
+Nouveau Pod
+        ↓
+EndpointSlice Controller
+        ↓
+Mise à jour des EndpointSlices
+        ↓
+Le Service continue de fonctionner
+```
+
+---
+
 # Hiérarchie (réseau inclus)
 
 ```
@@ -321,22 +423,80 @@ Kubernetes ne se base **jamais** sur les noms pour relier les objets. La relatio
 
 ```
 Deployment
-        │  OwnerReference
-        ▼
+    │  OwnerReference
+    ▼
 ReplicaSet
-        │  OwnerReference
-        ▼
+    │  OwnerReference
+    ▼
 Pod
 ```
 
-Les noms ressemblent à une hiérarchie, ce n'est qu'une **convention** :
+Le Pod pointe vers son ReplicaSet, le ReplicaSet vers son Deployment. Les noms **reflètent** cette hiérarchie ; Kubernetes utilise les ownerReferences.
+
+## Noms générés
+
+Les ressources créées par un contrôleur reçoivent un nom dérivé du parent.
+
+**ReplicaSet** : `<deployment>-<hash-du-template>`
 
 ```
 nginx
     ↓
-nginx-7b9867795
-    ↓
-nginx-7b9867795-vkmtr
+nginx-7f9b867795
+```
+
+Le hash est calculé à partir de `spec.template`. Toute modification du template (image, variables d'environnement, volumes…) produit un **nouveau** ReplicaSet. C'est ce qui permet les rolling updates et les rollbacks.
+
+**Pod** : `<replicaset>-<identifiant-aléatoire>`
+
+```
+nginx-7f9b867795-vkmtr
+```
+
+Le suffixe garantit l'unicité des Pods d'un même ReplicaSet.
+
+## Garbage collection
+
+Supprimer le propriétaire supprime les enfants.
+
+```
+kubectl delete deployment nginx
+        ↓
+Deployment → ReplicaSet → Pods
+```
+
+On ne supprime en général que la ressource **racine**.
+
+## Deux types de modifications
+
+Toutes les modifications d'un Deployment n'ont pas le même impact.
+
+**Suppression d'un Pod** — le Deployment n'intervient pas. Le ReplicaSet reste valide.
+
+```
+Suppression d'un Pod
+        ↓
+ReplicaSet Controller
+        ↓
+Réconciliation
+        ↓
+Création d'un nouveau Pod
+```
+
+**Modification du template** (ex. `nginx:1.29` → `nginx:1.30`) — le ReplicaSet ne gère pas les changements de version. C'est le Deployment.
+
+```
+kubectl apply
+        ↓
+API Server
+        ↓
+Deployment Controller
+        ↓
+Nouveau ReplicaSet
+        ↓
+Nouveaux Pods
+        ↓
+Rolling Update
 ```
 
 ---
@@ -470,6 +630,115 @@ Dans les trois cas : le développeur décrit ce qu'il souhaite ; Kubernetes déc
 
 ---
 
+# Configuration des applications
+
+Le Deployment décrit **comment lancer** l'application. La configuration vit dans des ressources spécialisées. On peut la modifier sans mélanger les responsabilités.
+
+Le Deployment ne connaît pas les valeurs. Il connaît uniquement les ressources qui les fournissent.
+
+```
+Deployment
+        │
+        ├────────► ConfigMap
+        │
+        └────────► Secret
+```
+
+Avantages : séparation des responsabilités, réutilisation par plusieurs Pods, rotation des secrets sans retoucher le manifeste principal, lisibilité.
+
+## ConfigMap
+
+Données **non sensibles** : hôte de base, port, nom de base, niveau de logs, fuseau horaire, paramètres fonctionnels. Ne lance aucune application.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vaultwarden-config
+data:
+  DATABASE_HOST: postgres
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: vaultwarden
+  DATABASE_USER: vaultwarden
+  LOG_LEVEL: INFO
+  TZ: Europe/Paris
+```
+
+## Secret
+
+Données **sensibles** : mots de passe, clés API, jetons, certificats.
+
+Un Secret Kubernetes **n'est pas chiffré par défaut**. Les données sont encodées en Base64. Le chiffrement au repos est une option à activer explicitement. Les vraies valeurs ne sont pas versionnées dans ce dépôt (voir [Architecture.md](Architecture.md)).
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vaultwarden-secret
+stringData:
+  DATABASE_PASSWORD: "********"
+  ADMIN_TOKEN: "********"
+  JWT_SECRET: "********"
+```
+
+## Injection
+
+Le Pod ne lit jamais directement un ConfigMap ou un Secret. Il **référence** ce qu'il veut utiliser. Le **kubelet** injecte dans le conteneur : variables d'environnement, ou fichiers montés.
+
+```
+Deployment
+        ↓
+Pod
+        ↓
+Référence ConfigMap
+        ↓
+Référence Secret
+        ↓
+kubelet injecte
+```
+
+| Ressource | Contenu |
+|-----------|---------|
+| Deployment | Image, ports, volumes, CPU/RAM, **références** vers ConfigMaps et Secrets |
+| ConfigMap | Configuration non sensible |
+| Secret | Mots de passe, jetons, clés, certificats |
+
+Le Deployment ne contient idéalement aucune donnée métier.
+
+## Exemple : Vaultwarden
+
+| Ressource | Contenu |
+|-----------|---------|
+| Deployment | Image, volumes, ports, références `vaultwarden-config` et `vaultwarden-secret` |
+| ConfigMap | `DATABASE_HOST`, port, nom, user, `LOG_LEVEL`, `TZ` |
+| Secret | mot de passe, `ADMIN_TOKEN`, `JWT_SECRET` |
+
+## Composition d'une application
+
+Une application n'est pas un seul objet. C'est un ensemble de ressources qui collaborent.
+
+```
+                    Deployment
+                         │
+         ┌───────────────┼────────────────┐
+         │               │                │
+         ▼               ▼                ▼
+     ReplicaSet      ConfigMap        Secret
+         │
+         ▼
+        Pod
+         │
+         ├──────────────► PVC
+         │
+         ▼
+      Service
+         │
+         ▼
+   EndpointSlice
+```
+
+---
+
 # Vue d'ensemble
 
 Les ressources que l'on **écrit** (Deployment, Service, PVC) sont déclaratives : elles expriment un besoin. Celles **en dessous** (ReplicaSet, EndpointSlice, PersistentVolume…) sont créées ou maintenues par Kubernetes. C'est l'idée la plus fondamentale du système.
@@ -499,12 +768,18 @@ Les ressources que l'on **écrit** (Deployment, Service, PVC) sont déclaratives
 
 # Principes
 
-Observés dans la théorie et les premiers déploiements :
+Fondamentaux qui reviennent partout :
 
-- **Les Pods sont jetables.** Ils peuvent être supprimés ou recréés à tout moment. Aucune donnée importante dedans.
-- **Les Services sont permanents.** Identité réseau stable. On parle au Service, jamais au Pod.
-- **Les volumes sont permanents.** Ils survivent aux Pods. Jamais d'écriture critique dans le filesystem du Pod.
-- **Les ressources sont spécialisées.** Chacune a une responsabilité unique et délègue le reste.
-- **Les labels relient les ressources.** On ne se retrouve presque jamais par le nom, plutôt par labels et selectors.
-- **Tout repose sur l'état désiré.** Le développeur décrit un objectif. Les contrôleurs réconcilient.
+1. **Déclaratif** — décrire l'état désiré, jamais les étapes.
+2. **Réconciliation** — les contrôleurs comparent en permanence état désiré et état réel, et corrigent.
+3. **Une responsabilité par ressource** — chaque objet a un rôle précis et délègue le reste.
+4. **Abstractions stables** — IP, disque physique, mots de passe dans le manifeste sont remplacés par Service, PVC, ConfigMap, Secret.
+5. **Composition** — une application est un ensemble de ressources qui collaborent, pas un seul objet.
+
+Conséquences concrètes :
+
+- **Les Pods sont jetables.** Aucune donnée importante dedans.
+- **Les Services sont permanents.** On parle au Service, jamais au Pod.
+- **Les volumes sont permanents.** Jamais d'écriture critique dans le filesystem du Pod.
+- **Les labels relient les ressources.** Presque jamais par le nom.
 

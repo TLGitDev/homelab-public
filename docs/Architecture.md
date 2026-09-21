@@ -163,6 +163,8 @@ Tout dépôt APT ajouté doit provenir du projet officiel ou d'une organisation 
 
 Mots de passe, clés SSH et jetons Cloudflare ne sont jamais partagés ni versionnés dans ce dépôt.
 
+Un Secret Kubernetes n'est **pas chiffré** par défaut (Base64 seulement). Détail : [Kubernetes.md](Kubernetes.md).
+
 ## Ne jamais ouvrir un service inutilement
 
 Un service n'est exposé que lorsqu'il est nécessaire.

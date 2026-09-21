@@ -122,8 +122,11 @@
 | Taints / Tolerations | 🟡 |
 | Ingress | 🔲 |
 | PVC / PV / StorageClass | 🟡 |
+| ConfigMap / Secret | 🟡 |
 | Volumes persistants | 🟡 |
 | Cluster (installation) | 🔲 |
+| Manifestes YAML | 🟡 |
+| Rolling update / rollback | 🟡 |
 
 ---
 

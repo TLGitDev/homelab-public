@@ -68,9 +68,29 @@ Règle qui sélectionne les ressources portant certains labels (ex. `app: nginx`
 
 Liste des Pods actuellement joignables pour un Service. Maintenue par le EndpointSlice Controller, pas par le Service lui-même.
 
+### DNS Kubernetes
+
+Nom stable d'un Service dans le cluster : `<service>.<namespace>.svc.cluster.local` (ex. `nginx.default.svc.cluster.local`).
+
 ### Taint / Toleration
 
 Un taint sur un Node interdit d'y planifier des Pods, sauf ceux qui ont une toleration correspondante.
+
+### apiVersion / kind / metadata / spec
+
+Structure commune d'un manifeste. `spec` = état désiré. `metadata` = identité (nom, labels, ownerReferences…), pas le comportement.
+
+### Pod template
+
+`spec.template` n'est pas un Pod : c'est le modèle dont le ReplicaSet se sert pour en créer. Un hash de ce template entre dans le nom du ReplicaSet.
+
+### containerPort
+
+Décrit le port d'écoute. N'ouvre pas le port. Un nom (`http`) permet au Service d'utiliser `targetPort: http` sans coller au numéro.
+
+### Garbage collection
+
+Supprimer un propriétaire (`kubectl delete deployment …`) supprime ses enfants via les ownerReferences.
 
 ### Label
 
@@ -80,9 +100,13 @@ Métadonnée qui relie les ressources (ex. `app: vaultwarden`) sans les coupler 
 
 Conteneur d'assistance dans le même Pod que l'application (logs, proxy, sync).
 
-### ConfigMap / Secret
+### ConfigMap
 
-Configuration non sensible (ConfigMap) ou informations sensibles (Secret), stockées comme ressources du cluster.
+Configuration non sensible (hôte, port, niveau de logs…). Injectée dans le Pod par le kubelet (variables d'environnement ou fichiers). Ne lance aucune application.
+
+### Secret
+
+Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte.
 
 ### PersistentVolumeClaim (PVC)
 
