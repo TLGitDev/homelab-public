@@ -108,6 +108,14 @@ Configuration non sensible (hôte, port, niveau de logs…). Injectée dans le P
 
 Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte.
 
+### data / stringData
+
+Deux façons de remplir un Secret. `data` attend du Base64. `stringData` accepte le clair ; l'API Server encode.
+
+### Cycle de vie des données
+
+Critère pour partager un volume : ensembles créés, sauvegardés, restaurés et supprimés ensemble → un PVC. Sinon, volumes (et souvent déploiements) séparés.
+
 ### PersistentVolumeClaim (PVC)
 
 Besoin de stockage exprimé par l'application (capacité, mode d'accès, StorageClass). Ne crée pas le volume.

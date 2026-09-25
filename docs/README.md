@@ -56,7 +56,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Stockage.md](Stockage.md) | ZFS : cours, `rpool`, `tank` |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
-| [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, réseau, stockage, ConfigMap) — cluster homelab non installé |
+| [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) — cluster homelab non installé |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 

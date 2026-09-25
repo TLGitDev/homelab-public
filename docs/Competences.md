@@ -123,7 +123,11 @@
 | Ingress | 🔲 |
 | PVC / PV / StorageClass | 🟡 |
 | ConfigMap / Secret | 🟡 |
+| data / stringData | 🟡 |
 | Volumes persistants | 🟡 |
+| Cycle de vie des données (PVC) | 🟡 |
+| Conception (besoin → ressource) | 🟡 |
+| Docker → ressources K8s | 🟡 |
 | Cluster (installation) | 🔲 |
 | Manifestes YAML | 🟡 |
 | Rolling update / rollback | 🟡 |

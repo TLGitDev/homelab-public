@@ -610,6 +610,32 @@ Poursuivre les exercices. Kubernetes sur le homelab seulement s'il est justifié
 
 ---
 
+# 2026-09-25 — Sprint 15 : Conception d'une application Kubernetes
+
+## Objectif
+
+Passer des ressources isolées à la conception : besoins, dépendances, cycle de vie des données.
+
+## Réalisé
+
+- ConfigMap : rôle, injection (API Server → kubelet), n'écrire que ce qui change le défaut.
+- Secret : `data` vs `stringData` ; Base64 ≠ chiffrement.
+- Politique Git : Secrets d'exercice acceptés temporairement ; SOPS / Sealed Secrets / External Secrets plus tard.
+- Table besoin → ressource ; Deployment au centre (ConfigMap, Secret, PVC).
+- Un PVC si même cycle de vie (SQLite + pièces jointes Vaultwarden) ; séparés sinon.
+- Traduction `docker run` → Deployment, PVC, Service, ConfigMap / Secret.
+
+## Vérifications
+
+- ✅ Documenté dans [Kubernetes.md](Kubernetes.md).
+- ⬜ Cluster homelab non installé.
+
+## Prochaine étape
+
+Poursuivre les exercices de manifestes. Kubernetes sur le homelab seulement s'il est justifié.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -625,3 +651,4 @@ Poursuivre les exercices. Kubernetes sur le homelab seulement s'il est justifié
 | 2026-09-20 | Sprint 12 : stockage K8s (PVC, PV, StorageClass). |
 | 2026-09-21 | Sprint 13 : anatomie des manifestes, GC, cycle d'une requête. |
 | 2026-09-21 | Sprint 14 : ConfigMap, Secret, composition d'une application. |
+| 2026-09-25 | Sprint 15 : conception d'appli, cycle de vie des données, Docker → K8s. |

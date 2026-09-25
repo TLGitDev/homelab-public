@@ -628,6 +628,8 @@ Même philosophie que le reste de Kubernetes :
 
 Dans les trois cas : le développeur décrit ce qu'il souhaite ; Kubernetes décide comment le satisfaire.
 
+Quand on hésite entre un ou plusieurs PVC : [cycle de vie des données](#cycle-de-vie-des-données).
+
 ---
 
 # Configuration des applications
@@ -648,7 +650,9 @@ Avantages : séparation des responsabilités, réutilisation par plusieurs Pods,
 
 ## ConfigMap
 
-Données **non sensibles** : hôte de base, port, nom de base, niveau de logs, fuseau horaire, paramètres fonctionnels. Ne lance aucune application.
+**Rôle** — stocker la configuration **non sensible**. Ne lance aucune application.
+
+Exemples : nom d'hôte d'une base, numéro de port, niveau de logs, domaine, options de fonctionnement.
 
 ```yaml
 apiVersion: v1
@@ -664,11 +668,13 @@ data:
   TZ: Europe/Paris
 ```
 
+**Bonnes pratiques** — ne pas configurer une option uniquement parce qu'elle existe. Seulement ce qui **modifie le comportement par défaut**. Une configuration courte se maintient mieux qu'une liste qui recopie toutes les valeurs par défaut.
+
 ## Secret
 
-Données **sensibles** : mots de passe, clés API, jetons, certificats.
+**Rôle** — stocker les informations **sensibles** : mots de passe, jetons, clés API, certificats.
 
-Un Secret Kubernetes **n'est pas chiffré par défaut**. Les données sont encodées en Base64. Le chiffrement au repos est une option à activer explicitement. Les vraies valeurs ne sont pas versionnées dans ce dépôt (voir [Architecture.md](Architecture.md)).
+Un Secret Kubernetes **n'est pas chiffré par défaut**. Les données sont encodées en Base64. Le chiffrement au repos doit être configuré séparément.
 
 ```yaml
 apiVersion: v1
@@ -681,20 +687,51 @@ stringData:
   JWT_SECRET: "********"
 ```
 
+### data vs stringData
+
+Deux champs pour créer un Secret.
+
+**`data`** — valeurs déjà encodées en Base64.
+
+```yaml
+data:
+  ADMIN_TOKEN: YWJjMTIz
+```
+
+**`stringData`** — valeurs en clair. L'API Server les convertit en Base64.
+
+```yaml
+stringData:
+  ADMIN_TOKEN: exemple-token
+```
+
+Pour un manifeste écrit à la main, `stringData` est généralement plus pratique.
+
+### Git
+
+Les Secrets ne devraient pas être stockés en clair dans un dépôt Git.
+
+Sur ce homelab, l'approche est **acceptée temporairement** pour simplifier l'apprentissage. Une solution dédiée (SOPS, Sealed Secrets, External Secrets…) viendra ensuite. Les secrets d'infrastructure (SSH, Cloudflare) restent hors dépôt : [Architecture.md](Architecture.md).
+
 ## Injection
 
-Le Pod ne lit jamais directement un ConfigMap ou un Secret. Il **référence** ce qu'il veut utiliser. Le **kubelet** injecte dans le conteneur : variables d'environnement, ou fichiers montés.
+Le Pod ne lit **jamais** directement un ConfigMap ou un Secret. Il les **référence**. Le **kubelet** injecte les valeurs dans le conteneur : variables d'environnement, ou fichiers.
 
 ```
-Deployment
-        ↓
-Pod
-        ↓
-Référence ConfigMap
-        ↓
-Référence Secret
-        ↓
-kubelet injecte
+ConfigMap / Secret
+        │
+        ▼
+API Server
+        │
+        ▼
+Kubelet
+        │
+        ▼
+Variables d'environnement
+ou fichiers
+        │
+        ▼
+Application
 ```
 
 | Ressource | Contenu |
@@ -713,28 +750,85 @@ Le Deployment ne contient idéalement aucune donnée métier.
 | ConfigMap | `DATABASE_HOST`, port, nom, user, `LOG_LEVEL`, `TZ` |
 | Secret | mot de passe, `ADMIN_TOKEN`, `JWT_SECRET` |
 
-## Composition d'une application
+---
 
-Une application n'est pas un seul objet. C'est un ensemble de ressources qui collaborent.
+# Conception d'une application
+
+Avant d'écrire les manifestes, identifier les **besoins** de l'application. Chaque besoin devient une ressource.
+
+| Besoin | Ressource Kubernetes |
+|--------|----------------------|
+| Exécuter l'application | Deployment |
+| Stockage persistant | PersistentVolumeClaim |
+| Configuration | ConfigMap |
+| Informations sensibles | Secret |
+| Accès réseau | Service |
+
+On raisonne à partir de l'application, pas à partir d'un catalogue de ressources.
+
+## Cycle de vie des données
+
+Critère principal pour un ou plusieurs volumes : le **cycle de vie** des données.
+
+Deux ensembles créés, sauvegardés, restaurés et supprimés **ensemble** peuvent partager le même volume.
+
+Exemple Vaultwarden : la base SQLite et les pièces jointes ont le même cycle de vie → un seul PVC.
+
+À l'inverse, Vaultwarden et PostgreSQL ont des cycles indépendants → déploiements séparés (déjà le cas au niveau des Pods).
+
+## Le Deployment au centre
+
+Le Deployment est en général la ressource centrale. Les autres sont ses **dépendances**.
 
 ```
-                    Deployment
-                         │
-         ┌───────────────┼────────────────┐
-         │               │                │
-         ▼               ▼                ▼
-     ReplicaSet      ConfigMap        Secret
-         │
-         ▼
-        Pod
-         │
-         ├──────────────► PVC
-         │
-         ▼
-      Service
-         │
-         ▼
-   EndpointSlice
+                Deployment
+                /    |    \
+               /     |     \
+              ▼      ▼      ▼
+       ConfigMap   Secret   PVC
+```
+
+Le Deployment décrit : quelle image, quels volumes, quels ports, quels ConfigMaps, quels Secrets. Idéalement aucune donnée métier, seulement des références.
+
+Le ReplicaSet et les Pods restent créés par le Deployment (sections précédentes). Ils n'apparaissent pas ici : ce schéma montre les **dépendances déclarées**, pas la hiérarchie d'ownerReferences.
+
+## De Docker vers Kubernetes
+
+Kubernetes ne remplace pas Docker. Il **décompose** ce qu'une seule commande `docker run` réunissait.
+
+```
+docker run \
+  -v /vw-data:/data \
+  -p 80:80 \
+  vaultwarden/server:1.37.3
+```
+
+| Docker | Kubernetes |
+|--------|------------|
+| Image | Deployment |
+| `-v` | PVC + Volume + VolumeMount |
+| `-p` | Service + `containerPort` |
+| Variables d'environnement | ConfigMap / Secret |
+
+## Composition
+
+Une application est un ensemble de ressources spécialisées. Chaque ressource a une responsabilité unique : maintenance, mises à jour, sauvegardes et évolutions en sont plus simples.
+
+```
+                   Deployment
+                        │
+      ┌─────────────────┼─────────────────┐
+      ▼                 ▼                 ▼
+ ConfigMap           Secret              PVC
+      │
+      ▼
+     Pod
+      │
+      ▼
+   Service
+      │
+      ▼
+EndpointSlice
 ```
 
 ---
