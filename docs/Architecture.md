@@ -163,7 +163,7 @@ Tout dépôt APT ajouté doit provenir du projet officiel ou d'une organisation 
 
 Mots de passe, clés SSH et jetons Cloudflare ne sont jamais partagés ni versionnés dans ce dépôt.
 
-Un Secret Kubernetes n'est **pas chiffré par défaut** (Base64 seulement). Les Secrets d'exercice peuvent être versionnés **temporairement** pour l'apprentissage ; SOPS, Sealed Secrets ou External Secrets viendront ensuite. Détail : [Kubernetes.md](Kubernetes.md).
+Un Secret Kubernetes n'est **pas chiffré par défaut** (Base64 seulement). Dans Git, les secrets applicatifs sont chiffrés avec **SOPS + age**. La clé privée age reste hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sops--age).
 
 ## Ne jamais ouvrir un service inutilement
 
@@ -177,7 +177,7 @@ Aucune couche ne protège seule l'infrastructure. Le détail des couches d'accè
 
 ## Refus par défaut
 
-Tout accès est refusé tant qu'une règle ne l'autorise pas explicitement. Politique Access : [Cloudflare.md](Cloudflare.md).
+Pour les services derrière Access (Proxmox), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden n'est pas derrière Access. Politique : [Cloudflare.md](Cloudflare.md).
 
 ---
 

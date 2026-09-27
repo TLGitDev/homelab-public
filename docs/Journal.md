@@ -662,6 +662,32 @@ Sécuriser le Secret ; documenter la sauvegarde du PVC.
 
 ---
 
+# 2026-09-27 — Sprint 17 : SOPS + age pour ADMIN_TOKEN
+
+## Objectif
+
+Versionner le Secret Vaultwarden sans mettre `ADMIN_TOKEN` en clair dans Git.
+
+## Réalisé
+
+- SOPS 3.13.3 + age (PC et k3s-01). Même paire de clés ; privée hors dépôt.
+- `.sops.yaml` : règle pour `kubernetes/vaultwarden/secret.yaml`.
+- Édition via `sops` ; apply via `sops --decrypt | kubectl apply -f -`.
+- Access : conservé pour Proxmox, pas devant Vaultwarden.
+- Persistance vérifiée en recréant le Pod (PVC conservé).
+
+## Vérifications
+
+- ✅ Documenté dans [Vaultwarden.md](Vaultwarden.md).
+- ✅ Fichier Git chiffré (`ENC[...]`).
+- ⬜ Sauvegarde du PVC non définie.
+
+## Prochaine étape
+
+Documenter la sauvegarde du PVC.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -679,3 +705,4 @@ Sécuriser le Secret ; documenter la sauvegarde du PVC.
 | 2026-09-21 | Sprint 14 : ConfigMap, Secret, composition d'une application. |
 | 2026-09-25 | Sprint 15 : conception d'appli, cycle de vie des données, Docker → K8s. |
 | 2026-09-27 | Sprint 16 : Vaultwarden sur K3s, Traefik, tunnel Cloudflare. |
+| 2026-09-27 | Sprint 17 : SOPS + age, Access limité à Proxmox. |

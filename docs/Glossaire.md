@@ -112,6 +112,10 @@ Configuration non sensible (hôte, port, niveau de logs…). Injectée dans le P
 
 Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte.
 
+### SOPS / age
+
+SOPS chiffre des fichiers (ex. un Secret YAML) pour Git. age fournit les clés. Clé publique dans `.sops.yaml` ; clé privée hors dépôt. As-built : [Vaultwarden.md](Vaultwarden.md#sops--age).
+
 ### data / stringData
 
 Deux façons de remplir un Secret. `data` attend du Base64. `stringData` accepte le clair ; l'API Server encode.

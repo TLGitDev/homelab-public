@@ -123,6 +123,7 @@
 | Ingress | 🟡 |
 | PVC / PV / StorageClass | 🟡 |
 | ConfigMap / Secret | 🟡 |
+| SOPS / age | 🟡 |
 | data / stringData | 🟡 |
 | Volumes persistants | 🟡 |
 | Cycle de vie des données (PVC) | 🟡 |

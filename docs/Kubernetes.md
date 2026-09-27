@@ -735,9 +735,7 @@ Pour un manifeste écrit à la main, `stringData` est généralement plus pratiq
 
 ### Git
 
-Les Secrets ne devraient pas être stockés en clair dans un dépôt Git.
-
-Sur ce homelab, l'approche est **acceptée temporairement** pour simplifier l'apprentissage. Une solution dédiée (SOPS, Sealed Secrets, External Secrets…) viendra ensuite. Les secrets d'infrastructure (SSH, Cloudflare) restent hors dépôt : [Architecture.md](Architecture.md).
+Les Secrets ne doivent pas être stockés en clair dans Git. Sur ce homelab, `kubernetes/vaultwarden/secret.yaml` est chiffré avec **SOPS + age**. Les secrets d'infrastructure (SSH, Cloudflare) restent hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sops--age), [Architecture.md](Architecture.md).
 
 ## Injection
 

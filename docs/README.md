@@ -36,7 +36,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 |---------|------|
 | Matériel | Validé (Node 804, Ryzen 7 5700G, 32 Go, NVMe 2 To, 2× IronWolf 8 To) |
 | Hyperviseur | Proxmox VE sur ZFS (`rpool`), IP `<ip-pve>` |
-| Accès distant | Cloudflare Tunnel + Access + MFA |
+| Accès distant | Tunnel ; Access + MFA sur Proxmox ; Vaultwarden sans Access |
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (`https://vaultwarden.labo.example`) |
@@ -59,7 +59,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
-| [Vaultwarden.md](Vaultwarden.md) | Service : K3s, Traefik, tunnel, `vaultwarden.labo.example` |
+| [Vaultwarden.md](Vaultwarden.md) | Service : K3s, Traefik, tunnel, SOPS |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 

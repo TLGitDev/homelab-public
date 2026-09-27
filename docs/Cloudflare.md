@@ -89,6 +89,8 @@ Application
 
 ## Politique actuelle
 
+**Proxmox** (`proxmox.labo.example`) : Access actif.
+
 Autoriser uniquement : `personne@labo.example`
 
 Sinon : refuser (refus par défaut).
@@ -97,7 +99,9 @@ Authentification : One-Time PIN (par défaut).
 
 MFA : application TOTP (KeePassXC).
 
-## Deux authentifications indépendantes
+**Vaultwarden** : pas d'Access. L'application authentifie déjà ses clients. Détail : [Vaultwarden.md](Vaultwarden.md#cloudflare-access).
+
+## Deux authentifications indépendantes (Proxmox)
 
 Cloudflare Access répond à : « Qui peut accéder au service ? »
 
