@@ -39,13 +39,19 @@ Le serveur établit une connexion **sortante** permanente vers Cloudflare. Aucun
 
 Le tunnel ne rend aucun service accessible par lui-même. Il transporte les requêtes jusqu'au LAN. Les services publiés sont définis par des **routes**.
 
-Exemple :
+Le tunnel `homelab` sert **plusieurs** routes. Un CT `cloudflared` par application n'est pas nécessaire.
 
 ```
 proxmox.labo.example
         ↓
 https://<ip-pve>:8006
+
+vaultwarden.labo.example
+        ↓
+http://<ip-k3s-01>:80   (Traefik sur K3s)
 ```
+
+Proxmox : origin **HTTPS**. Vaultwarden : origin **HTTP** ; le HTTPS public est celui de Cloudflare. Détail : [Vaultwarden.md](Vaultwarden.md).
 
 Avantages : aucun port ouvert sur Internet, chiffrement, intégration Access.
 

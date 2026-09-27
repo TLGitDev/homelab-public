@@ -120,7 +120,7 @@
 | Selector / EndpointSlice | 🟡 |
 | Labels | 🟡 |
 | Taints / Tolerations | 🟡 |
-| Ingress | 🔲 |
+| Ingress | 🟡 |
 | PVC / PV / StorageClass | 🟡 |
 | ConfigMap / Secret | 🟡 |
 | data / stringData | 🟡 |
@@ -128,7 +128,7 @@
 | Cycle de vie des données (PVC) | 🟡 |
 | Conception (besoin → ressource) | 🟡 |
 | Docker → ressources K8s | 🟡 |
-| Cluster (installation) | 🔲 |
+| Cluster (K3s) | 🟡 |
 | Manifestes YAML | 🟡 |
 | Rolling update / rollback | 🟡 |
 

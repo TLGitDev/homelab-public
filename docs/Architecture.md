@@ -3,7 +3,7 @@
 > Principes et état de conception.
 >
 > Ce fichier ne décrit pas les manipulations ([Journal.md](Journal.md)), le matériel ([Materiel.md](Materiel.md)), ni les cours détaillés.
-> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). IP et nœud : [Proxmox.md](Proxmox.md).
+> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md).
 > L'index de toute la documentation est dans [README.md](README.md).
 
 ---
@@ -112,11 +112,11 @@ Matériel
 
 ## Séparation des responsabilités
 
-Chaque service possède son propre environnement d'exécution (un LXC).
+Les services d'infrastructure légers ont chacun leur LXC. Les applications tournent sur K3s (ressources Kubernetes distinctes).
 
 Pourquoi : maintenance plus simple, impact d'une panne limité, mises à jour isolées, possibilité de supprimer ou recréer un service sans affecter les autres.
 
-Exemples de rôles : Cloudflare Tunnel, reverse proxy, Home Assistant, Immich, Paperless.
+Exemples : LXC Cloudflare Tunnel ; Vaultwarden, Immich, Paperless sur le cluster.
 
 ## Moindre privilège
 
@@ -207,9 +207,9 @@ Internet
  eno1
     │
  vmbr0
- ├── Proxmox
- ├── Cloudflare
- ├── Home Assistant
+ ├── Proxmox (.50)
+ ├── Cloudflare (.20)
+ ├── K3s (.30)
  └── ...
 ```
 
@@ -221,15 +221,17 @@ Plan d'adressage (source de vérité) : [Proxmox.md](Proxmox.md).
 
 # Services
 
-Les services légers tournent dans des LXC Debian Stable.
+Les services d'infrastructure légers tournent dans des LXC Debian Stable.
 
 Avantages : peu de mémoire, démarrage rapide, noyau partagé avec Proxmox, isolation entre services.
 
-Conventions :
+Conventions LXC :
 
-- un service = un LXC ;
+- un service d'infra = un LXC ;
 - hostname = nom du service ;
-- exemples : `cloudflare`, `caddy`, `paperless`, `immich`.
+- exemple : `cloudflare`.
+
+Les applications (Vaultwarden, plus tard Paperless, Immich…) sont des ressources Kubernetes sur K3s, pas des LXC.
 
 Disques des LXC/VM : datasets sous `rpool/data`. ISO, templates, sauvegardes : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
 
@@ -242,20 +244,22 @@ Tunnel Cloudflare
     │
 LXC Cloudflare
     │
-Reverse Proxy (à venir)
+Traefik (K3s, <ip-k3s-01>:80)
     │
-Applications
+Applications (Ingress → Service → Pod)
 ```
+
+Premier service : [Vaultwarden.md](Vaultwarden.md). Proxmox reste une route directe du tunnel (HTTPS vers le nœud), pas via Traefik.
 
 ---
 
 # Plateforme
 
-Kubernetes est la plateforme visée pour les applications (Vaultwarden, Paperless, Immich…). **Pas encore déployé.**
+Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. Premier service : [Vaultwarden.md](Vaultwarden.md).
 
 Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
 
-Étude : [Kubernetes.md](Kubernetes.md).
+Cours : [Kubernetes.md](Kubernetes.md).
 
 ---
 
@@ -290,12 +294,12 @@ Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
 
 ## Plateforme
 
-- ⬜ Kubernetes (théorie documentée, cluster non installé)
-- ⬜ Caddy
+- ✅ K3s (`<ip-k3s-01>`) + Traefik
+- ⬜ Caddy (non utilisé : Traefik remplit le rôle d'Ingress)
 
 ## Services
 
-- ⬜ Vaultwarden
+- ✅ Vaultwarden (`https://vaultwarden.labo.example`)
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich

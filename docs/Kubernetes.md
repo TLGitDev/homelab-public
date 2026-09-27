@@ -2,7 +2,7 @@
 
 > Cours : pourquoi Kubernetes, modèle déclaratif, ressources.
 >
-> Pas encore déployé sur le homelab. Feuille de route : [Architecture.md](Architecture.md).
+> Cluster K3s en service. As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md). Feuille de route : [Architecture.md](Architecture.md).
 > Définitions courtes : [Glossaire.md](Glossaire.md).
 
 ---
@@ -368,6 +368,32 @@ Mise à jour des EndpointSlices
         ↓
 Le Service continue de fonctionner
 ```
+
+---
+
+# Ingress
+
+Un Service ClusterIP n'est visible **que** dans le cluster. L'Ingress décrit une règle HTTP pour un Ingress Controller (ici Traefik sur K3s).
+
+```
+Client (Host: app.exemple.dev)
+        │
+        ▼
+Ingress Controller
+        │
+        ▼
+Ingress (host + path)
+        │
+        ▼
+Service
+        │
+        ▼
+Pod
+```
+
+L'Ingress pointe vers le **Service**, jamais vers le Pod. `ingressClassName` désigne le contrôleur. `pathType: Prefix` couvre `/` et les chemins en dessous.
+
+As-built (Cloudflare → Traefik → Vaultwarden) : [Vaultwarden.md](Vaultwarden.md).
 
 ---
 

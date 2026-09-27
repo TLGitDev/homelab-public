@@ -56,6 +56,10 @@ Cycle de vie de l'application : ReplicaSet, rolling update, rollback, nombre de 
 
 Lien de propriété réel entre objets (`metadata.ownerReferences`). Kubernetes ne relie pas les ressources par leur nom.
 
+### Ingress
+
+Règle de routage HTTP (hostname, chemin) vers un Service. Prise en charge par un Ingress Controller (`ingressClassName`, ex. Traefik). As-built : [Vaultwarden.md](Vaultwarden.md).
+
 ### Service
 
 Identité réseau stable (ClusterIP) devant des Pods à IP éphémère. Ne lance pas les Pods. Sélection par labels.

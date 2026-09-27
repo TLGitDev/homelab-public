@@ -636,6 +636,32 @@ Poursuivre les exercices de manifestes. Kubernetes sur le homelab seulement s'il
 
 ---
 
+# 2026-09-27 — Sprint 16 : Vaultwarden sur K3s
+
+## Objectif
+
+Déployer Vaultwarden sur K3s et le publier en `https://vaultwarden.labo.example` via le tunnel existant, sans port ouvert sur la box.
+
+## Réalisé
+
+- Manifestes : ConfigMap, Secret, PVC, Deployment, Service, Ingress (Traefik).
+- Route Cloudflare `vaultwarden.labo.example` → `http://<ip-k3s-01>:80` (même tunnel `homelab`).
+- HTTPS public = Cloudflare ; origin Traefik en HTTP.
+- Chaîne vérifiée : dry-run, Pod Running, PVC Bound, curl Service, curl Host vers Traefik, navigateur.
+
+## Vérifications
+
+- ✅ Documenté dans [Vaultwarden.md](Vaultwarden.md).
+- ✅ Accès Internet fonctionnel.
+- ⬜ `ADMIN_TOKEN` encore une valeur de démonstration.
+- ⬜ Sauvegarde du PVC non définie.
+
+## Prochaine étape
+
+Sécuriser le Secret ; documenter la sauvegarde du PVC.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -652,3 +678,4 @@ Poursuivre les exercices de manifestes. Kubernetes sur le homelab seulement s'il
 | 2026-09-21 | Sprint 13 : anatomie des manifestes, GC, cycle d'une requête. |
 | 2026-09-21 | Sprint 14 : ConfigMap, Secret, composition d'une application. |
 | 2026-09-25 | Sprint 15 : conception d'appli, cycle de vie des données, Docker → K8s. |
+| 2026-09-27 | Sprint 16 : Vaultwarden sur K3s, Traefik, tunnel Cloudflare. |

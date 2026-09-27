@@ -45,6 +45,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-box>` | Box / passerelle / DNS | Réseau domestique |
 | `<ip-pve-prévue>` | — | Adresse initialement prévue pour Proxmox, **jamais appliquée** |
 | `<ip-cloudflare>` | LXC `cloudflare` (CT 100) | Tunnel Cloudflare |
+| `<ip-k3s-01>` | K3s (Traefik :80) | Cluster applicatif |
 | `<ip-pve>` | Proxmox (`pve`) | Adresse réelle du nœud |
 
 ## Particularités
