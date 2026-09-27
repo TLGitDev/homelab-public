@@ -5,4 +5,4 @@ metadata:
 data:
   DOMAIN: https://vaultwarden.labo.example
   DATABASE_URL: sqlite://data/db.sqlite3
-  SIGNUPS_ALLOWED: "false"
+  SIGNUPS_ALLOWED: "true"
