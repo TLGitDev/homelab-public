@@ -114,7 +114,19 @@ Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod réf
 
 ### SOPS / age
 
-SOPS chiffre des fichiers (ex. un Secret YAML) pour Git. age fournit les clés. Clé publique dans `.sops.yaml` ; clé privée hors dépôt. As-built : [Vaultwarden.md](Vaultwarden.md#sops--age).
+A servi à chiffrer `secret.yaml` dans Git (sprint 17). Remplacé pour Vaultwarden par Sealed Secrets.
+
+### SealedSecret
+
+Représentation chiffrée d'un Secret, versionnable. Le controller crée le Secret dans le cluster. Lié au namespace et au nom : un changement impose de resealer. As-built : [Vaultwarden.md](Vaultwarden.md#sealed-secrets).
+
+### Namespace
+
+Frontière logique pour les ressources namespacées. Un PVC ne change pas de namespace : nouveau volume + restauration.
+
+### Argo CD
+
+GitOps : compare Git (état désiré) et le cluster. Synced = conforme à Git ; Healthy = appli saine. As-built : [Vaultwarden.md](Vaultwarden.md#argo-cd).
 
 ### data / stringData
 
@@ -130,7 +142,7 @@ Besoin de stockage exprimé par l'application (capacité, mode d'accès, Storage
 
 ### StorageClass
 
-Politique de provisionnement : comment Kubernetes crée un volume (ZFS, NFS, Ceph, cloud…).
+Politique de provisionnement : comment Kubernetes crée un volume (ZFS, NFS, Ceph, cloud…). `WaitForFirstConsumer` : le PV n'est créé que lorsqu'un Pod consomme le PVC (`local-path` K3s).
 
 ### PersistentVolume (PV)
 

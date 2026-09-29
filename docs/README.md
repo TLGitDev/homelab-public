@@ -39,7 +39,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Accès distant | Tunnel ; Access + MFA sur Proxmox ; Vaultwarden sans Access |
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
-| Application | Vaultwarden (`https://vaultwarden.labo.example`) |
+| Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
 | Pool de données | `tank` créé (miroir 2×8 To), aucun dataset de service |
 | Sauvegardes | Stratégie définie, pas encore mise en œuvre |
 
@@ -59,7 +59,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
-| [Vaultwarden.md](Vaultwarden.md) | Service : K3s, Traefik, tunnel, SOPS |
+| [Vaultwarden.md](Vaultwarden.md) | Service : namespace, Traefik, Sealed Secrets, Argo CD |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 

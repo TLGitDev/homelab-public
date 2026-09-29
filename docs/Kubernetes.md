@@ -393,6 +393,8 @@ Pod
 
 L'Ingress pointe vers le **Service**, jamais vers le Pod. `ingressClassName` désigne le contrôleur. `pathType: Prefix` couvre `/` et les chemins en dessous.
 
+Deux Ingress avec le **même hostname** (même dans des namespaces différents) peuvent faire échouer Traefik. `kubectl get ingress -A` avant une migration. Incident : [Vaultwarden.md](Vaultwarden.md#traefik-503).
+
 As-built (Cloudflare → Traefik → Vaultwarden) : [Vaultwarden.md](Vaultwarden.md).
 
 ---
@@ -735,7 +737,7 @@ Pour un manifeste écrit à la main, `stringData` est généralement plus pratiq
 
 ### Git
 
-Les Secrets ne doivent pas être stockés en clair dans Git. Sur ce homelab, `kubernetes/vaultwarden/secret.yaml` est chiffré avec **SOPS + age**. Les secrets d'infrastructure (SSH, Cloudflare) restent hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sops--age), [Architecture.md](Architecture.md).
+Les Secrets ne doivent pas être stockés en clair dans Git. Sur ce homelab, Vaultwarden utilise un **SealedSecret** (`kubernetes/vaultwarden/sealed-secret.yaml`). Les secrets d'infrastructure (SSH perso, Cloudflare) restent hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sealed-secrets), [Architecture.md](Architecture.md).
 
 ## Injection
 

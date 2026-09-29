@@ -163,7 +163,7 @@ Tout dépôt APT ajouté doit provenir du projet officiel ou d'une organisation 
 
 Mots de passe, clés SSH et jetons Cloudflare ne sont jamais partagés ni versionnés dans ce dépôt.
 
-Un Secret Kubernetes n'est **pas chiffré par défaut** (Base64 seulement). Dans Git, les secrets applicatifs sont chiffrés avec **SOPS + age**. La clé privée age reste hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sops--age).
+Un Secret Kubernetes n'est **pas chiffré par défaut** (Base64 seulement). Dans Git, les secrets applicatifs sont des **SealedSecrets**. Détail : [Vaultwarden.md](Vaultwarden.md#sealed-secrets).
 
 ## Ne jamais ouvrir un service inutilement
 
@@ -255,7 +255,7 @@ Premier service : [Vaultwarden.md](Vaultwarden.md). Proxmox reste une route dire
 
 # Plateforme
 
-Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. Premier service : [Vaultwarden.md](Vaultwarden.md).
+Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. Argo CD synchronise Git → cluster. Premier service : [Vaultwarden.md](Vaultwarden.md).
 
 Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
 
@@ -295,6 +295,7 @@ Cours : [Kubernetes.md](Kubernetes.md).
 ## Plateforme
 
 - ✅ K3s (`<ip-k3s-01>`) + Traefik
+- ✅ Argo CD (GitOps, Vaultwarden)
 - ⬜ Caddy (non utilisé : Traefik remplit le rôle d'Ingress)
 
 ## Services

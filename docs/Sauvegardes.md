@@ -89,7 +89,7 @@ Couche 4    Sauvegarde hors site (future)
             Copie chiffrée sur un support dans un autre lieu.
 ```
 
-État : stratégie écrite, **pas encore mise en œuvre**. Tests de restauration : à faire. Le PVC Vaultwarden (`local-path`) n'a pas encore de sauvegarde dédiée : [Vaultwarden.md](Vaultwarden.md).
+État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire. Un backup **de migration** Vaultwarden existe sur k3s-01 (`/home/utilisateur/backups/vaultwarden/`). Le PVC `local-path` n'a pas encore de routine : [Vaultwarden.md](Vaultwarden.md).
 
 ---
 

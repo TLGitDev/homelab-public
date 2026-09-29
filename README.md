@@ -13,7 +13,7 @@ L'objectif n'est pas seulement un serveur qui marche : comprendre chaque couche,
 | Chemin | Rôle |
 |--------|------|
 | [docs/](docs/) | Journal, architecture, ADR, matériel, compétences |
-| [kubernetes/](kubernetes/) | Exercices de manifestes (pas déployés) |
+| [kubernetes/](kubernetes/) | Manifestes GitOps (Vaultwarden, Argo CD) |
 | Autres dossiers | À venir (scripts, automatisation…) |
 
 La racine du dépôt est le projet. `docs/` n'est que la partie écrite.

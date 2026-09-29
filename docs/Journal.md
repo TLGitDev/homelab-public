@@ -688,6 +688,32 @@ Documenter la sauvegarde du PVC.
 
 ---
 
+# 2026-09-29 — Sprint 18 : Namespace vaultwarden, Sealed Secrets, Argo CD
+
+## Objectif
+
+Isoler Vaultwarden dans son namespace, versionner les secrets via Sealed Secrets, et laisser Argo CD synchroniser Git.
+
+## Réalisé
+
+- Namespace `vaultwarden` ; PVC neuf + restore depuis `/home/utilisateur/backups/vaultwarden/` (hashes vérifiés).
+- SealedSecret resealé pour le nouveau namespace (changer le YAML ne suffit pas).
+- Traefik 503 : ancien Ingress `default` + même hostname ; suppression → 200.
+- Application Argo CD Synced/Healthy ; Deploy Key SSH en SealedSecret (`argocd-repo-homelab`).
+- Nettoyage des ressources `default`.
+
+## Vérifications
+
+- ✅ Documenté dans [Vaultwarden.md](Vaultwarden.md).
+- ✅ Coffre et données accessibles après migration.
+- ⬜ Sauvegarde récurrente du PVC.
+
+## Prochaine étape
+
+Mettre en place une sauvegarde récurrente du volume Vaultwarden.
+
+---
+
 # Changelog
 
 | Date | Évolution |
@@ -706,3 +732,4 @@ Documenter la sauvegarde du PVC.
 | 2026-09-25 | Sprint 15 : conception d'appli, cycle de vie des données, Docker → K8s. |
 | 2026-09-27 | Sprint 16 : Vaultwarden sur K3s, Traefik, tunnel Cloudflare. |
 | 2026-09-27 | Sprint 17 : SOPS + age, Access limité à Proxmox. |
+| 2026-09-29 | Sprint 18 : namespace vaultwarden, Sealed Secrets, Argo CD. |

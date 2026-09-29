@@ -1,6 +1,8 @@
 # Vaultwarden
 
-> Premier service applicatif sur K3s. Manifestes : [kubernetes/vaultwarden/](../kubernetes/vaultwarden/).
+> Service applicatif sur K3s, namespace `vaultwarden`, géré par Argo CD.
+>
+> Manifestes : [kubernetes/vaultwarden/](../kubernetes/vaultwarden/). Application : [kubernetes/argocd/vaultwarden-application.yaml](../kubernetes/argocd/vaultwarden-application.yaml).
 >
 > Cours Kubernetes : [Kubernetes.md](Kubernetes.md). Tunnel : [Cloudflare.md](Cloudflare.md). IP : [Proxmox.md](Proxmox.md).
 
@@ -8,76 +10,65 @@
 
 # Objectif
 
-Déployer Vaultwarden sur K3s avec : un seul Pod, SQLite, un PVC, Traefik, le tunnel Cloudflare `homelab`.
+Un Pod Vaultwarden, SQLite, un PVC, Traefik, tunnel Cloudflare `homelab`. Namespace dédié. GitOps (Argo CD). `ADMIN_TOKEN` via Sealed Secrets, jamais en clair dans Git.
 
-Cloudflare Access reste sur **Proxmox**. Il n'est **pas** devant Vaultwarden (l'application a déjà son authentification).
+Cloudflare Access reste sur **Proxmox**, pas devant Vaultwarden.
 
-`ADMIN_TOKEN` est protégé dans Git par **SOPS + age**. La valeur réelle n'est ni dans cette doc, ni dans une conversation.
-
-URL publique : `https://vaultwarden.labo.example`. Aucun port entrant sur la box.
+URL : `https://vaultwarden.labo.example`. Aucun port entrant sur la box.
 
 ---
 
 # Architecture
 
 ```
-INTERNET
+Internet
     │ HTTPS
     ▼
 Cloudflare
     │
     ▼
 Tunnel "homelab"
-    │
-    ▼
-CT cloudflared
     │ HTTP
     ▼
 <ip-k3s-01>:80
     │
     ▼
-Traefik (K3s)
+Traefik
     │
     ▼
-Ingress vaultwarden-ingress
+Ingress  vaultwarden.labo.example
     │
     ▼
-Service vaultwarden-service
+Service  vaultwarden-service:80
     │
     ▼
-Pod Vaultwarden
+Deployment vaultwarden
     │
     ▼
-/data → PVC vaultwarden-pvc
+Pod
+    │
+    ▼
+PVC vaultwarden-pvc → PV local-path (nœud k3s-01)
 ```
 
-Deux routages : Cloudflare (Internet → Traefik), puis Kubernetes (Host → Service → Pod).
-
-## HTTPS
-
-Cloudflare termine le HTTPS public (`https://vaultwarden.labo.example`). Le tunnel envoie ensuite **HTTP** vers `http://<ip-k3s-01>:80`. Traefik lit le `Host` pour choisir l'Ingress. Aucun certificat TLS dans l'Ingress.
-
-Différent de Proxmox : origin déjà en HTTPS (`https://<ip-pve>:8006`).
+Le HTTPS public est terminé par Cloudflare. Le tunnel envoie **HTTP** à Traefik. Vaultwarden authentifie lui-même ses clients.
 
 ---
 
-# Cloudflare Tunnel
+# Namespace
 
-Le tunnel `homelab` (CT `cloudflared`) est réutilisé. Pas un tunnel ni un CT par application.
+Namespace dédié : `vaultwarden`. Les ressources ne se mélangent pas avec le reste du cluster.
 
-| Champ | Valeur |
-|-------|--------|
-| Hostname | `vaultwarden.labo.example` |
-| Service | `http://<ip-k3s-01>:80` |
-| Path | aucun (tout le hostname) |
+| Ressource | Nom |
+|-----------|-----|
+| Deployment | `vaultwarden` |
+| Service | `vaultwarden-service` |
+| ConfigMap | `vaultwarden-config` |
+| PVC | `vaultwarden-pvc` |
+| SealedSecret → Secret | `vaultwarden-secret` |
+| Ingress | `vaultwarden-ingress` |
 
-Le tunnel envoie vers **Traefik**, pas vers le Pod. Traefik est le point d'entrée HTTP de K3s : il applique les Ingress selon le hostname.
-
-```
-Cloudflare → Traefik → Ingress → Service → Pod
-```
-
-Détail du tunnel : [Cloudflare.md](Cloudflare.md).
+L'Application Argo CD vit dans `argocd`.
 
 ---
 
@@ -88,235 +79,162 @@ kubernetes/vaultwarden/
 ├── configmap.yaml
 ├── deployment.yaml
 ├── pvc.yaml
-├── secret.yaml          # chiffré SOPS dans Git
+├── sealed-secret.yaml
 ├── service.yaml
 └── ingress.yaml
+
+kubernetes/argocd/
+├── vaultwarden-application.yaml
+└── repo-homelab-sealed-secret.yaml
 ```
 
 ---
 
 # ConfigMap
 
-Fichier : `kubernetes/vaultwarden/configmap.yaml`. Paramètres **non sensibles**.
+Fichier : `kubernetes/vaultwarden/configmap.yaml`.
 
 | Clé | Valeur | Rôle |
 |-----|--------|------|
 | `DOMAIN` | `https://vaultwarden.labo.example` | URL publique |
-| `DATABASE_URL` | `sqlite://data/db.sqlite3` | SQLite sous `/data` (volume du PVC) |
+| `DATABASE_URL` | `sqlite://data/db.sqlite3` | SQLite sous `/data` |
 | `SIGNUPS_ALLOWED` | `"false"` | Inscriptions publiques désactivées |
 
 ---
 
 # Deployment
 
-Fichier : `kubernetes/vaultwarden/deployment.yaml`. État désiré : image `vaultwarden/server:1.37.3`, `replicas: 1`, port 80, `/data` depuis `vaultwarden-pvc`.
-
-## ReplicaSet
+Fichier : `kubernetes/vaultwarden/deployment.yaml`. Image `vaultwarden/server:1.37.3`, `replicas: 1`, port 80, `/data` depuis `vaultwarden-pvc`.
 
 ```
-Deployment → ReplicaSet → Pod → conteneur Vaultwarden
+Deployment → ReplicaSet → Pod
 ```
 
-Le Deployment ne crée pas les Pods. Le ReplicaSet maintient le nombre. Réconciliation : comparer état désiré et état réel, corriger. Avec `replicas: 1`, un Pod correspondant au sélecteur est toujours maintenu.
+`containerPort: 80` décrit le port ; l'exposition passe par Service puis Ingress.
 
-## Conteneur
-
-`containerPort: 80` **décrit** le port. Il n'expose pas vers l'extérieur. L'exposition : Service, puis Ingress.
-
-## Variables d'environnement
-
-Depuis le ConfigMap : `DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`.
-
-`ADMIN_TOKEN` vient du Secret, pas du Deployment :
-
-```yaml
-valueFrom:
-  secretKeyRef:
-    name: vaultwarden-secret
-    key: ADMIN_TOKEN
-```
-
-Une variable d'environnement n'est **pas** relue si le Secret change. Il faut recréer le Pod :
-
-```
-kubectl rollout restart deployment vaultwarden
-kubectl rollout status deployment vaultwarden
-```
+Depuis le ConfigMap : `DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`. `ADMIN_TOKEN` depuis `Secret/vaultwarden-secret`. Si le Secret change, `kubectl rollout restart deployment vaultwarden -n vaultwarden`.
 
 ---
 
-# Secret Kubernetes vs Git
+# Sealed Secrets
 
-Fichier versionné : `kubernetes/vaultwarden/secret.yaml`. Dans Git : uniquement des `ENC[...]` (SOPS + age). Jamais le vrai token en clair.
-
-Structure logique (déchiffrée, **jamais** commitée telle quelle) :
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: vaultwarden-secret
-stringData:
-  ADMIN_TOKEN: <secret>
-```
-
-Le token a été généré aléatoirement. Il n'apparaît ni ici, ni dans un manifeste non chiffré.
-
-## Deux niveaux
-
-| Où | Protection |
-|----|------------|
-| Git / GitHub | Fichier chiffré SOPS. Pas le token en clair. |
-| Cluster | Après `sops --decrypt \| kubectl apply`, Kubernetes a un `Secret/vaultwarden-secret` **en clair** dans son datastore. |
-
-SOPS protège le secret **au repos dans Git**. Il ne remplace pas la sécurité du cluster. `kubectl get secret … -o yaml` révèle les données : ne pas le faire sans raison.
-
----
-
-# SOPS + age
-
-SOPS chiffre des fichiers tout en les laissant versionnables. age fournit le chiffrement.
+Pas de Secret en clair dans Git. Fichier : `kubernetes/vaultwarden/sealed-secret.yaml`.
 
 ```
-secret.yaml en clair → SOPS + age → secret.yaml chiffré → Git
+SealedSecret (Git)
+        │
+        ▼
+Controller Sealed Secrets
+        │
+        ▼
+Secret Kubernetes (cluster)
+        │
+        ▼
+Deployment
 ```
 
-Kubernetes ne lit pas SOPS. Déploiement sans fichier clair permanent :
+Un SealedSecret est chiffré **pour un cluster, un namespace et un nom**. Changer uniquement le `namespace` dans le YAML **ne suffit pas** : il faut **resealer**. C'est ce qui a été fait pour `default` → `vaultwarden`.
 
-```
-sops --decrypt kubernetes/vaultwarden/secret.yaml | kubectl apply -f -
-```
+Le Secret dans etcd reste en clair côté API. Ne pas `kubectl get secret … -o yaml` sans besoin. La valeur réelle d'`ADMIN_TOKEN` n'est ni dans cette doc ni dans une conversation.
 
-(`-` = stdin.)
-
-## Clés
-
-| Élément | Où | Git ? |
-|---------|-----|-------|
-| Clé publique | `.sops.yaml` | oui |
-| Clé privée | hors dépôt | **jamais** |
-| `secret.yaml` | chiffré | oui |
-
-Clé publique : `age1utrl26vp9t06k453kgf2vkplrpz9jzr7rww7n6la705ucgyvtv4qj9f9va`
-
-La même paire sert le PC Windows et `k3s-01` :
-
-| Machine | Clé privée |
-|---------|------------|
-| Windows | `C:\Users\utilisateur\.config\sops\age\keys.txt` |
-| k3s-01 | `/home/utilisateur/.config/sops/age/keys.txt` |
-
-Ne pas mettre `keys.txt` dans `Homelab/`, même avec `.gitignore`. `.gitignore` n'est pas une protection cryptographique.
-
-Sauvegarder la clé privée **hors dépôt**, dans un endroit sûr. Perdue sans autre destinataire SOPS → fichiers irrécupérables.
-
-## `.sops.yaml`
-
-```yaml
-creation_rules:
-  - path_regex: 'kubernetes[\\/]+vaultwarden[\\/]+secret\.yaml$'
-    age: age1utrl26vp9t06k453kgf2vkplrpz9jzr7rww7n6la705ucgyvtv4qj9f9va
-```
-
-Le regex accepte `/` et `\` (Windows et Linux). Le fichier est versionné.
-
-## Outils
-
-| Machine | SOPS | age | Variable |
-|---------|------|-----|----------|
-| PC | 3.13.3 | 1.3.1 | `$env:SOPS_AGE_KEY_FILE = "$HOME\.config\sops\age\keys.txt"` |
-| k3s-01 | 3.13.3 | 1.2.1 | `export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"` |
-
-Édition sur le PC : `$env:SOPS_EDITOR = "notepad.exe"` (session PowerShell).
-
-## Modifier le secret
-
-Ne pas déchiffrer « pour de bon » puis recommiter. Éditer via SOPS :
-
-```
-sops ./kubernetes/vaultwarden/secret.yaml
-```
-
-SOPS déchiffre temporairement, ouvre l'éditeur, rechiffre à la fermeture. Vérifier avec `git diff` que le fichier reste en `ENC[...]`.
-
----
-
-# Workflow
-
-```
-PC → sops (édition) → commit chiffré → GitHub → git pull sur k3s-01
-     → sops --decrypt | kubectl apply -f -
-     → kubectl rollout restart deployment vaultwarden   # si ADMIN_TOKEN a changé
-     → kubectl rollout status deployment vaultwarden
-     → kubectl get pods -l app=vaultwarden
-```
-
-Exemple de commit (sans afficher le secret) : `git add .sops.yaml kubernetes/vaultwarden/secret.yaml`.
+**Avant** : SOPS + age (`secret.yaml`). Remplacé par Sealed Secrets pour que le cluster déchiffre tout seul (GitOps). Journal : sprint 17.
 
 ---
 
 # Stockage
 
-SQLite dans `/data/db.sqlite3`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass `local-path` (`rancher.io/local-path`, `WaitForFirstConsumer`).
+SQLite dans `/data`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass `local-path` (`WaitForFirstConsumer`).
 
-```
-PVC → StorageClass → PV → disque du nœud → montage /data
-```
+PV actuel (constaté) : `pvc-<uuid-pv-local-path>`, lié au nœud **k3s-01**.
 
-Un seul PVC : SQLite et fichiers de `/data` ont le même cycle de vie. Recréer le **Pod** conserve les données. Supprimer le **PVC** risque de tout perdre.
+`local-path` n'est **pas** un stockage distribué. Si le nœud disparaît, le volume n'est pas disponible ailleurs. Les sauvegardes restent essentielles.
+
+Un PVC **ne se déplace pas** d'un namespace à un autre : nouveau PVC + restauration.
 
 ---
 
 # Service et Ingress
 
-Service `vaultwarden-service` : port 80, `targetPort: http`, selector `app: vaultwarden`. ClusterIP, pas exposé sur Internet. L'IP du Pod change ; le Service et les EndpointSlices restent le point d'entrée interne.
+Service ClusterIP `vaultwarden-service:80`, `targetPort: http`, selector `app: vaultwarden`.
 
-Ingress `vaultwarden-ingress` : `ingressClassName: traefik`, host `vaultwarden.labo.example`, path `/` `Prefix` → `vaultwarden-service:80`.
+Ingress Traefik : host `vaultwarden.labo.example`, path `/` `Prefix`.
 
-Traefik **applique** la règle. L'Ingress **décrit** la règle. Le Service **stabilise** l'adresse. L'EndpointSlice **liste** les Pods. Le Pod **exécute** Vaultwarden.
-
-Cours : [Kubernetes.md](Kubernetes.md#ingress).
+Deux Ingress avec le **même hostname** (même dans des namespaces différents) cassent le routage Traefik. Toujours `kubectl get ingress -A` avant une bascule.
 
 ---
 
-# Cloudflare Access
+# Cloudflare
 
-Proxmox : Access + MFA, puis auth Proxmox. [Cloudflare.md](Cloudflare.md).
+Tunnel `homelab` : `vaultwarden.labo.example` → `http://<ip-k3s-01>:80` (Traefik, pas le Pod). [Cloudflare.md](Cloudflare.md).
 
-Vaultwarden : **pas** d'Access. Une couche Cloudflare devant une appli qui authentifie déjà ses clients serait redondante et gênante pour les clients Bitwarden.
+Access : Proxmox seulement.
+
+---
+
+# Argo CD
+
+Application : `kubernetes/argocd/vaultwarden-application.yaml` (namespace `argocd`).
+
+| Champ | Valeur |
+|-------|--------|
+| repoURL | `git@github.com:TLGitDev/homelab.git` |
+| path | `kubernetes/vaultwarden` |
+| targetRevision | `HEAD` |
+| destination | namespace `vaultwarden` |
+
+État constaté : **Synced** / **Healthy**, révision `8322150`. Ressources gérées : ConfigMap, PVC, Service, Deployment, SealedSecret, Ingress.
+
+## Dépôt privé
+
+Argo CD utilise une **Deploy Key** SSH (lecture seule), distincte de la clé d'admin du serveur. SealedSecret : `kubernetes/argocd/repo-homelab-sealed-secret.yaml` → Secret `argocd-repo-homelab` dans `argocd`, label `argocd.argoproj.io/secret-type: repository`. Aucune clé privée en clair dans Git.
+
+## GitOps
 
 ```
-Proxmox :      Internet → Access → Tunnel → Proxmox
-Vaultwarden :  Internet → HTTPS Cloudflare → Tunnel → Traefik → auth Vaultwarden
+Modification locale → commit → GitHub → Argo CD → Kubernetes
+```
+
+Git est la source de vérité. Le manuel dans le cluster reste exceptionnel : bootstrap, incident, migration, diagnostic.
+
+```
+Bootstrap / migration exceptionnelle
+        ↓
+état fonctionnel
+        ↓
+état versionné
+        ↓
+Argo CD (GitOps normal)
 ```
 
 ---
 
-# Vérifications
+# Migration `default` → `vaultwarden`
 
-| Contrôle | Résultat |
-|----------|----------|
-| Pod | Running, 1/1 |
-| PVC `vaultwarden-pvc` | Bound, 5 Gi |
-| Service | 80/TCP, endpoint = Pod |
-| `curl` → `http://vaultwarden-service` | HTML Vaultwarden |
-| `Host: vaultwarden.labo.example` → `<ip-k3s-01>:80` | HTML Vaultwarden |
-| `https://vaultwarden.labo.example` | HTTPS valide |
-| Recréation du Pod (PVC conservé) | données conservées |
+## Motif
 
----
+Séparer les ressources. Nouveau PVC (un PVC ne change pas de namespace). Reseal du SealedSecret. Introduction d'Argo CD sur une appli déjà en place.
 
-# Règles
+## Données
 
-1. Jamais de clé privée age dans Git (ni dans `Homelab/`, même ignorée).
-2. Jamais `ADMIN_TOKEN` en clair dans Git, la doc ou une conversation.
-3. Ne pas publier `keys.txt`.
-4. Ne pas coller un Secret déchiffré.
-5. Éviter `kubectl get secret … -o yaml` sans besoin.
-6. `secret.yaml` reste chiffré dans Git.
-7. Sauvegarder la clé privée, de façon protégée.
-8. Ne pas supprimer le PVC à la légère.
-9. Après changement de `ADMIN_TOKEN` : `rollout restart`.
+Ancien PVC `default/vaultwarden-pvc`, PV `pvc-<uuid-pv-default>`. Deployment arrêté pour figer les données.
+
+Sauvegarde : `/home/utilisateur/backups/vaultwarden/` (`db.sqlite3`, WAL/SHM, `rsa_key.pem`, `icon_cache/`, `tmp/`). Hashes vérifiés (`db.sqlite3`, `rsa_key.pem`).
+
+Nouveau PVC 5 Gi / RWO / `local-path`. `WaitForFirstConsumer` : un Pod temporaire a monté le volume pour le provisionner, puis copie + re-vérification des hashes.
+
+Nouveau SealedSecret appliqué. Pod Running. Coffre et données vérifiés dans l'UI.
+
+## Traefik 503
+
+Pod et Service : 200. Traefik : **503**. Cause : l'Ingress `default/vaultwarden-ingress` existait encore pour le même host, vers un Service **sans endpoint**.
+
+Correction : `kubectl delete ingress vaultwarden-ingress -n default` → Traefik 200.
+
+Leçon : avant de basculer, lister tous les Ingress du hostname.
+
+## Nettoyage
+
+Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : suppression dans `default` du Deployment, Service, Secret, SealedSecret, PVC. L'ancien PV a suivi la politique de rétention. Il ne reste que le PV du namespace `vaultwarden`.
 
 ---
 
@@ -324,10 +242,26 @@ Vaultwarden :  Internet → HTTPS Cloudflare → Tunnel → Traefik → auth Vau
 
 | Élément | État |
 |---------|------|
-| K3s / Traefik / Ingress | OK |
-| Deployment / Pod / Service | OK |
-| PVC / SQLite / persistance | OK |
-| Tunnel / HTTPS public | OK |
-| SOPS + age (`ADMIN_TOKEN` dans Git) | OK |
-| Cloudflare Access devant Vaultwarden | volontairement absent |
-| Sauvegarde du PVC | ⬜ [Sauvegardes.md](Sauvegardes.md) |
+| Namespace `vaultwarden` | OK |
+| Deployment 1/1 Running | OK |
+| Service ClusterIP / Ingress Traefik | OK |
+| PVC Bound / PV local-path | OK |
+| SealedSecret Synced | OK |
+| Argo CD Synced / Healthy | OK |
+| `https://vaultwarden.labo.example` | OK, données post-migration |
+| Access devant Vaultwarden | volontairement absent |
+| Sauvegarde **récurrente** du PVC | ⬜ [Sauvegardes.md](Sauvegardes.md) (un backup de migration existe sur k3s-01) |
+
+---
+
+# À retenir
+
+**Kubernetes** — Un namespace isole les ressources namespacées. Un PVC ne migre pas : nouveau volume + restore. `local-path` = disque du nœud. `WaitForFirstConsumer` peut attendre un Pod avant de créer le PV.
+
+**Réseau** — Service = identité stable ; EndpointSlice = Pods actuels. Traefik lit les Ingress. Deux Ingress / même host = piège.
+
+**Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change.
+
+**GitOps** — Git = état désiré. Synced = cluster = Git. Healthy = appli saine. Manuel = exception.
+
+**Sauvegardes** — Stockage local K3s, SQLite : backup essentiel. Toute migration de données commence par un backup **vérifié**.

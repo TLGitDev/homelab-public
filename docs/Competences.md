@@ -123,7 +123,10 @@
 | Ingress | 🟡 |
 | PVC / PV / StorageClass | 🟡 |
 | ConfigMap / Secret | 🟡 |
+| Sealed Secrets | 🟡 |
 | SOPS / age | 🟡 |
+| Namespace | 🟡 |
+| Argo CD / GitOps | 🟡 |
 | data / stringData | 🟡 |
 | Volumes persistants | 🟡 |
 | Cycle de vie des données (PVC) | 🟡 |
