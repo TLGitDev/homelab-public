@@ -69,7 +69,7 @@ Le dépôt GitHub est privé. Argo CD n'utilise **pas** la clé SSH d'administra
 - Secret Kubernetes généré par un SealedSecret ;
 - label `argocd.argoproj.io/secret-type: repository`.
 
-Fichier : `kubernetes/argocd/repo-homelab-sealed-secret.yaml` → Secret `argocd-repo-homelab` dans le namespace `argocd`.
+Fichier : `kubernetes/argocd/bootstrap/repo-homelab-sealed-secret.yaml` → Secret `argocd-repo-homelab` dans le namespace `argocd`.
 
 Aucune clé privée en clair dans Git.
 
@@ -92,16 +92,59 @@ Patron :
 | `targetRevision` | Branche / tag / SHA (`HEAD` = `master`) |
 | `destination.namespace` | Namespace cible |
 
-Nouvelle appli : un dossier `kubernetes/<app>/` + une `Application` dans `kubernetes/argocd/`, sans recopier ce fichier.
+Nouvelle appli : dossier `kubernetes/<app>/` + un fichier dans `kubernetes/argocd/applications/`. Le root la découvre ; le Sync du workload reste manuel.
 
 Première appli : [Vaultwarden.md](Vaultwarden.md).
 
 ---
 
-# Manifestes Argo CD
+# Organisation des manifests
+
+Trois catégories, volontairement séparées.
 
 ```
 kubernetes/argocd/
-├── vaultwarden-application.yaml
-└── repo-homelab-sealed-secret.yaml
+├── applications/
+│   └── vaultwarden.yaml
+├── bootstrap/
+│   └── repo-homelab-sealed-secret.yaml
+└── root-application.yaml
 ```
+
+## `applications/`
+
+Les `Application` des **workloads**. Exemple : `kubernetes/argocd/applications/vaultwarden.yaml`.
+
+Chaque enfant définit le dépôt, le chemin du workload, le namespace de destination. **Pas** de `syncPolicy.automated` : synchronisation manuelle.
+
+## `bootstrap/`
+
+Ressources pour faire tourner Argo CD au départ. Exemple : `kubernetes/argocd/bootstrap/repo-homelab-sealed-secret.yaml`.
+
+**Pas** surveillé par le Root Application.
+
+## `root-application.yaml`
+
+Application `root` : path `kubernetes/argocd/applications/`, auto-sync. Elle crée / réconcilie les Applications enfants. Elle **ne** déploie **pas** les workloads.
+
+---
+
+# Workflow
+
+**Ajouter une application**
+
+1. Manifestes du workload dans `kubernetes/<application>/`.
+2. `Application` dans `kubernetes/argocd/applications/`.
+3. Commit et push.
+4. Le Root Application découvre la nouvelle Application.
+5. Vérifier l'état dans Argo CD.
+6. `Sync` **manuel** sur l'enfant.
+
+**Modifier un workload existant**
+
+1. Modifier `kubernetes/<application>/`.
+2. Commit et push.
+3. Argo CD passe l'Application en `OutOfSync`.
+4. `Sync` manuel.
+
+Le root reste auto-synchronisé. Les workloads restent sous contrôle manuel.

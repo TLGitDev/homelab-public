@@ -33,6 +33,43 @@ Détail : [ArgoCD.md](../ArgoCD.md). Première Application : [Vaultwarden.md](..
 - Réconciliation, pas seulement un `apply` ponctuel.
 - Visibilité : Application, Synced / OutOfSync, Healthy / Degraded, ressources associées. Utile pour apprendre et pour une migration (ex. Vaultwarden Synced / Healthy).
 
+### App of Apps
+
+Le pattern **App of Apps** sépare la **découverte** des applications de leur **déploiement**.
+
+```
+kubernetes/argocd/
+├── applications/
+│   └── vaultwarden.yaml
+├── bootstrap/
+│   └── repo-homelab-sealed-secret.yaml
+└── root-application.yaml
+```
+
+`root` surveille `kubernetes/argocd/applications/` et crée / réconcilie les `Application` qui s'y trouvent. Auto-sync sur le root seulement :
+
+```yaml
+syncPolicy:
+  automated: {}
+```
+
+Les Applications enfants n'ont **pas** de `syncPolicy.automated`. Une nouvelle entrée dans `applications/` apparaît dans Argo CD toute seule ; le workload attend un **Sync** manuel.
+
+```
+Git
+ │
+ ▼
+Root Application (auto-sync)
+ │
+ ├── Application/vaultwarden   → sync manuel
+ ├── Application/nextcloud     → sync manuel   (exemple)
+ └── Application/homepage      → sync manuel   (exemple)
+```
+
+`bootstrap/` est **exclu** du root : accès Git (SealedSecret), pas des workloads.
+
+Détail : [ArgoCD.md](../ArgoCD.md).
+
 ## Alternatives étudiées
 
 | Option | Commentaire |
@@ -50,3 +87,4 @@ Argo CD : Git ⟷ cluster, en continu
 - Les changements normaux passent par Git. `kubectl` manuel = bootstrap, incident, migration, diagnostic.
 - Le dépôt privé est lu par une Deploy Key (lecture seule), distincte de la clé d'admin du serveur.
 - `targetRevision: HEAD` suit `master`.
+- Root : auto-sync. Workloads : sync manuel.

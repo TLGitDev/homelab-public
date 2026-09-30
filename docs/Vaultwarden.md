@@ -68,7 +68,7 @@ Namespace dédié : `vaultwarden`. Les ressources ne se mélangent pas avec le r
 | SealedSecret → Secret | `vaultwarden-secret` |
 | Ingress | `vaultwarden-ingress` |
 
-L'Application Argo CD (`kubernetes/argocd/vaultwarden-application.yaml`) vit dans `argocd` et pointe vers `kubernetes/vaultwarden` → namespace `vaultwarden`. Détail : [ArgoCD.md](ArgoCD.md).
+L'Application Argo CD (`kubernetes/argocd/applications/vaultwarden.yaml`) vit dans `argocd` et pointe vers `kubernetes/vaultwarden` → namespace `vaultwarden`. Découverte par le root (App of Apps), Sync manuel. Détail : [ArgoCD.md](ArgoCD.md).
 
 ---
 
