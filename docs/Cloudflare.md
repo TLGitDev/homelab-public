@@ -48,10 +48,14 @@ https://<ip-pve>:8006
 
 vaultwarden.labo.example
         ↓
-http://<ip-k3s-01>:80   (Traefik sur K3s)
+http://<ip-k3s-01>:80   (Traefik, **sans** Access)
+
+argocd.labo.example
+        ↓
+http://<ip-k3s-01>:80   (Traefik, **avec** Access)
 ```
 
-Proxmox : origin **HTTPS**. Vaultwarden : origin **HTTP** ; le HTTPS public est celui de Cloudflare. Détail : [Vaultwarden.md](Vaultwarden.md).
+Proxmox : origin **HTTPS**. Vaultwarden et Argo CD : origin **HTTP** ; le HTTPS public est celui de Cloudflare. Traefik distingue les services par hostname. Détail : [Vaultwarden.md](Vaultwarden.md), [ArgoCD.md](ArgoCD.md).
 
 Avantages : aucun port ouvert sur Internet, chiffrement, intégration Access.
 
@@ -100,6 +104,8 @@ Authentification : One-Time PIN (par défaut).
 MFA : application TOTP (KeePassXC).
 
 **Vaultwarden** : pas d'Access. L'application authentifie déjà ses clients. Détail : [Vaultwarden.md](Vaultwarden.md#cloudflare-access).
+
+**Argo CD** (`argocd.labo.example`) : Access actif (même logique que Proxmox : outil d'admin). Puis login Argo CD. [ArgoCD.md](ArgoCD.md), [ADR-007](ADR/ADR-007-Argo-CD-exposition.md).
 
 ## Deux authentifications indépendantes (Proxmox)
 

@@ -43,10 +43,14 @@ kubernetes/argocd/
 │   └── vaultwarden.yaml
 ├── bootstrap/
 │   └── repo-homelab-sealed-secret.yaml
+├── config/
+│   └── argocd-cmd-params.yaml
+├── ingress/
+│   └── argocd-ingressroute.yaml
 └── root-application.yaml
 ```
 
-`root` surveille `kubernetes/argocd/applications/` et crée / réconcilie les `Application` qui s'y trouvent. Auto-sync sur le root seulement :
+`root` surveille **uniquement** `kubernetes/argocd/applications/`. `bootstrap/`, `config/` et `ingress/` en sont exclus.
 
 ```yaml
 syncPolicy:
@@ -66,9 +70,7 @@ Root Application (auto-sync)
  └── Application/homepage      → sync manuel   (exemple)
 ```
 
-`bootstrap/` est **exclu** du root : accès Git (SealedSecret), pas des workloads.
-
-Détail : [ArgoCD.md](../ArgoCD.md).
+`bootstrap/` (Deploy Key), `config/` et `ingress/` restent hors du root. Exposition : [ADR-007](ADR-007-Argo-CD-exposition.md).
 
 ## Alternatives étudiées
 
@@ -88,3 +90,4 @@ Argo CD : Git ⟷ cluster, en continu
 - Le dépôt privé est lu par une Deploy Key (lecture seule), distincte de la clé d'admin du serveur.
 - `targetRevision: HEAD` suit `master`.
 - Root : auto-sync. Workloads : sync manuel.
+- Configuration et Ingress d'Argo CD : Git + apply manuel ([ADR-007](ADR-007-Argo-CD-exposition.md)).

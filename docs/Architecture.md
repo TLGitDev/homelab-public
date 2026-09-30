@@ -177,7 +177,7 @@ Aucune couche ne protège seule l'infrastructure. Le détail des couches d'accè
 
 ## Refus par défaut
 
-Pour les services derrière Access (Proxmox), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden n'est pas derrière Access. Politique : [Cloudflare.md](Cloudflare.md).
+Pour les services derrière Access (Proxmox, Argo CD), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden n'est pas derrière Access. Politique : [Cloudflare.md](Cloudflare.md).
 
 ---
 
@@ -251,7 +251,7 @@ Traefik (K3s, <ip-k3s-01>:80)
 Applications (Ingress → Service → Pod)
 ```
 
-Premier service : [Vaultwarden.md](Vaultwarden.md). Proxmox reste une route directe du tunnel (HTTPS vers le nœud), pas via Traefik.
+Premier service : [Vaultwarden.md](Vaultwarden.md). UI GitOps : [ArgoCD.md](ArgoCD.md) (`argocd.labo.example`, Access). Proxmox reste une route directe du tunnel (HTTPS vers le nœud), pas via Traefik.
 
 ---
 
@@ -273,6 +273,7 @@ Cours : [Kubernetes.md](Kubernetes.md).
 - [ADR-004](ADR/ADR-004-K3s.md) — K3s (mono-nœud)
 - [ADR-005](ADR/ADR-005-Sealed-Secrets.md) — Sealed Secrets
 - [ADR-006](ADR/ADR-006-Argo-CD.md) — Argo CD
+- [ADR-007](ADR/ADR-007-Argo-CD-exposition.md) — Exposition Argo CD
 
 ---
 
