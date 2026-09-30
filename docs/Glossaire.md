@@ -126,7 +126,7 @@ Frontière logique pour les ressources namespacées. Un PVC ne change pas de nam
 
 ### Argo CD
 
-GitOps : compare Git (état désiré) et le cluster. Synced = conforme à Git ; Healthy = appli saine. As-built : [Vaultwarden.md](Vaultwarden.md#argo-cd).
+GitOps : compare Git (état désiré) et le cluster. Synced = conforme à Git ; Healthy = appli saine. As-built : [ArgoCD.md](ArgoCD.md).
 
 ### data / stringData
 

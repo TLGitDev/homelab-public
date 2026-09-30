@@ -1,16 +1,16 @@
 # Vaultwarden
 
-> Service applicatif sur K3s, namespace `vaultwarden`, géré par Argo CD.
+> Service applicatif sur K3s, namespace `vaultwarden`, géré par Argo CD ([ArgoCD.md](ArgoCD.md)).
 >
-> Manifestes : [kubernetes/vaultwarden/](../kubernetes/vaultwarden/). Application : [kubernetes/argocd/vaultwarden-application.yaml](../kubernetes/argocd/vaultwarden-application.yaml).
+> Manifestes : [kubernetes/vaultwarden/](../kubernetes/vaultwarden/).
 >
-> Cours Kubernetes : [Kubernetes.md](Kubernetes.md). Tunnel : [Cloudflare.md](Cloudflare.md). IP : [Proxmox.md](Proxmox.md).
+> Cours Kubernetes : [Kubernetes.md](Kubernetes.md). Tunnel : [Cloudflare.md](Cloudflare.md). GitOps : [ArgoCD.md](ArgoCD.md). IP : [Proxmox.md](Proxmox.md).
 
 ---
 
 # Objectif
 
-Un Pod Vaultwarden, SQLite, un PVC, Traefik, tunnel Cloudflare `homelab`. Namespace dédié. GitOps (Argo CD). `ADMIN_TOKEN` via Sealed Secrets, jamais en clair dans Git.
+Un Pod Vaultwarden, SQLite, un PVC, Traefik, tunnel Cloudflare `homelab`. Namespace dédié. `ADMIN_TOKEN` via Sealed Secrets, jamais en clair dans Git. Déploiement : [ArgoCD.md](ArgoCD.md).
 
 Cloudflare Access reste sur **Proxmox**, pas devant Vaultwarden.
 
@@ -68,7 +68,7 @@ Namespace dédié : `vaultwarden`. Les ressources ne se mélangent pas avec le r
 | SealedSecret → Secret | `vaultwarden-secret` |
 | Ingress | `vaultwarden-ingress` |
 
-L'Application Argo CD vit dans `argocd`.
+L'Application Argo CD (`kubernetes/argocd/vaultwarden-application.yaml`) vit dans `argocd` et pointe vers `kubernetes/vaultwarden` → namespace `vaultwarden`. Détail : [ArgoCD.md](ArgoCD.md).
 
 ---
 
@@ -82,11 +82,9 @@ kubernetes/vaultwarden/
 ├── sealed-secret.yaml
 ├── service.yaml
 └── ingress.yaml
-
-kubernetes/argocd/
-├── vaultwarden-application.yaml
-└── repo-homelab-sealed-secret.yaml
 ```
+
+GitOps (Application, Deploy Key) : [ArgoCD.md](ArgoCD.md).
 
 ---
 
@@ -137,7 +135,7 @@ Un SealedSecret est chiffré **pour un cluster, un namespace et un nom**. Change
 
 Le Secret dans etcd reste en clair côté API. Ne pas `kubectl get secret … -o yaml` sans besoin. La valeur réelle d'`ADMIN_TOKEN` n'est ni dans cette doc ni dans une conversation.
 
-**Avant** : SOPS + age (`secret.yaml`). Remplacé par Sealed Secrets pour que le cluster déchiffre tout seul (GitOps). Journal : sprint 17.
+**Avant** : SOPS + age (`secret.yaml`). Remplacé par Sealed Secrets pour que le cluster déchiffre tout seul. Journal : sprint 17.
 
 ---
 
@@ -146,6 +144,8 @@ Le Secret dans etcd reste en clair côté API. Ne pas `kubectl get secret … -o
 SQLite dans `/data`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass `local-path` (`WaitForFirstConsumer`).
 
 PV actuel (constaté) : `pvc-<uuid-pv-local-path>`, lié au nœud **k3s-01**.
+
+Ces données sont sur le **disque de la VM** (donc `rpool`), **pas** sur le miroir `tank`. Déplacer le volume vers `tank` est prévu **plus tard**. [Stockage.md](Stockage.md#état-actuel).
 
 `local-path` n'est **pas** un stockage distribué. Si le nœud disparaît, le volume n'est pas disponible ailleurs. Les sauvegardes restent essentielles.
 
@@ -173,38 +173,9 @@ Access : Proxmox seulement.
 
 # Argo CD
 
-Application : `kubernetes/argocd/vaultwarden-application.yaml` (namespace `argocd`).
+Géré par l'Application `vaultwarden` : path `kubernetes/vaultwarden`, destination `vaultwarden`, `targetRevision: HEAD`. État constaté : **Synced** / **Healthy** (révision `8322150` au moment de la bascule).
 
-| Champ | Valeur |
-|-------|--------|
-| repoURL | `git@github.com:TLGitDev/homelab.git` |
-| path | `kubernetes/vaultwarden` |
-| targetRevision | `HEAD` |
-| destination | namespace `vaultwarden` |
-
-État constaté : **Synced** / **Healthy**, révision `8322150`. Ressources gérées : ConfigMap, PVC, Service, Deployment, SealedSecret, Ingress.
-
-## Dépôt privé
-
-Argo CD utilise une **Deploy Key** SSH (lecture seule), distincte de la clé d'admin du serveur. SealedSecret : `kubernetes/argocd/repo-homelab-sealed-secret.yaml` → Secret `argocd-repo-homelab` dans `argocd`, label `argocd.argoproj.io/secret-type: repository`. Aucune clé privée en clair dans Git.
-
-## GitOps
-
-```
-Modification locale → commit → GitHub → Argo CD → Kubernetes
-```
-
-Git est la source de vérité. Le manuel dans le cluster reste exceptionnel : bootstrap, incident, migration, diagnostic.
-
-```
-Bootstrap / migration exceptionnelle
-        ↓
-état fonctionnel
-        ↓
-état versionné
-        ↓
-Argo CD (GitOps normal)
-```
+Flux, dépôt SSH, patron pour les prochaines applis : [ArgoCD.md](ArgoCD.md).
 
 ---
 
@@ -262,6 +233,6 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 **Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change.
 
-**GitOps** — Git = état désiré. Synced = cluster = Git. Healthy = appli saine. Manuel = exception.
+**GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
 **Sauvegardes** — Stockage local K3s, SQLite : backup essentiel. Toute migration de données commence par un backup **vérifié**.

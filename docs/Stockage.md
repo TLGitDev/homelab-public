@@ -47,7 +47,7 @@ Dataset
 Fichiers
 ```
 
-Exemple (pool de données) :
+Exemple **cible** (pool de données, **pas encore créé**) :
 
 ```
 sda
@@ -57,7 +57,7 @@ Mirror
     ↓
 tank
     ↓
-tank/vaultwarden   ← dataset créé seulement quand le service existe
+tank/vaultwarden   ← prévu plus tard, n'existe pas
     ↓
 Base SQLite
 ```
@@ -144,7 +144,7 @@ Critères :
 
 En l'absence de besoin particulier, un simple répertoire est privilégié.
 
-`tank` n'a donc pas de datasets de service pour l'instant. Ils apparaîtront avec Vaultwarden, Immich, etc.
+`tank` n'a **aucun** dataset de service. Vaultwarden tourne déjà, mais ses données ne sont **pas** sur le miroir : voir [état actuel](#état-actuel). Le dataset `tank/vaultwarden` (ou équivalent) viendra **dans un second temps**.
 
 ---
 
@@ -199,22 +199,26 @@ Le choix d'architecture se fait donc avant toute mise en production.
 # État actuel
 
 ```
-Infrastructure
+Infrastructure (rpool, NVMe)
 
 rpool
-└── Proxmox
-    └── LXC cloudflare
+├── Proxmox, LXC cloudflare
+└── VM k3s-01
+        └── local-path
+                └── données Vaultwarden   ← aujourd'hui
 
-Données
+Données (tank, miroir IronWolf)
 
 tank
-└── (vide)
+└── (aucun dataset de service)
 ```
 
-| Pool | Support | VDEV | Rôle |
-|------|---------|------|------|
-| `rpool` | NVMe 2 To | single | Système, VM, LXC |
-| `tank` | 2× IronWolf 8 To | mirror | Données (aucun dataset de service pour l'instant) |
+| Pool | Support | VDEV | Rôle aujourd'hui |
+|------|---------|------|------------------|
+| `rpool` | NVMe 2 To | single | Système, VM, LXC — **y compris le PVC Vaultwarden** (`local-path` sur k3s-01) |
+| `tank` | 2× IronWolf 8 To | mirror | Prévu pour les données de service ; **vide de datasets applicatifs** |
+
+`tank` n'héberge pas Vaultwarden. Le miroir ne protège donc pas encore le coffre. Cible : dataset sur `tank`, plus tard. Service : [Vaultwarden.md](Vaultwarden.md).
 
 `rpool` en détail :
 

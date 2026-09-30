@@ -733,3 +733,6 @@ Mettre en place une sauvegarde récurrente du volume Vaultwarden.
 | 2026-09-27 | Sprint 16 : Vaultwarden sur K3s, Traefik, tunnel Cloudflare. |
 | 2026-09-27 | Sprint 17 : SOPS + age, Access limité à Proxmox. |
 | 2026-09-29 | Sprint 18 : namespace vaultwarden, Sealed Secrets, Argo CD. |
+| 2026-09-30 | Extraire GitOps vers [ArgoCD.md](ArgoCD.md). |
+| 2026-09-30 | ADR-004 K3s, ADR-005 Sealed Secrets, ADR-006 Argo CD. |
+| 2026-09-30 | Clarifier : données Vaultwarden en `local-path`, pas sur `tank`. |

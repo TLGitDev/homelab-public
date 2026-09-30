@@ -3,7 +3,7 @@
 > Principes et état de conception.
 >
 > Ce fichier ne décrit pas les manipulations ([Journal.md](Journal.md)), le matériel ([Materiel.md](Materiel.md)), ni les cours détaillés.
-> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md).
+> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). GitOps : [ArgoCD.md](ArgoCD.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md).
 > L'index de toute la documentation est dans [README.md](README.md).
 
 ---
@@ -183,13 +183,15 @@ Pour les services derrière Access (Proxmox), tout accès est refusé tant qu'un
 
 # Stockage
 
-Le SSD NVMe (`rpool`) est réservé à l'infrastructure : Proxmox, VM, LXC, ISO.
+Le SSD NVMe (`rpool`) est réservé à l'infrastructure : Proxmox, VM, LXC, ISO — **y compris le disque de la VM K3s**.
 
-Les deux IronWolf (`tank`, miroir ZFS) sont réservés aux données : services, sauvegardes, documents, médias. Aucun dataset de service n'y est créé tant qu'un besoin réel n'existe pas.
+Les deux IronWolf (`tank`, miroir ZFS) sont réservés aux **données de service** une fois qu'un dataset est créé.
 
-Les deux espaces évoluent indépendamment.
+**Aujourd'hui** : `tank` n'a aucun dataset de service. Vaultwarden est sur un PVC Kubernetes `local-path`, donc sur le disque du nœud `k3s-01` (ce disque est sur `rpool`, pas sur le miroir).
 
-Détail : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md).
+**Plus tard** : déplacer ces données vers `tank`. Ce n'est pas fait.
+
+Détail : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md). As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md).
 
 ---
 
@@ -255,7 +257,7 @@ Premier service : [Vaultwarden.md](Vaultwarden.md). Proxmox reste une route dire
 
 # Plateforme
 
-Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. Argo CD synchronise Git → cluster. Premier service : [Vaultwarden.md](Vaultwarden.md).
+Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. GitOps : [ArgoCD.md](ArgoCD.md). Premier service : [Vaultwarden.md](Vaultwarden.md).
 
 Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
 
@@ -268,6 +270,9 @@ Cours : [Kubernetes.md](Kubernetes.md).
 - [ADR-001](ADR/ADR-001-Proxmox.md) — Proxmox VE
 - [ADR-002](ADR/ADR-002-ZFS.md) — ZFS
 - [ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md) — Cloudflare Tunnel
+- [ADR-004](ADR/ADR-004-K3s.md) — K3s (mono-nœud)
+- [ADR-005](ADR/ADR-005-Sealed-Secrets.md) — Sealed Secrets
+- [ADR-006](ADR/ADR-006-Argo-CD.md) — Argo CD
 
 ---
 
@@ -300,7 +305,8 @@ Cours : [Kubernetes.md](Kubernetes.md).
 
 ## Services
 
-- ✅ Vaultwarden (`https://vaultwarden.labo.example`)
+- ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données encore en `local-path`, pas sur `tank`
+- ⬜ Données Vaultwarden sur `tank`
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich

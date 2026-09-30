@@ -2,7 +2,7 @@
 
 > Cours : pourquoi Kubernetes, modèle déclaratif, ressources.
 >
-> Cluster K3s en service. As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md). Feuille de route : [Architecture.md](Architecture.md).
+> Cluster K3s en service ([ADR-004](ADR/ADR-004-K3s.md)). As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md). Feuille de route : [Architecture.md](Architecture.md).
 > Définitions courtes : [Glossaire.md](Glossaire.md).
 
 ---

@@ -40,7 +40,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
-| Pool de données | `tank` créé (miroir 2×8 To), aucun dataset de service |
+| Pool de données | `tank` (miroir) **sans** dataset de service ; Vaultwarden est en `local-path` sur k3s-01 |
 | Sauvegardes | Stratégie définie, pas encore mise en œuvre |
 
 ---
@@ -59,7 +59,8 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
-| [Vaultwarden.md](Vaultwarden.md) | Service : namespace, Traefik, Sealed Secrets, Argo CD |
+| [ArgoCD.md](ArgoCD.md) | GitOps : Argo CD, dépôt privé, Applications |
+| [Vaultwarden.md](Vaultwarden.md) | Service : namespace, Traefik, Sealed Secrets |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 
@@ -70,6 +71,9 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [ADR-001-Proxmox.md](ADR/ADR-001-Proxmox.md) | Hyperviseur : Proxmox VE |
 | [ADR-002-ZFS.md](ADR/ADR-002-ZFS.md) | Stockage : ZFS |
 | [ADR-003-Cloudflare-Tunnel.md](ADR/ADR-003-Cloudflare-Tunnel.md) | Accès distant : Cloudflare Tunnel |
+| [ADR-004-K3s.md](ADR/ADR-004-K3s.md) | Plateforme : K3s, un nœud |
+| [ADR-005-Sealed-Secrets.md](ADR/ADR-005-Sealed-Secrets.md) | Secrets GitOps : Sealed Secrets |
+| [ADR-006-Argo-CD.md](ADR/ADR-006-Argo-CD.md) | GitOps : Argo CD |
 
 ---
 
