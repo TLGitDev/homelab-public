@@ -199,7 +199,7 @@ Détail : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md).
 
 Le serveur est connecté en Ethernet à la box. Les serveurs ont une IP statique (joignabilité, reverse proxy, tunnels). Les postes utilisateurs peuvent rester en DHCP.
 
-L'administration se fait depuis le LAN. Aucun port Proxmox n'est exposé sur Internet. Accès distant : [Cloudflare.md](Cloudflare.md) et [ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md).
+L'administration se fait depuis le LAN. Aucun port Proxmox n'est exposé sur Internet. L'**API Kubernetes n'est pas publiée** sur Internet. Accès distant : [Cloudflare.md](Cloudflare.md) et [ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md).
 
 ```
 Internet
@@ -294,6 +294,7 @@ Cours : [Kubernetes.md](Kubernetes.md).
 ## Infrastructure
 
 - ⬜ Mise en œuvre des sauvegardes
+- ⬜ Copie hors k3s-01 de la clé Sealed Secrets
 - ⬜ Tests de restauration
 - ⬜ Onduleur
 - ⬜ Supervision

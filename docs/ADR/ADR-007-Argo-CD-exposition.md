@@ -6,40 +6,86 @@ Accepté
 
 ## Contexte
 
-Argo CD tourne dans le namespace `argocd`. Il doit être joignable hors LAN pour l'administration GitOps, sans ouvrir de port sur la box, et sans se confondre avec Vaultwarden sur le même Traefik.
+Argo CD est déployé dans le namespace `argocd` (K3s).
 
-Le même origin Tunnel `http://<ip-k3s-01>:80` sert plusieurs hostnames. Traefik route selon le `Host`.
+L'accès externe :
+
+```
+Internet
+    → Cloudflare Access / TLS
+    → Tunnel homelab
+    → <ip-k3s-01>:80
+    → Traefik
+    → Argo CD
+```
+
+L'**API Kubernetes n'est pas exposée** sur Internet.
+
+Cloudflare termine le HTTPS public. Le Tunnel envoie du HTTP vers Traefik. Argo CD écoute en HTTP interne (`server.insecure: "true"`). Traefik route vers `argocd-server`.
+
+Le même `:80` sert Vaultwarden et Argo CD ; le `Host` les sépare.
 
 ## Décision
 
-Exposer Argo CD sur **`argocd.labo.example`** via Cloudflare Tunnel + **Cloudflare Access**, puis Traefik (`IngressRoute`, entrypoint `web`).
+### Exposition
 
-Ne **pas** faire gérer la configuration d'Argo CD par l'Application `root` pour le moment.
+Hostname **`argocd.labo.example`**, protégé par **Cloudflare Access**.
 
-Les fichiers `kubernetes/argocd/config/` et `kubernetes/argocd/ingress/` restent **versionnés dans Git** et **appliqués à la main** (`kubectl apply`).
+IngressRoute Traefik, entrypoint `web` :
 
-`root` continue de ne gérer que `kubernetes/argocd/applications/`.
+- HTTP classique → `argocd-server:80` ;
+- gRPC (CLI / API) → `argocd-server:80` en `h2c`.
 
-Détail : [ArgoCD.md](../ArgoCD.md). Tunnel : [Cloudflare.md](../Cloudflare.md). GitOps : [ADR-006](ADR-006-Argo-CD.md).
+### Authentification
+
+1. Cloudflare Access : qui atteint le hostname depuis Internet.
+2. Argo CD : comptes et RBAC.
+
+Access **ne remplace pas** l'auth Argo CD.
+
+### Gestion de la configuration
+
+Versionné dans Git, **pas** géré par `root` (évite une boucle de bootstrap) :
+
+| Chemin | Rôle | Gestion |
+|--------|------|---------|
+| `kubernetes/argocd/applications/` | Applications workloads | `root` (auto-sync) |
+| `kubernetes/argocd/bootstrap/` | Credentials dépôt Git | manuelle |
+| `kubernetes/argocd/config/` | `cmd-params` | manuelle |
+| `kubernetes/argocd/ingress/` | IngressRoute | manuelle |
+
+Actuellement : `root` → `vaultwarden`. Enfants : Sync **manuel**.
+
+### Clé Sealed Secrets
+
+Sauvegardée **hors Git**, sur le serveur : `~/backups/sealed-secrets/` (fichier de clé, `tls.crt` / `tls.key`, permissions `600`). Une copie **hors** k3s-01 reste à faire.
+
+Détail opérationnel : [ArgoCD.md](../ArgoCD.md). Tunnel : [Cloudflare.md](../Cloudflare.md). GitOps : [ADR-006](ADR-006-Argo-CD.md). Secrets : [ADR-005](ADR-005-Sealed-Secrets.md).
 
 ## Raisons
 
-- Évite une boucle de bootstrap : Argo CD n'a pas à être déjà opérationnel pour appliquer sa propre exposition / ses `cmd-params`.
-- Git reste la source de vérité (reconstruction reproductible).
-- Access devant l'UI : qui peut arriver jusqu'à Argo CD. Argo CD garde ensuite ses comptes et permissions.
-- HTTP interne (`server.insecure: "true"`, port 8080) : le HTTPS public est celui de Cloudflare, comme Vaultwarden. Traefik route HTTP et gRPC (`h2c`) vers `argocd-server:80`.
+- Exposition limitée au hostname nécessaire ; API K8s privée.
+- Access + login Argo CD (deux couches).
+- Config versionnée, apply manuel : reconstruction possible sans auto-gestion circulaire.
+- App of Apps : découverte auto, déploiement des workloads sous contrôle.
 
 ## Alternatives étudiées
 
 | Option | Commentaire |
 |--------|-------------|
-| Self-management (Argo CD applique sa propre config via une Application) | Valable plus tard. Aujourd'hui : risque de se bloquer si l'appli casse l'Ingress ou le serveur. |
-| Inclure `config/` et `ingress/` dans `root` | Mélangerait bootstrap d'Argo CD et découverte des workloads. |
-| TLS dans le cluster jusqu'à `argocd-server` | Possible. Non retenu : origin Tunnel en HTTP, certificat public chez Cloudflare. |
-| Pas d'Access (comme Vaultwarden) | Vaultwarden authentifie des clients Bitwarden. L'UI Argo CD est un outil d'admin : Access en plus du login Argo CD. |
+| Self-management (Argo CD applique `config/` / `ingress/`) | Possible plus tard, après un bootstrap / recover clair. Pas maintenant. |
+| Inclure `config/` et `ingress/` dans `root` | Mélange bootstrap d'Argo CD et workloads. |
+| TLS jusqu'à `argocd-server` | Possible. Origin Tunnel en HTTP ; certificat public chez Cloudflare. |
+| Pas d'Access | L'UI est un outil d'admin, contrairement à Vaultwarden. |
+| Versionner la clé Sealed Secrets dans Git | Inacceptable. |
 
 ## Conséquences
 
-- Deux authentifications : Access, puis compte Argo CD (`admin` local). Mot de passe initial changé ; le Secret `argocd-initial-admin-secret` est **supprimé**. Aucun mot de passe dans Git ni dans cette doc.
-- Modifier l'Ingress ou `server.insecure` : commit, `git pull` sur k3s-01, `kubectl apply` — pas un Sync d'Application.
-- Un passage au self-management pourra faire l'objet d'un ADR ultérieur.
+- Mot de passe `admin` changé ; `argocd-initial-admin-secret` supprimé. Aucune valeur secrète dans Git ni ici.
+- Modifier Ingress / `server.insecure` : `kubectl apply` après pull, pas un Sync d'Application.
+- Perte de k3s-01 **et** de la seule copie de la clé Sealed Secrets = SealedSecrets du dépôt indéchiffrables sur un cluster neuf.
+- Self-management : ADR ultérieur, pas au programme actuel.
+
+## Évolution prévue
+
+Faire gérer progressivement sa config par Argo CD **après** avoir formalisé bootstrap et récupération du cluster. Pas de calendrier maintenant.

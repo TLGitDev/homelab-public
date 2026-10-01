@@ -53,3 +53,4 @@ Un SealedSecret est lié au cluster, au namespace et au nom : un changement impo
 - Git contient des SealedSecrets, jamais `ADMIN_TOKEN` (ni équivalent) en clair.
 - Le Secret créé dans le cluster reste lisible via l'API (`kubectl get secret`) : ce n'est pas un coffre-fort interne.
 - SOPS peut rester visible dans l'historique Git ; ce n'est plus le flux opérationnel.
+- La **clé** du controller (TLS) est sauvegardée hors Git sur k3s-01 (`~/backups/sealed-secrets/`, mode `600`). **Pas** dans le dépôt. Une copie hors serveur reste à faire. Sans cette clé, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants.

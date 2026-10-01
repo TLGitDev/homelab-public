@@ -738,3 +738,4 @@ Mettre en place une sauvegarde récurrente du volume Vaultwarden.
 | 2026-09-30 | Clarifier : données Vaultwarden en `local-path`, pas sur `tank`. |
 | 2026-09-30 | App of Apps (root auto-sync, workloads manuels). |
 | 2026-09-30 | ADR-007 : exposition Argo CD, config hors `root`. |
+| 2026-10-01 | API K8s privée ; backup local de la clé Sealed Secrets. |

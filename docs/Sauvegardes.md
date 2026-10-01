@@ -89,7 +89,9 @@ Couche 4    Sauvegarde hors site (future)
             Copie chiffrée sur un support dans un autre lieu.
 ```
 
-État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire. Un backup **de migration** Vaultwarden existe sur k3s-01 (`/home/utilisateur/backups/vaultwarden/`). Le PVC `local-path` n'a pas encore de routine : [Vaultwarden.md](Vaultwarden.md).
+État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire.
+
+Copies ponctuelles sur k3s-01 : backup de migration Vaultwarden ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire. [Vaultwarden.md](Vaultwarden.md), [ADR-005](ADR/ADR-005-Sealed-Secrets.md).
 
 ---
 

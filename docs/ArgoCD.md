@@ -47,19 +47,23 @@ Vaultwarden et Argo CD partagent **le même** point d'entrée Traefik `<ip-k3s-0
                     └─────────────────┘
 ```
 
+L'**API Kubernetes n'est pas exposée** sur Internet.
+
 Cloudflare termine le HTTPS. Le Tunnel envoie `http://<ip-k3s-01>:80`. Traefik : entrypoint `web`.
 
 Argo CD : `server.insecure: "true"` (HTTP interne, 8080). IngressRoute :
 
 - HTTP → `argocd-server:80` ;
-- gRPC → `argocd-server:80` en `h2c`.
+- gRPC (CLI / API) → `argocd-server:80` en `h2c`.
 
 Fichier : `kubernetes/argocd/ingress/argocd-ingressroute.yaml`.
 
 ## Authentification
 
 1. **Cloudflare Access** : qui peut atteindre `argocd.labo.example`. [Cloudflare.md](Cloudflare.md).
-2. **Argo CD** : comptes et permissions (compte local `admin`). Mot de passe initial changé ; Secret `argocd-initial-admin-secret` **supprimé**. Aucune valeur secrète ici.
+2. **Argo CD** : comptes et RBAC (compte local `admin`). Access **ne remplace pas** ce login.
+
+Mot de passe initial changé ; Secret `argocd-initial-admin-secret` **supprimé**. Aucune valeur secrète ici.
 
 ---
 
@@ -188,7 +192,7 @@ Ressources pour faire tourner Argo CD au départ. Exemple : `kubernetes/argocd/b
 
 ## `root-application.yaml`
 
-Application `root` : path `kubernetes/argocd/applications/`, auto-sync. Elle crée / réconcilie les Applications enfants. Elle **ne** déploie **pas** les workloads, et **ne** gère **pas** `config/` ni `ingress/`.
+Application `root` : path `kubernetes/argocd/applications/`, auto-sync. Aujourd'hui : `root` → `vaultwarden`. Elle **ne** déploie **pas** les workloads, et **ne** gère **pas** `bootstrap/`, `config/` ni `ingress/`.
 
 ---
 
@@ -228,7 +232,7 @@ Le root reste auto-synchronisé. Les workloads restent sous contrôle manuel.
 
 ---
 
-# État actuel — 2026-09-30
+# État actuel — 2026-10-01
 
 | Élément | Valeur |
 |---------|--------|
@@ -239,8 +243,10 @@ Le root reste auto-synchronisé. Les workloads restent sous contrôle manuel.
 | Tunnel | `homelab` → `http://<ip-k3s-01>:80` |
 | Traefik | entrypoint `web`, `IngressRoute` |
 | Interne | HTTP, `server.insecure=true` |
-| `root` | Applications dans `applications/` seulement |
-| Config / Ingress Argo CD | Git + `kubectl apply` |
+| `root` | `applications/` seulement (`vaultwarden`) |
+| Config / Ingress / bootstrap | Git + `kubectl apply` |
 | Compte | `admin` local ; mot de passe initial changé |
+| API Kubernetes | **non** exposée sur Internet |
+| Clé Sealed Secrets | `~/backups/sealed-secrets/` (ex. `sealed-secrets-keygvck8.yaml`, mode `600`, **hors Git**) ; copie hors k3s-01 ⬜ |
 
 Aucun mot de passe, jeton Cloudflare ou blob Sealed Secret dans cette page.
