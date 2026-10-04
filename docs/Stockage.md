@@ -2,7 +2,7 @@
 
 > Cours ZFS et état du stockage du homelab.
 >
-> Choix : [ADR-002](ADR/ADR-002-ZFS.md). Inventaire disques : [Materiel.md](Materiel.md).
+> Choix : [ADR-002](ADR/ADR-002-ZFS.md). Cible Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Inventaire disques : [Materiel.md](Materiel.md).
 > Miroir ≠ sauvegarde : [Sauvegardes.md](Sauvegardes.md). Nœud Proxmox : [Proxmox.md](Proxmox.md).
 
 ---
@@ -47,20 +47,17 @@ Dataset
 Fichiers
 ```
 
-Exemple **cible** (pool de données, **pas encore créé**) :
+Exemple **cible** (`tank`, volumes VM — **pas encore créé**) :
 
 ```
-sda
-sdb
-    ↓
-Mirror
-    ↓
 tank
-    ↓
-tank/vaultwarden   ← prévu plus tard, n'existe pas
-    ↓
-Base SQLite
+├── vmdata          ← zfspool Proxmox (volumes bloc seulement)
+│   └── vm-…        ← ex. volume Vaultwarden (nom à confirmer)
+├── backups         ← rôle éventuel, plus tard
+└── …
 ```
+
+Pas de dataset `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.
 
 Exemple actuel (infrastructure) :
 
@@ -144,7 +141,7 @@ Critères :
 
 En l'absence de besoin particulier, un simple répertoire est privilégié.
 
-`tank` n'a **aucun** dataset de service. Vaultwarden tourne déjà, mais ses données ne sont **pas** sur le miroir : voir [état actuel](#état-actuel). Le dataset `tank/vaultwarden` (ou équivalent) viendra **dans un second temps**.
+`tank` n'a **aucun** dataset `vmdata` ni volume Vaultwarden. Le coffre est encore en `local-path` sur `rpool`. Cible : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -218,7 +215,39 @@ tank
 | `rpool` | NVMe 2 To | single | Système, VM, LXC — **y compris le PVC Vaultwarden** (`local-path` sur k3s-01) |
 | `tank` | 2× IronWolf 8 To | mirror | Prévu pour les données de service ; **vide de datasets applicatifs** |
 
-`tank` n'héberge pas Vaultwarden. Le miroir ne protège donc pas encore le coffre. Cible : dataset sur `tank`, plus tard. Service : [Vaultwarden.md](Vaultwarden.md).
+`tank` n'héberge pas Vaultwarden. Le miroir ne protège donc pas encore le coffre.
+
+## Cible (`tank`)
+
+```
+Proxmox
+├── rpool   ← infra (Proxmox, disque système de k3s-01, CT…)
+└── tank    ← données
+    ├── vmdata/     volumes bloc (zfspool Proxmox)
+    ├── backups/    si retenu plus tard
+    └── …
+```
+
+| Élément | Rôle |
+|---------|------|
+| `rpool` | Infrastructure et disques **système** des VM/CT |
+| `tank` | Données qui doivent survivre à une reconstruction de l'infra |
+| `tank/vmdata` | Volumes ZFS **bloc** pour les VM |
+| `tank/backups` | Sauvegardes, si ce rôle est retenu |
+
+Vaultwarden (cible) : PVC → volume bloc → VM → ZFS `tank`. **Pas** NFS pour SQLite.
+
+```
+Volume primaire (service)     →  tank
+Snapshot ZFS                  →  rollback rapide (même pool)
+Backup indépendant            →  USB / offsite (après mise en place de tank)
+```
+
+Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le volume existant, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Documenter la procédure après le POC pour ne pas le supprimer par erreur.
+
+**Prochaine étape** : POC (petit volume de test sur `tank/vmdata`). Ne pas migrer Vaultwarden tant que le chemin n'est pas validé.
+
+Service : [Vaultwarden.md](Vaultwarden.md). Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 `rpool` en détail :
 

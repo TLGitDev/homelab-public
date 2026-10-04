@@ -2,7 +2,7 @@
 
 > RAID, snapshots et sauvegardes : trois protections différentes.
 >
-> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md).
+> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Cible Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -91,7 +91,39 @@ Couche 4    Sauvegarde hors site (future)
 
 État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire.
 
-Copies ponctuelles sur k3s-01 : backup de migration Vaultwarden ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire. [Vaultwarden.md](Vaultwarden.md), [ADR-005](ADR/ADR-005-Sealed-Secrets.md).
+Copies ponctuelles sur k3s-01 : backup de migration Vaultwarden ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire.
+
+---
+
+# Vaultwarden (prévu, après `tank`)
+
+Tant que le coffre est en `local-path` / `rpool`, l'automatisation n'est **pas** lancée. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+
+Une fois le volume sur `tank` :
+
+```
+03:00
+ ├── arrêter Vaultwarden
+ ├── vérifier l'arrêt
+ ├── sauvegarde cohérente (SQLite, pas une copie à chaud arbitraire)
+ ├── vérifier le résultat
+ ├── redémarrer Vaultwarden
+ └── vérifier le service
+```
+
+Fichiers critiques : `db.sqlite3`, `rsa_key.pem`.
+
+```
+~/backups/
+├── vaultwarden/
+│   ├── 2026-10-01/
+│   └── …
+└── sealed-secrets/
+```
+
+La copie sur k3s-01 est une **étape**. Ensuite : USB, éventuellement offsite chiffré.
+
+Miroir `tank` + snapshots ZFS ≠ cette sauvegarde.
 
 ---
 

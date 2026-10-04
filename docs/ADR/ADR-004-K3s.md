@@ -43,5 +43,5 @@ Détail opérationnel : [Kubernetes.md](../Kubernetes.md), [Proxmox.md](../Proxm
 ## Conséquences
 
 - Perte du nœud = perte du cluster. Pas de failover.
-- `local-path` = stockage **local au nœud**, pas un stockage distribué. Les données Vaultwarden y sont aujourd'hui ; `tank` n'est pas encore utilisé pour ça ([Stockage.md](../Stockage.md)).
+- `local-path` = stockage **local au nœud**. Données Vaultwarden **aujourd'hui**. Cible : volume bloc sur `tank` ([ADR-008](ADR-008-Vaultwarden-tank.md)).
 - La résilience repose sur **sauvegardes + restauration**, pas sur la réplication du cluster. Exemple : migration Vaultwarden (nouveau PVC + restore), pas une HA fictive. [Sauvegardes.md](../Sauvegardes.md).

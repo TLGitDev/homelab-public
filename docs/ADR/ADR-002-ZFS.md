@@ -44,6 +44,6 @@ Utiliser ZFS comme stockage principal.
 
 - Proxmox a été réinstallé sur ZFS. L'ancienne installation ext4/LVM n'existe plus.
 - `rpool` et `tank` sont décrits dans [Stockage.md](../Stockage.md).
-- `tank` existe ; **aucun** dataset de service. Vaultwarden n'y est pas : PVC `local-path` sur k3s-01 (`rpool`). Cible : données applicatives sur `tank`, plus tard. [Stockage.md](../Stockage.md).
+- `tank` existe ; **pas** encore `vmdata` ni le volume Vaultwarden. Aujourd'hui : `local-path` sur `rpool`. Cible : [ADR-008](ADR-008-Vaultwarden-tank.md).
 - Un miroir n'est pas une sauvegarde : une copie indépendante reste nécessaire ([Sauvegardes.md](../Sauvegardes.md)).
 - Les identifiants Linux (`/dev/sda`, `/dev/sdb`) ne doivent pas servir à identifier les disques : utiliser les numéros de série (voir [Materiel.md](../Materiel.md)).

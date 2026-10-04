@@ -183,15 +183,15 @@ Pour les services derrière Access (Proxmox, Argo CD), tout accès est refusé t
 
 # Stockage
 
-Le SSD NVMe (`rpool`) est réservé à l'infrastructure : Proxmox, VM, LXC, ISO — **y compris le disque de la VM K3s**.
+Le SSD NVMe (`rpool`) est l'**infrastructure** : Proxmox, disques système des VM/CT (dont `k3s-01`).
 
-Les deux IronWolf (`tank`, miroir ZFS) sont réservés aux **données de service** une fois qu'un dataset est créé.
+`tank` (miroir IronWolf) est destiné aux **données** qui doivent survivre à une reconstruction de `rpool`.
 
-**Aujourd'hui** : `tank` n'a aucun dataset de service. Vaultwarden est sur un PVC Kubernetes `local-path`, donc sur le disque du nœud `k3s-01` (ce disque est sur `rpool`, pas sur le miroir).
+**Aujourd'hui** : Vaultwarden est en PVC `local-path` sur le disque de `k3s-01` → `rpool`. `tank` n'a pas encore `vmdata` ni le volume du coffre.
 
-**Plus tard** : déplacer ces données vers `tank`. Ce n'est pas fait.
+**Cible** (décidée, pas appliquée) : volume **bloc** ZFS sous `tank/vmdata`, présenté à la VM, consommé par un PVC. Pas de NFS pour SQLite. POC d'abord, puis migration. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-Détail : [Stockage.md](Stockage.md). Décision : [ADR-002](ADR/ADR-002-ZFS.md). As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md).
+Détail : [Stockage.md](Stockage.md). As-built : [Vaultwarden.md](Vaultwarden.md).
 
 ---
 
@@ -235,7 +235,7 @@ Conventions LXC :
 
 Les applications (Vaultwarden, plus tard Paperless, Immich…) sont des ressources Kubernetes sur K3s, pas des LXC.
 
-Disques des LXC/VM : datasets sous `rpool/data`. ISO, templates, sauvegardes : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
+Disques **système** des LXC/VM : datasets sous `rpool/data`. Volumes de **données** (cible) : `tank/vmdata` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)). ISO, templates : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
 
 ```
 Internet
@@ -274,6 +274,7 @@ Cours : [Kubernetes.md](Kubernetes.md).
 - [ADR-005](ADR/ADR-005-Sealed-Secrets.md) — Sealed Secrets
 - [ADR-006](ADR/ADR-006-Argo-CD.md) — Argo CD
 - [ADR-007](ADR/ADR-007-Argo-CD-exposition.md) — Exposition Argo CD
+- [ADR-008](ADR/ADR-008-Vaultwarden-tank.md) — Vaultwarden : volume bloc sur `tank`
 
 ---
 
@@ -308,7 +309,9 @@ Cours : [Kubernetes.md](Kubernetes.md).
 ## Services
 
 - ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données encore en `local-path`, pas sur `tank`
-- ⬜ Données Vaultwarden sur `tank`
+- ⬜ POC `tank/vmdata` (volume de test, avant Vaultwarden)
+- ⬜ Données Vaultwarden sur `tank` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
+- ⬜ Sauvegardes Vaultwarden automatisées (après `tank`)
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich

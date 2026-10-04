@@ -145,9 +145,20 @@ SQLite dans `/data`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass
 
 PV actuel (constaté) : `pvc-<uuid-pv-local-path>`, lié au nœud **k3s-01**.
 
-Ces données sont sur le **disque de la VM** (donc `rpool`), **pas** sur le miroir `tank`. Déplacer le volume vers `tank` est prévu **plus tard**. [Stockage.md](Stockage.md#état-actuel).
+Ces données sont sur le **disque de la VM** (donc `rpool`), **pas** sur `tank`.
 
-`local-path` n'est **pas** un stockage distribué. Si le nœud disparaît, le volume n'est pas disponible ailleurs. Les sauvegardes restent essentielles.
+## Cible
+
+Volume **bloc** ZFS sur `tank/vmdata`, présenté à `k3s-01`, PVC Kubernetes. Vaultwarden ne connaît pas ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md), [Stockage.md](Stockage.md#cible-tank).
+
+```
+aujourd'hui :  PVC → local-path → disque k3s-01 → rpool
+cible :        PVC → volume bloc → VM → tank
+```
+
+Pas de migration tant qu'un POC `tank/vmdata` n'est pas validé.
+
+`local-path` n'est **pas** un stockage distribué. Snapshots ZFS (une fois sur `tank`) ≠ sauvegarde.
 
 Un PVC **ne se déplace pas** d'un namespace à un autre : nouveau PVC + restauration.
 
@@ -216,12 +227,13 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 | Namespace `vaultwarden` | OK |
 | Deployment 1/1 Running | OK |
 | Service ClusterIP / Ingress Traefik | OK |
-| PVC Bound / PV local-path | OK |
+| PVC Bound / PV local-path | OK (**pas** encore `tank`) |
 | SealedSecret Synced | OK |
+| Volume bloc sur `tank` | ⬜ POC puis migration ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
 | Argo CD Synced / Healthy | OK |
 | `https://vaultwarden.labo.example` | OK, données post-migration |
 | Access devant Vaultwarden | volontairement absent |
-| Sauvegarde **récurrente** du PVC | ⬜ [Sauvegardes.md](Sauvegardes.md) (un backup de migration existe sur k3s-01) |
+| Sauvegarde récurrente | ⬜ après `tank` (copie de migration déjà sur k3s-01) |
 
 ---
 
@@ -235,4 +247,4 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Stockage local K3s, SQLite : backup essentiel. Toute migration de données commence par un backup **vérifié**.
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Automatisation **après** `tank`. [Sauvegardes.md](Sauvegardes.md).
