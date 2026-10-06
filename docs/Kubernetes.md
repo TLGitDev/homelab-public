@@ -637,6 +637,25 @@ PersistentVolume
 Dataset ZFS / NFS / Ceph / Cloud
 ```
 
+## Provisionnement statique (Local PV)
+
+Inverse du cas précédent : le volume **existe déjà** (ici : un zvol Proxmox formaté et monté dans la VM). On déclare un PersistentVolume qui pointe vers ce chemin, avec une `nodeAffinity` sur le nœud.
+
+```
+zvol / filesystem déjà là
+      │
+      ▼
+PersistentVolume (local.path, Retain)
+      │
+      ▼
+PersistentVolumeClaim
+      │
+      ▼
+Pod
+```
+
+`local-path` (K3s) est du provisionnement **dynamique** sur le disque du nœud. Le patron retenu pour `tank` est un Local PV **statique**. As-built et POC : [Stockage.md](Stockage.md). Décision Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+
 ## Séparation des responsabilités
 
 | Ressource | Responsable de | Ne fait pas |

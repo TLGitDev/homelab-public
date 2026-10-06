@@ -12,6 +12,14 @@
 > Les sprints 1 à 3 ont été rédigés le jour même.
 > Les sprints 4 à 8 ont été reconstitués le 2026-09-02 à partir de l'historique local Cursor (sauvegardes datées des fichiers Markdown). Ce sont les dates auxquelles le travail a été **documenté**. Sans Git, l'heure exacte des commandes sur le serveur n'est pas disponible. Les 30 août et 1er septembre 2026 n'ont laissé aucune trace de documentation.
 
+## Sprint et changelog
+
+Un **sprint** a un chapitre (objectif, réalisé, vérifs, prochaine étape). Il correspond à une séance d'infra, d'étude cadrée, ou de POC.
+
+Le **changelog** (en bas) indexe aussi les jours où seule la documentation a bougé (extraction, ADR, précisions). Ces lignes n'ont pas forcément un numéro de sprint.
+
+Exemple : ADR-008 le 4 octobre (changelog seulement) ; POC `tank/vmdata` le 6 octobre (sprint 19).
+
 ---
 
 # 2026-08-27 — Sprint 1 : Validation matérielle
@@ -714,7 +722,41 @@ Mettre en place une sauvegarde récurrente du volume Vaultwarden.
 
 ---
 
+# 2026-10-06 — Sprint 19 : POC `tank/vmdata` et Local PV
+
+## Objectif
+
+Valider le chemin ZFS → Proxmox → VM → Linux → Local PV → PVC → Pod, sans migrer Vaultwarden.
+
+## Réalisé
+
+- Dataset `tank/vmdata` déclaré dans Proxmox (`zfspool: tank-vmdata`, `content images`, `sparse 1`).
+- Volume de test 1 GiB `tank/vmdata/vm-9999-k8s-test`, attaché à `k3s-01` (`scsi1`, Virtio SCSI).
+- ext4, montage `/var/lib/k3s-storage/k8s-test`.
+- PV local statique + PVC Bound ; Pod a écrit `test.txt`, contenu identique dans la VM.
+- Nettoyage intégral : plus aucune ressource de test. Vaultwarden inchangé (`local-path` / `rpool`).
+
+## Vérifications
+
+- ✅ Chaîne complète lecture / écriture.
+- ✅ NFS et CSI ZFS écartés pour Vaultwarden à ce stade ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)).
+- ⬜ Migration Vaultwarden.
+- ⬜ Procédure de restauration (réattacher le zvol après perte de la VM).
+
+## Compétences acquises
+
+- zvol Proxmox sur `tank`.
+- PersistentVolume local statique (`Retain`, `nodeAffinity`).
+
+## Prochaine étape
+
+Concevoir la migration Vaultwarden : sauvegarde préalable, nouveau volume sur `tank`, rollback via l'ancien PVC.
+
+---
+
 # Changelog
+
+Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
 
 | Date | Évolution |
 |------|-----------|
@@ -740,3 +782,4 @@ Mettre en place une sauvegarde récurrente du volume Vaultwarden.
 | 2026-09-30 | ADR-007 : exposition Argo CD, config hors `root`. |
 | 2026-10-01 | API K8s privée ; backup local de la clé Sealed Secrets. |
 | 2026-10-04 | ADR-008 : Vaultwarden sur volume bloc `tank` (cible, POC d'abord). |
+| 2026-10-06 | Sprint 19 : POC `tank/vmdata` + Local PV validé, puis nettoyé. |

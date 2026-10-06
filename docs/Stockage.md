@@ -47,12 +47,12 @@ Dataset
 Fichiers
 ```
 
-Exemple **cible** (`tank`, volumes VM — **pas encore créé**) :
+Exemple **actuel** (`tank`) :
 
 ```
 tank
-├── vmdata          ← zfspool Proxmox (volumes bloc seulement)
-│   └── vm-…        ← ex. volume Vaultwarden (nom à confirmer)
+├── vmdata          ← zfspool Proxmox `tank-vmdata` (volumes bloc seulement)
+│   └── (pas de volume applicatif ; le zvol de POC a été détruit)
 ├── backups         ← rôle éventuel, plus tard
 └── …
 ```
@@ -141,7 +141,7 @@ Critères :
 
 En l'absence de besoin particulier, un simple répertoire est privilégié.
 
-`tank` n'a **aucun** dataset `vmdata` ni volume Vaultwarden. Le coffre est encore en `local-path` sur `rpool`. Cible : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`tank/vmdata` existe (volumes Proxmox). Aucun volume Vaultwarden. Le coffre est encore en `local-path` sur `rpool`. Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -196,68 +196,120 @@ Le choix d'architecture se fait donc avant toute mise en production.
 # État actuel
 
 ```
-Infrastructure (rpool, NVMe)
-
-rpool
-├── Proxmox, LXC cloudflare
-└── VM k3s-01
-        └── local-path
-                └── données Vaultwarden   ← aujourd'hui
-
-Données (tank, miroir IronWolf)
-
-tank
-└── (aucun dataset de service)
+Proxmox
+├── rpool   ← infrastructure
+│   ├── Proxmox, LXC, disque système de k3s-01
+│   └── local-path → données Vaultwarden   ← aujourd'hui
+│
+└── tank    ← données (miroir IronWolf, ONLINE)
+    └── vmdata     ← zfspool Proxmox `tank-vmdata`
+        └── (aucun volume applicatif)
 ```
 
 | Pool | Support | VDEV | Rôle aujourd'hui |
 |------|---------|------|------------------|
 | `rpool` | NVMe 2 To | single | Système, VM, LXC — **y compris le PVC Vaultwarden** (`local-path` sur k3s-01) |
-| `tank` | 2× IronWolf 8 To | mirror | Prévu pour les données de service ; **vide de datasets applicatifs** |
+| `tank` | 2× IronWolf 8 To | mirror | Données. `vmdata` existe ; **pas** encore le volume Vaultwarden |
 
 `tank` n'héberge pas Vaultwarden. Le miroir ne protège donc pas encore le coffre.
 
-## Cible (`tank`)
+## rpool
 
 ```
-Proxmox
-├── rpool   ← infra (Proxmox, disque système de k3s-01, CT…)
-└── tank    ← données
-    ├── vmdata/     volumes bloc (zfspool Proxmox)
-    ├── backups/    si retenu plus tard
-    └── …
+rpool
+├── ROOT
+│   └── pve-1                      → système Proxmox
+├── data
+│   ├── subvol-100-disk-0          → LXC 100 (cloudflare)
+│   ├── vm-101-disk-0
+│   ├── vm-101-disk-1              → disque système de k3s-01 (64 Go)
+│   └── vm-101-state-Debian_13_propre
+└── var-lib-vz                     → ISO, templates, sauvegardes, imports
 ```
+
+## tank / `tank-vmdata`
+
+`tank` est un miroir (`mirror-0` : `sda` / `sdb` côté Linux — les identifiants stables restent les numéros de série). État attendu : **ONLINE**.
+
+Dataset dédié aux volumes de VM :
+
+```
+zfspool: tank-vmdata
+        pool tank/vmdata
+        content images
+        mountpoint /tank/vmdata
+        sparse 1
+```
+
+`tank/vmdata` est **réservé** aux volumes bloc gérés par Proxmox. Pas de dataset applicatif mélangé (`tank/vmdata/vaultwarden`).
 
 | Élément | Rôle |
 |---------|------|
 | `rpool` | Infrastructure et disques **système** des VM/CT |
 | `tank` | Données qui doivent survivre à une reconstruction de l'infra |
-| `tank/vmdata` | Volumes ZFS **bloc** pour les VM |
-| `tank/backups` | Sauvegardes, si ce rôle est retenu |
+| `tank/vmdata` (`tank-vmdata`) | Volumes ZFS **bloc** pour les VM |
+| `tank/backups` | Sauvegardes, si ce rôle est retenu plus tard |
 
-Vaultwarden (cible) : PVC → volume bloc → VM → ZFS `tank`. **Pas** NFS pour SQLite.
+## Chaîne applicative (cible)
+
+Pour un service qui a besoin de stockage persistant local (SQLite) :
+
+```
+Pod
+ ↓
+PVC
+ ↓
+Local PV (statique)
+ ↓
+filesystem Linux (ext4 au POC)
+ ↓
+disque de la VM (Virtio SCSI)
+ ↓
+zvol Proxmox (`tank-vmdata`)
+ ↓
+tank/vmdata
+```
+
+**Pas** de NFS comme stockage primaire pour SQLite. **Pas** de CSI ZFS pour l'instant ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)).
 
 ```
 Volume primaire (service)     →  tank
 Snapshot ZFS                  →  rollback rapide (même pool)
-Backup indépendant            →  USB / offsite (après mise en place de tank)
+Backup indépendant            →  USB / offsite (après migration)
 ```
 
-Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le volume existant, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Documenter la procédure après le POC pour ne pas le supprimer par erreur.
+Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM.
 
-**Prochaine étape** : POC (petit volume de test sur `tank/vmdata`). Ne pas migrer Vaultwarden tant que le chemin n'est pas validé.
+Un Local PV est lié au nœud `k3s-01`. Le cluster n'a qu'un nœud ; le stockage physique est déjà hors du disque système de la VM.
+
+**Prochaine étape** : concevoir la migration Vaultwarden (sauvegarde, rollback, conservation de l'ancien PVC). Ne pas migrer tant que cette procédure n'est pas écrite et qu'une restauration n'est pas prévue.
 
 Service : [Vaultwarden.md](Vaultwarden.md). Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-`rpool` en détail :
+Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02 ([Journal.md](Journal.md), sprint 8). Pool `tank` créé le 2026-09-07 (sprint 9). `tank/vmdata` déclaré dans Proxmox le 2026-10-06.
 
-```
-rpool
-├── ROOT
-│   └── pve-1                 → système Proxmox
-├── data
-│   └── subvol-100-disk-0     → disque du LXC 100 (cloudflare)
-└── var-lib-vz                → ISO, templates, sauvegardes, imports
-```
+---
 
-Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02 ([Journal.md](Journal.md), sprint 8). Pool `tank` créé le 2026-09-07 (sprint 9).
+# POC (6 octobre 2026)
+
+Objectif : valider ZFS → Proxmox → VM → Linux → Local PV → PVC → Pod, **sans** toucher à Vaultwarden.
+
+| Étape | Constat |
+|-------|---------|
+| Volume | `tank/vmdata/vm-9999-k8s-test`, `volsize=1G`, `volblocksize=16K` |
+| Proxmox | `tank-vmdata:vm-9999-k8s-test`, attaché `scsi1` (Virtio SCSI) |
+| Dans la VM | `/dev/sdb`, 1 GiB (nom Linux **du moment** ; peut changer) |
+| Filesystem | ext4, montage temporaire `/var/lib/k3s-storage/k8s-test` |
+| Kubernetes | PV statique `k8s-test-pv` (`Retain`, `local.path`, `nodeAffinity` hostname `k3s-01`, StorageClass `k8s-test-local`) |
+| PVC | `k8s-test-pvc` 500 Mi, RWO → Bound ; capacité affichée : 1 Gi (celle du PV) |
+| Pod | écriture `/data/test.txt` ; même contenu dans la VM au point de montage |
+
+Chaîne validée de bout en bout (écriture et lecture).
+
+## Nettoyage
+
+Tout a été supprimé : Pod, PVC, PV, démontage, point de montage, disque détaché, zvol détruit.
+
+Aucune ressource de test ne reste sur `tank`. Aucune donnée Vaultwarden n'a été modifiée.
+
+Les noms `k8s-test-*` et le chemin `/var/lib/k3s-storage/k8s-test` n'existent plus. Ils documentent le **patron**, pas l'état du cluster.

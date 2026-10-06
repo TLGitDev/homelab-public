@@ -95,16 +95,16 @@ Copies ponctuelles sur k3s-01 : backup de migration Vaultwarden ; clé Sealed Se
 
 ---
 
-# Vaultwarden (prévu, après `tank`)
+# Vaultwarden (prévu, après migration sur `tank`)
 
-Tant que le coffre est en `local-path` / `rpool`, l'automatisation n'est **pas** lancée. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`tank/vmdata` existe. Le coffre est encore en `local-path` / `rpool`. L'automatisation n'est **pas** lancée tant que les données n'ont pas migré. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 Une fois le volume sur `tank` :
 
 ```
 03:00
  ├── arrêter Vaultwarden
- ├── vérifier l'arrêt
+ ├── attendre l'arrêt réel du Pod
  ├── sauvegarde cohérente (SQLite, pas une copie à chaud arbitraire)
  ├── vérifier le résultat
  ├── redémarrer Vaultwarden
@@ -116,12 +116,21 @@ Fichiers critiques : `db.sqlite3`, `rsa_key.pem`.
 ```
 ~/backups/
 ├── vaultwarden/
-│   ├── 2026-10-01/
-│   └── …
+│   └── <sauvegardes datées>
 └── sealed-secrets/
 ```
 
 La copie sur k3s-01 est une **étape**. Ensuite : USB, éventuellement offsite chiffré.
+
+```
+k3s-01 → backup local → USB
+```
+
+Plusieurs générations. Une sauvegarde n'est fiable que si une restauration a été testée :
+
+```
+backup → restore test → validation
+```
 
 Miroir `tank` + snapshots ZFS ≠ cette sauvegarde.
 

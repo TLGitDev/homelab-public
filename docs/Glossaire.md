@@ -146,7 +146,11 @@ Politique de provisionnement : comment Kubernetes crée un volume (ZFS, NFS, Cep
 
 ### PersistentVolume (PV)
 
-Volume réellement disponible, associé à un PVC. Peut représenter un dataset ZFS, du NFS, etc.
+Volume réellement disponible, associé à un PVC. Peut représenter un chemin local, du NFS, etc.
+
+### Local PV
+
+PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Patron validé pour `tank` : [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -197,6 +201,10 @@ Espace de stockage ZFS constitué d'un ou plusieurs VDEV. Il contient des datase
 ### Dataset
 
 Système de fichiers indépendant à l'intérieur d'un pool, avec ses propres propriétés (compression, quotas, snapshots, montage). L'espace est pris dynamiquement dans le pool : pas de taille fixée à l'avance comme une partition. On ne crée un dataset que s'il y a un besoin distinct (sinon un répertoire suffit).
+
+### zvol
+
+Volume **bloc** ZFS (pas un filesystem ZFS monté). Proxmox s'en sert pour les disques de VM (`tank/vmdata` via `tank-vmdata`). Dans la VM, il apparaît comme un disque (`/dev/sdX`).
 
 ### Checksum
 

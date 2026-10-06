@@ -145,22 +145,56 @@ SQLite dans `/data`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass
 
 PV actuel (constaté) : `pvc-<uuid-pv-local-path>`, lié au nœud **k3s-01**.
 
-Ces données sont sur le **disque de la VM** (donc `rpool`), **pas** sur `tank`.
+Ces données sont sur le **disque système de la VM** (`rpool/data/vm-101-disk-1`), **pas** sur `tank`. Architecture temporaire.
+
+```
+aujourd'hui :  PVC → local-path → filesystem k3s-01 → disque VM → rpool
+cible :        PVC → Local PV → filesystem → zvol → k3s-01 → tank/vmdata
+```
 
 ## Cible
 
-Volume **bloc** ZFS sur `tank/vmdata`, présenté à `k3s-01`, PVC Kubernetes. Vaultwarden ne connaît pas ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md), [Stockage.md](Stockage.md#cible-tank).
+Volume **bloc** ZFS sous `tank/vmdata` (`tank-vmdata`), présenté à `k3s-01`, filesystem Linux, **Local PV statique**, PVC. Vaultwarden ne connaît pas ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md), [Stockage.md](Stockage.md).
 
-```
-aujourd'hui :  PVC → local-path → disque k3s-01 → rpool
-cible :        PVC → volume bloc → VM → tank
-```
+Le chemin ZFS → Proxmox → VM → ext4 → Local PV → PVC → Pod a été **validé** le 2026-10-06. Le volume de test a été détruit. Vaultwarden n'a pas été migré.
 
-Pas de migration tant qu'un POC `tank/vmdata` n'est pas validé.
-
-`local-path` n'est **pas** un stockage distribué. Snapshots ZFS (une fois sur `tank`) ≠ sauvegarde.
+`local-path` n'est **pas** un stockage distribué. Un Local PV non plus : il est lié à `k3s-01`. Snapshots ZFS (une fois sur `tank`) ≠ sauvegarde.
 
 Un PVC **ne se déplace pas** d'un namespace à un autre : nouveau PVC + restauration.
+
+## Migration (prévue, pas commencée)
+
+Principes : sauvegarde cohérente **avant**, ancien PVC conservé comme rollback, nouveau stockage sur `tank`, bascule seulement après vérifs.
+
+1. Conserver le stockage actuel comme rollback.
+2. Créer le volume Vaultwarden sur `tank/vmdata`.
+3. L'attacher à `k3s-01`.
+4. Créer et monter le filesystem.
+5. Créer le PV local (statique, `Retain`, affinité `k3s-01`).
+6. Créer le PVC.
+7. Arrêter Vaultwarden.
+8. Copie cohérente des données (SQLite, pas une copie à chaud arbitraire).
+9. Démarrer Vaultwarden sur le nouveau stockage.
+10. Vérifier l'application.
+11. Garder l'ancien PVC pendant la période de validation.
+12. Supprimer l'ancien stockage **seulement** après validation.
+
+```
+                migration
+                   │
+       ┌───────────┴───────────┐
+       │                       │
+ancien PVC                 nouveau PVC
+local-path / rpool         tank / zvol
+       │                       │
+       └────── rollback ───────┘
+```
+
+## Restauration si k3s-01 est perdu (`tank` intact)
+
+Nouvelle VM → réattacher le zvol → filesystem → Local PV → PVC → Vaultwarden.
+
+Cette procédure doit être **écrite et testée** avant de considérer l'architecture pleinement opérationnelle. Le volume ne se recrée pas avec la VM : ne pas le détruire par erreur.
 
 ---
 
@@ -229,7 +263,7 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 | Service ClusterIP / Ingress Traefik | OK |
 | PVC Bound / PV local-path | OK (**pas** encore `tank`) |
 | SealedSecret Synced | OK |
-| Volume bloc sur `tank` | ⬜ POC puis migration ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
+| Volume bloc sur `tank` | ⬜ migration ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md) ; POC 2026-10-06 OK) |
 | Argo CD Synced / Healthy | OK |
 | `https://vaultwarden.labo.example` | OK, données post-migration |
 | Access devant Vaultwarden | volontairement absent |
@@ -247,4 +281,4 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Volume / snapshot / backup sont trois choses. Automatisation **après** `tank`. [Sauvegardes.md](Sauvegardes.md).
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Automatisation **après** migration sur `tank`. [Sauvegardes.md](Sauvegardes.md).
