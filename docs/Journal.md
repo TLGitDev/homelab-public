@@ -754,6 +754,39 @@ Concevoir la migration Vaultwarden : sauvegarde préalable, nouveau volume sur `
 
 ---
 
+# 2026-10-14 — Sprint 20 : Migration Vaultwarden vers `tank`
+
+## Objectif
+
+Déplacer les données persistantes de Vaultwarden hors du disque système de `k3s-01`, vers un zvol sur `tank`, sans perdre GitOps ni le rollback.
+
+## Réalisé
+
+- Volume `tank/vmdata/vm-101-vaultwarden-data` (8 Gio), `scsi1`, ext4, `fstab` par UUID, montage `/var/lib/k3s-storage/vaultwarden`.
+- PV `vaultwarden-zfs-pv` (`Retain`) + PVC `vaultwarden-zfs-pvc` Bound.
+- Sauvegarde arrêtée `migration-2026-10-14` ; `integrity_check` ok ; SHA-256 source/destination identiques.
+- Copie via Pod temporaire (ancien PVC en lecture seule). Deployment → `vaultwarden-zfs-pvc`.
+- GitOps : `8ccecbc`, refresh, sync manuel. Argo CD Synced / Healthy. HTTP 200, coffre OK.
+- Ancien PVC `vaultwarden-pvc` conservé (figé).
+
+## Vérifications
+
+- ✅ Chemin ZFS → VM → Local PV → Pod en production.
+- ⬜ Sauvegardes régulières et copie hors `tank`.
+- ⬜ Test de restauration (réattacher le zvol).
+- ⬜ `ADMIN_TOKEN` en Argon2 PHC.
+
+## Compétences acquises
+
+- Migration de PVC avec rollback conservé.
+- Local PV statique en GitOps (sync manuel).
+
+## Prochaine étape
+
+Formaliser les sauvegardes (SQLite cohérent), une copie hors `tank`, et un test de restauration. Ne pas supprimer l'ancien PVC tant que ce n'est pas en place.
+
+---
+
 # Changelog
 
 Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
@@ -783,3 +816,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-01 | API K8s privée ; backup local de la clé Sealed Secrets. |
 | 2026-10-04 | ADR-008 : Vaultwarden sur volume bloc `tank` (cible, POC d'abord). |
 | 2026-10-06 | Sprint 19 : POC `tank/vmdata` + Local PV validé, puis nettoyé. |
+| 2026-10-14 | Sprint 20 : Vaultwarden migré sur zvol `tank` (Local PV). |

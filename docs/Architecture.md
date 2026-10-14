@@ -187,9 +187,9 @@ Le SSD NVMe (`rpool`) est l'**infrastructure** : Proxmox, disques système des V
 
 `tank` (miroir IronWolf) est destiné aux **données** qui doivent survivre à une reconstruction de `rpool`.
 
-**Aujourd'hui** : Vaultwarden est en PVC `local-path` sur le disque système de `k3s-01` → `rpool`. `tank/vmdata` existe (`zfspool: tank-vmdata`) ; **pas** encore le volume du coffre.
+**Aujourd'hui** : Vaultwarden est sur `tank/vmdata/vm-101-vaultwarden-data` (zvol → ext4 → Local PV → `vaultwarden-zfs-pvc`). L'ancien PVC `local-path` est conservé figé. Pas de NFS pour SQLite, pas de CSI ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-**Cible** (chemin validé par POC le 2026-10-06, pas appliquée au service) : zvol sous `tank/vmdata` → VM → filesystem → Local PV → PVC. Pas de NFS pour SQLite, pas de CSI ZFS pour l'instant. Prochaine étape : concevoir la migration (rollback, sauvegarde). [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+Prochaine étape stockage : sauvegardes régulières, copie hors `tank`, test de restauration.
 
 Détail : [Stockage.md](Stockage.md). As-built : [Vaultwarden.md](Vaultwarden.md).
 
@@ -235,7 +235,7 @@ Conventions LXC :
 
 Les applications (Vaultwarden, plus tard Paperless, Immich…) sont des ressources Kubernetes sur K3s, pas des LXC.
 
-Disques **système** des LXC/VM : datasets sous `rpool/data` (k3s-01 : `vm-101-disk-1`, 64 Go). Volumes de **données** : `tank/vmdata` (`tank-vmdata`) — dataset en place, volume Vaultwarden pas encore. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). ISO, templates : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
+Disques **système** des LXC/VM : datasets sous `rpool/data` (k3s-01 : `vm-101-disk-1`, 64 Go). Volumes de **données** : `tank/vmdata` (`tank-vmdata`) — Vaultwarden : `vm-101-vaultwarden-data`. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). ISO, templates : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
 
 ```
 Internet
@@ -308,11 +308,12 @@ Cours : [Kubernetes.md](Kubernetes.md).
 
 ## Services
 
-- ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données encore en `local-path`, pas sur `tank`
+- ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données sur `tank` (`vaultwarden-zfs-pvc`)
 - ✅ POC `tank/vmdata` (1 GiB, Local PV, 2026-10-06 ; nettoyé)
-- ⬜ Conception de la migration Vaultwarden (sauvegarde, rollback)
-- ⬜ Données Vaultwarden sur `tank` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
-- ⬜ Sauvegardes Vaultwarden automatisées (après `tank`)
+- ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
+- ⬜ Sauvegardes Vaultwarden automatisées
+- ⬜ Copie hors `tank` + test de restauration
+- ⬜ `ADMIN_TOKEN` en Argon2 PHC
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich

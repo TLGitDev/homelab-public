@@ -654,7 +654,7 @@ PersistentVolumeClaim
 Pod
 ```
 
-`local-path` (K3s) est du provisionnement **dynamique** sur le disque du nœud. Le patron retenu pour `tank` est un Local PV **statique**. As-built et POC : [Stockage.md](Stockage.md). Décision Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`local-path` (K3s) est du provisionnement **dynamique** sur le disque du nœud. Le patron retenu pour `tank` est un Local PV **statique**. Vaultwarden l'utilise depuis le 2026-10-14. [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ## Séparation des responsabilités
 

@@ -2,7 +2,7 @@
 
 > Cours ZFS et état du stockage du homelab.
 >
-> Choix : [ADR-002](ADR/ADR-002-ZFS.md). Cible Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Inventaire disques : [Materiel.md](Materiel.md).
+> Choix : [ADR-002](ADR/ADR-002-ZFS.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Inventaire disques : [Materiel.md](Materiel.md).
 > Miroir ≠ sauvegarde : [Sauvegardes.md](Sauvegardes.md). Nœud Proxmox : [Proxmox.md](Proxmox.md).
 
 ---
@@ -52,7 +52,7 @@ Exemple **actuel** (`tank`) :
 ```
 tank
 ├── vmdata          ← zfspool Proxmox `tank-vmdata` (volumes bloc seulement)
-│   └── (pas de volume applicatif ; le zvol de POC a été détruit)
+│   └── vm-101-vaultwarden-data
 ├── backups         ← rôle éventuel, plus tard
 └── …
 ```
@@ -141,7 +141,7 @@ Critères :
 
 En l'absence de besoin particulier, un simple répertoire est privilégié.
 
-`tank/vmdata` existe (volumes Proxmox). Aucun volume Vaultwarden. Le coffre est encore en `local-path` sur `rpool`. Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`tank/vmdata` existe. Volume Vaultwarden : `tank/vmdata/vm-101-vaultwarden-data` (depuis le 2026-10-14). L'ancien PVC `local-path` est conservé figé. Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -199,19 +199,19 @@ Le choix d'architecture se fait donc avant toute mise en production.
 Proxmox
 ├── rpool   ← infrastructure
 │   ├── Proxmox, LXC, disque système de k3s-01
-│   └── local-path → données Vaultwarden   ← aujourd'hui
+│   └── local-path → ancien PVC Vaultwarden (figé, rollback)
 │
 └── tank    ← données (miroir IronWolf, ONLINE)
     └── vmdata     ← zfspool Proxmox `tank-vmdata`
-        └── (aucun volume applicatif)
+        └── vm-101-vaultwarden-data   ← coffre en service
 ```
 
 | Pool | Support | VDEV | Rôle aujourd'hui |
 |------|---------|------|------------------|
-| `rpool` | NVMe 2 To | single | Système, VM, LXC — **y compris le PVC Vaultwarden** (`local-path` sur k3s-01) |
-| `tank` | 2× IronWolf 8 To | mirror | Données. `vmdata` existe ; **pas** encore le volume Vaultwarden |
+| `rpool` | NVMe 2 To | single | Système, VM, LXC. Ancien PVC Vaultwarden encore présent, plus en service |
+| `tank` | 2× IronWolf 8 To | mirror | Données. Volume Vaultwarden : `vm-101-vaultwarden-data` |
 
-`tank` n'héberge pas Vaultwarden. Le miroir ne protège donc pas encore le coffre.
+Le miroir de `tank` protège contre la panne d'un HDD. Ce n'est **pas** une sauvegarde.
 
 ## rpool
 
@@ -250,7 +250,7 @@ zfspool: tank-vmdata
 | `tank/vmdata` (`tank-vmdata`) | Volumes ZFS **bloc** pour les VM |
 | `tank/backups` | Sauvegardes, si ce rôle est retenu plus tard |
 
-## Chaîne applicative (cible)
+## Chaîne applicative (Vaultwarden, en service)
 
 Pour un service qui a besoin de stockage persistant local (SQLite) :
 
@@ -261,13 +261,11 @@ PVC
  ↓
 Local PV (statique)
  ↓
-filesystem Linux (ext4 au POC)
+filesystem Linux (ext4, UUID dans fstab)
  ↓
-disque de la VM (Virtio SCSI)
+disque de la VM (scsi1, Virtio SCSI)
  ↓
-zvol Proxmox (`tank-vmdata`)
- ↓
-tank/vmdata
+zvol `tank/vmdata/vm-101-vaultwarden-data`
 ```
 
 **Pas** de NFS comme stockage primaire pour SQLite. **Pas** de CSI ZFS pour l'instant ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)).
@@ -275,18 +273,18 @@ tank/vmdata
 ```
 Volume primaire (service)     →  tank
 Snapshot ZFS                  →  rollback rapide (même pool)
-Backup indépendant            →  USB / offsite (après migration)
+Backup indépendant            →  USB / offsite (pas encore en routine)
 ```
 
-Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM.
+Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Procédure **pas encore testée**.
 
-Un Local PV est lié au nœud `k3s-01`. Le cluster n'a qu'un nœud ; le stockage physique est déjà hors du disque système de la VM.
+Un Local PV est lié au nœud `k3s-01`. Le cluster n'a qu'un nœud ; le stockage physique est hors du disque système de la VM.
 
-**Prochaine étape** : concevoir la migration Vaultwarden (sauvegarde, rollback, conservation de l'ancien PVC). Ne pas migrer tant que cette procédure n'est pas écrite et qu'une restauration n'est pas prévue.
+**Prochaine étape** : sauvegardes régulières (SQLite cohérent), copie hors `tank`, test de restauration. Ne pas détruire l'ancien PVC tant que cette stratégie n'est pas formalisée.
 
 Service : [Vaultwarden.md](Vaultwarden.md). Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02 ([Journal.md](Journal.md), sprint 8). Pool `tank` créé le 2026-09-07 (sprint 9). `tank/vmdata` déclaré dans Proxmox le 2026-10-06.
+Première installation Proxmox : ext4 + LVM-Thin. Réinstallé sur ZFS le 2026-09-02 ([Journal.md](Journal.md), sprint 8). Pool `tank` créé le 2026-09-07 (sprint 9). `tank/vmdata` déclaré dans Proxmox le 2026-10-06. Volume Vaultwarden le 2026-10-14.
 
 ---
 
@@ -310,6 +308,4 @@ Chaîne validée de bout en bout (écriture et lecture).
 
 Tout a été supprimé : Pod, PVC, PV, démontage, point de montage, disque détaché, zvol détruit.
 
-Aucune ressource de test ne reste sur `tank`. Aucune donnée Vaultwarden n'a été modifiée.
-
-Les noms `k8s-test-*` et le chemin `/var/lib/k3s-storage/k8s-test` n'existent plus. Ils documentent le **patron**, pas l'état du cluster.
+Aucune ressource de test ne reste. Les noms `k8s-test-*` et le chemin `/var/lib/k3s-storage/k8s-test` n'existent plus. Le patron a servi à la migration Vaultwarden du 2026-10-14 ([Vaultwarden.md](Vaultwarden.md#migration-local-path--tank-2026-10-14)).

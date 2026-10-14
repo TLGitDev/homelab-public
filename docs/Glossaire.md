@@ -150,7 +150,7 @@ Volume réellement disponible, associé à un PVC. Peut représenter un chemin l
 
 ### Local PV
 
-PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Patron validé pour `tank` : [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Vaultwarden : `vaultwarden-zfs-pv` → `/var/lib/k3s-storage/vaultwarden`. [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 

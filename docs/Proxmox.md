@@ -69,7 +69,7 @@ Datacenter
 ## Stockage
 
 - `rpool` : infrastructure (Proxmox, VM, LXC) sur le NVMe.
-- `tank` : données, miroir des deux IronWolf. Aucun dataset de service pour l'instant.
+- `tank` : données, miroir des deux IronWolf. Volumes VM sous `tank/vmdata` (Vaultwarden : `vm-101-vaultwarden-data`). Détail : [Stockage.md](Stockage.md).
 
 Détail : [Stockage.md](Stockage.md).
 

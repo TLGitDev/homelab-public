@@ -43,5 +43,5 @@ Détail opérationnel : [Kubernetes.md](../Kubernetes.md), [Proxmox.md](../Proxm
 ## Conséquences
 
 - Perte du nœud = perte du cluster. Pas de failover.
-- `local-path` = stockage **local au nœud**. Données Vaultwarden **aujourd'hui**. Cible validée (POC) : zvol sur `tank` + Local PV ([ADR-008](ADR-008-Vaultwarden-tank.md)). Pas de CSI ZFS pour l'instant.
+- `local-path` = stockage **local au nœud**. Vaultwarden n'y est plus : zvol sur `tank` + Local PV ([ADR-008](ADR-008-Vaultwarden-tank.md)). Pas de CSI ZFS pour l'instant. L'ancien PVC `local-path` est conservé figé.
 - La résilience repose sur **sauvegardes + restauration**, pas sur la réplication du cluster. Exemple : migration Vaultwarden (nouveau PVC + restore), pas une HA fictive. [Sauvegardes.md](../Sauvegardes.md).

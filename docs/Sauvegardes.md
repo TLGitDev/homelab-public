@@ -2,7 +2,7 @@
 
 > RAID, snapshots et sauvegardes : trois protections différentes.
 >
-> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Cible Vaultwarden : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -91,15 +91,15 @@ Couche 4    Sauvegarde hors site (future)
 
 État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire.
 
-Copies ponctuelles sur k3s-01 : backup de migration Vaultwarden ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire.
+Copies ponctuelles sur k3s-01 : backups de migration Vaultwarden (dont `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/`) ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire. Aucune de ces copies n'est encore hors de `k3s-01` / hors de `tank` de façon régulière.
 
 ---
 
-# Vaultwarden (prévu, après migration sur `tank`)
+# Vaultwarden
 
-`tank/vmdata` existe. Le coffre est encore en `local-path` / `rpool`. L'automatisation n'est **pas** lancée tant que les données n'ont pas migré. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+Le coffre est sur `tank` depuis le 2026-10-14. L'automatisation n'est **pas** encore en place. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-Une fois le volume sur `tank` :
+V1 prévue :
 
 ```
 03:00

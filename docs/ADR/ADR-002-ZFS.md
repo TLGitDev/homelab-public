@@ -45,6 +45,6 @@ Utiliser ZFS comme stockage principal.
 - Proxmox a été réinstallé sur ZFS. L'ancienne installation ext4/LVM n'existe plus.
 - `rpool` : infrastructure (Proxmox, disques **système** des VM/CT). Disque système de `k3s-01` : `rpool/data/vm-101-disk-1` (64 Go).
 - `tank` : données persistantes. Dataset `tank/vmdata` exposé à Proxmox comme `zfspool: tank-vmdata` (`content images`, `sparse 1`). Réservé aux volumes bloc gérés par Proxmox.
-- Vaultwarden n'est **pas** encore sur `tank` : PVC `local-path` sur `rpool`. Consommation K8s (Local PV) : [ADR-008](ADR-008-Vaultwarden-tank.md). Détail : [Stockage.md](../Stockage.md).
+- Vaultwarden est sur `tank` depuis le 2026-10-14 (`tank/vmdata/vm-101-vaultwarden-data`, Local PV). [ADR-008](ADR-008-Vaultwarden-tank.md). Détail : [Stockage.md](../Stockage.md).
 - Un miroir n'est pas une sauvegarde : une copie indépendante reste nécessaire ([Sauvegardes.md](../Sauvegardes.md)).
 - Les identifiants Linux (`/dev/sda`, `/dev/sdb`) ne doivent pas servir à identifier les disques : utiliser les numéros de série (voir [Materiel.md](../Materiel.md)).

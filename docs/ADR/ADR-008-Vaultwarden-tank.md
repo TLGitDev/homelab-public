@@ -2,29 +2,29 @@
 
 ## Statut
 
-Accepté. Chemin de stockage **validé** par un POC (2026-10-06). **Pas encore appliqué** au Vaultwarden de production.
+Accepté. **Appliqué** le 2026-10-14. POC préalable : 2026-10-06.
 
 ## Contexte
 
-Vaultwarden tourne sur K3s. Ses données sont aujourd'hui un PVC `local-path` sur le disque système de la VM `k3s-01` (`rpool/data/vm-101-disk-1`). Perdre `rpool` ou la VM, c'est perdre le coffre.
+Vaultwarden tournait sur K3s avec un PVC `local-path` sur le disque système de `k3s-01` (`rpool`). Perdre `rpool` ou la VM, c'était perdre le coffre.
 
-`tank/vmdata` existe et est exposé à Proxmox (`zfspool: tank-vmdata`). Aucun volume applicatif n'y reste après le POC.
+`tank/vmdata` est exposé à Proxmox (`zfspool: tank-vmdata`). Le chemin zvol → VM → ext4 → Local PV → PVC → Pod a été validé par un POC, puis le volume de test a été détruit.
 
-Les sauvegardes automatiques ne sont **pas** en place. On fixe d'abord où vivent les données, **puis** on automatisera les backups.
+Les sauvegardes automatiques n'étaient **pas** en place. On a d'abord déplacé les données, **puis** on automatisera les backups.
 
 ## Décision
 
 Pour les données persistantes critiques de Vaultwarden :
 
-1. un **volume bloc ZFS** sous `tank/vmdata` (stockage Proxmox `tank-vmdata`) ;
-2. présenté à la VM `k3s-01` ;
-3. filesystem Linux (ext4 au POC) ;
-4. consommé par Kubernetes via un **PersistentVolume local statique** et un PVC.
+1. un **volume bloc ZFS** `tank/vmdata/vm-101-vaultwarden-data` (stockage Proxmox `tank-vmdata`, 8 Gio) ;
+2. présenté à la VM `k3s-01` (`scsi1`, `iothread=1`) ;
+3. filesystem Linux ext4, montage par UUID dans `fstab` ;
+4. consommé par Kubernetes via le PV statique `vaultwarden-zfs-pv` (`Retain`) et le PVC `vaultwarden-zfs-pvc`.
 
 Pas de NFS sous SQLite. Pas de CSI ZFS à ce stade.
 
 ```
-SQLite → PVC → Local PV → filesystem Linux → zvol → VM → tank/vmdata
+SQLite → PVC vaultwarden-zfs-pvc → Local PV → ext4 → zvol → VM 101 → tank/vmdata
 ```
 
 Organisation :
@@ -32,13 +32,12 @@ Organisation :
 ```
 tank
 ├── vmdata     ← zfspool Proxmox `tank-vmdata` ; volumes bloc uniquement
+│   └── vm-101-vaultwarden-data
 ├── backups    ← rôle éventuel, plus tard
 └── …
 ```
 
-Nom du volume Vaultwarden : à fixer à la migration. **Pas** de dataset applicatif du type `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.
-
-Prochaine étape : **conception détaillée de la migration** (sauvegarde préalable, rollback, conservation de l'ancien PVC). Ne pas migrer tant que cette procédure n'est pas écrite.
+**Pas** de dataset applicatif du type `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.
 
 Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultwarden.md). Backups : [Sauvegardes.md](../Sauvegardes.md).
 
@@ -49,6 +48,7 @@ Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultward
 - Un Local PV évite d'introduire un CSI ZFS alors que le cluster n'a qu'un nœud et que Proxmox gère déjà les zvols.
 - Snapshots ZFS possibles (rollback rapide). **Ce n'est pas** une sauvegarde : perte de `tank` = perte des snapshots.
 - Vaultwarden ne connaît pas ZFS : PVC → K8s → chemin local → VM → Proxmox → ZFS.
+- GitOps conserve le Deployment, le PV et le PVC dans Git (sync manuel).
 
 ## Alternatives étudiées
 
@@ -61,15 +61,14 @@ Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultward
 
 ## Validation
 
-POC du **2026-10-06** : volume de test `tank/vmdata/vm-9999-k8s-test` (1 GiB), attaché à `k3s-01`, ext4, Local PV + PVC, écriture depuis un Pod, lecture identique dans la VM.
-
-Le POC a ensuite été **entièrement supprimé** (Pod, PVC, PV, montage, disque, zvol). Aucune donnée Vaultwarden n'a été modifiée. Détail : [Stockage.md](../Stockage.md#poc-6-octobre-2026).
+- POC du **2026-10-06** : volume de test détruit ensuite. [Stockage.md](../Stockage.md#poc-6-octobre-2026).
+- Migration du **2026-10-14** : sauvegarde arrêtée, copie SHA-256 identique, `PRAGMA integrity_check` ok (29 tables), Argo CD Synced/Healthy, HTTP 200, coffre OK. Ancien PVC conservé. [Vaultwarden.md](../Vaultwarden.md#migration-local-path--tank-2026-10-14).
 
 ## Conséquences
 
 - Provisioning des volumes **manuel** (Proxmox + PV statique).
 - Le Local PV est lié au nœud `k3s-01`. Pas de HA Kubernetes du stockage — cohérent avec un cluster à un nœud ([ADR-004](ADR-004-K3s.md)).
-- Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure de restauration à écrire **avant** la migration, et à tester.
-- Pendant la migration : conserver l'ancien PVC `local-path` comme rollback jusqu'à validation.
-- Miroir + snapshots ≠ backup. Backup indépendant (USB / offsite) **après** cette architecture.
+- Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure de restauration à **tester**.
+- L'ancien PVC `vaultwarden-pvc` est un rollback **figé** : plus synchronisé depuis la bascule.
+- Miroir + snapshots ≠ backup. Backup indépendant (USB / offsite) et test de restauration : **prochaine étape**.
 - Première version de backup prévue : arrêt Vaultwarden, copie cohérente (`db.sqlite3`, `rsa_key.pem`, …), vérifs, redémarrage — pas une copie à chaud arbitraire.

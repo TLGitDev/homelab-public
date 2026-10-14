@@ -40,8 +40,8 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
-| Pool de données | `tank/vmdata` (`tank-vmdata`) en place ; Vaultwarden encore en `local-path` ; [ADR-008](ADR/ADR-008-Vaultwarden-tank.md) |
-| Sauvegardes | Stratégie définie, pas encore mise en œuvre |
+| Pool de données | `tank/vmdata` ; Vaultwarden sur zvol `vm-101-vaultwarden-data` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
+| Sauvegardes | Copies de migration ; routine et copie hors `tank` ⬜ |
 
 ---
 
@@ -55,7 +55,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Architecture.md](Architecture.md) | Principes, schéma actuel, feuille de route |
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, dépôts, systemd |
-| [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, POC Local PV |
+| [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
@@ -75,7 +75,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [ADR-005-Sealed-Secrets.md](ADR/ADR-005-Sealed-Secrets.md) | Secrets GitOps : Sealed Secrets |
 | [ADR-006-Argo-CD.md](ADR/ADR-006-Argo-CD.md) | GitOps : Argo CD |
 | [ADR-007-Argo-CD-exposition.md](ADR/ADR-007-Argo-CD-exposition.md) | Exposition Argo CD, config hors `root` |
-| [ADR-008-Vaultwarden-tank.md](ADR/ADR-008-Vaultwarden-tank.md) | Vaultwarden : zvol `tank` + Local PV (POC OK) |
+| [ADR-008-Vaultwarden-tank.md](ADR/ADR-008-Vaultwarden-tank.md) | Vaultwarden : zvol `tank` + Local PV (appliqué) |
 
 ---
 

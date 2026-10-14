@@ -48,7 +48,8 @@ Deployment vaultwarden
 Pod
     │
     ▼
-PVC vaultwarden-pvc → PV local-path (nœud k3s-01)
+PVC vaultwarden-zfs-pvc → Local PV vaultwarden-zfs-pv
+        → /var/lib/k3s-storage/vaultwarden → zvol tank/vmdata/vm-101-vaultwarden-data
 ```
 
 Le HTTPS public est terminé par Cloudflare. Le tunnel envoie **HTTP** à Traefik. Vaultwarden authentifie lui-même ses clients.
@@ -64,7 +65,9 @@ Namespace dédié : `vaultwarden`. Les ressources ne se mélangent pas avec le r
 | Deployment | `vaultwarden` |
 | Service | `vaultwarden-service` |
 | ConfigMap | `vaultwarden-config` |
-| PVC | `vaultwarden-pvc` |
+| PVC (en service) | `vaultwarden-zfs-pvc` |
+| PV | `vaultwarden-zfs-pv` (statique, `Retain`) |
+| PVC historique (rollback) | `vaultwarden-pvc` (`local-path`, plus utilisé par le Deployment) |
 | SealedSecret → Secret | `vaultwarden-secret` |
 | Ingress | `vaultwarden-ingress` |
 
@@ -78,7 +81,9 @@ L'Application Argo CD (`kubernetes/argocd/applications/vaultwarden.yaml`) vit da
 kubernetes/vaultwarden/
 ├── configmap.yaml
 ├── deployment.yaml
-├── pvc.yaml
+├── pv-zfs.yaml
+├── pvc-zfs.yaml
+├── pvc.yaml              ← historique local-path, encore dans Git
 ├── sealed-secret.yaml
 ├── service.yaml
 └── ingress.yaml
@@ -102,7 +107,7 @@ Fichier : `kubernetes/vaultwarden/configmap.yaml`.
 
 # Deployment
 
-Fichier : `kubernetes/vaultwarden/deployment.yaml`. Image `vaultwarden/server:1.37.3`, `replicas: 1`, port 80, `/data` depuis `vaultwarden-pvc`.
+Fichier : `kubernetes/vaultwarden/deployment.yaml`. Image `vaultwarden/server:1.37.3`, `replicas: 1`, port 80, `/data` depuis `vaultwarden-zfs-pvc`.
 
 ```
 Deployment → ReplicaSet → Pod
@@ -141,60 +146,89 @@ Le Secret dans etcd reste en clair côté API. Ne pas `kubectl get secret … -o
 
 # Stockage
 
-SQLite dans `/data`. PVC `vaultwarden-pvc` : 5 Gi, `ReadWriteOnce`, StorageClass `local-path` (`WaitForFirstConsumer`).
+SQLite dans `/data`. **En service depuis le 2026-10-14** : PVC `vaultwarden-zfs-pvc` → Local PV `vaultwarden-zfs-pv` → zvol sur `tank`. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md), [Stockage.md](Stockage.md).
 
-PV actuel (constaté) : `pvc-<uuid-pv-local-path>`, lié au nœud **k3s-01**.
-
-Ces données sont sur le **disque système de la VM** (`rpool/data/vm-101-disk-1`), **pas** sur `tank`. Architecture temporaire.
+Vaultwarden ne connaît pas ZFS.
 
 ```
-aujourd'hui :  PVC → local-path → filesystem k3s-01 → disque VM → rpool
-cible :        PVC → Local PV → filesystem → zvol → k3s-01 → tank/vmdata
+Proxmox
+└── tank (miroir)
+    └── tank/vmdata/vm-101-vaultwarden-data   ← 8 Gio, scsi1, iothread=1
+            └── VM k3s-01  (/dev/sdb au moment de la migration)
+                    └── ext4 (label vaultwarden-data)
+                            └── /var/lib/k3s-storage/vaultwarden
+                                    └── PV vaultwarden-zfs-pv (Retain)
+                                            └── PVC vaultwarden-zfs-pvc
+                                                    └── Deployment
 ```
 
-## Cible
+| Élément | Valeur |
+|---------|--------|
+| VM Proxmox | 101 (`k3s-01`) |
+| Volume Proxmox | `vm-101-vaultwarden-data` |
+| zvol | `tank/vmdata/vm-101-vaultwarden-data` |
+| Taille | 8 Gio |
+| Disque Linux (constaté) | `/dev/sdb` — le nom peut changer ; `fstab` utilise l'UUID |
+| Filesystem | ext4, label `vaultwarden-data` |
+| UUID | `<uuid-disque-vaultwarden>` |
+| Montage | `/var/lib/k3s-storage/vaultwarden` (`defaults,noatime`) |
+| PV | `vaultwarden-zfs-pv` |
+| PVC | `vaultwarden-zfs-pvc` (ns `vaultwarden`) |
+| StorageClass | `vaultwarden-zfs-local` |
+| Rétention PV | `Retain` |
+| Nœud | `k3s-01` (`nodeAffinity`) |
 
-Volume **bloc** ZFS sous `tank/vmdata` (`tank-vmdata`), présenté à `k3s-01`, filesystem Linux, **Local PV statique**, PVC. Vaultwarden ne connaît pas ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md), [Stockage.md](Stockage.md).
-
-Le chemin ZFS → Proxmox → VM → ext4 → Local PV → PVC → Pod a été **validé** le 2026-10-06. Le volume de test a été détruit. Vaultwarden n'a pas été migré.
-
-`local-path` n'est **pas** un stockage distribué. Un Local PV non plus : il est lié à `k3s-01`. Snapshots ZFS (une fois sur `tank`) ≠ sauvegarde.
-
-Un PVC **ne se déplace pas** d'un namespace à un autre : nouveau PVC + restauration.
-
-## Migration (prévue, pas commencée)
-
-Principes : sauvegarde cohérente **avant**, ancien PVC conservé comme rollback, nouveau stockage sur `tank`, bascule seulement après vérifs.
-
-1. Conserver le stockage actuel comme rollback.
-2. Créer le volume Vaultwarden sur `tank/vmdata`.
-3. L'attacher à `k3s-01`.
-4. Créer et monter le filesystem.
-5. Créer le PV local (statique, `Retain`, affinité `k3s-01`).
-6. Créer le PVC.
-7. Arrêter Vaultwarden.
-8. Copie cohérente des données (SQLite, pas une copie à chaud arbitraire).
-9. Démarrer Vaultwarden sur le nouveau stockage.
-10. Vérifier l'application.
-11. Garder l'ancien PVC pendant la période de validation.
-12. Supprimer l'ancien stockage **seulement** après validation.
+`fstab` (VM) :
 
 ```
-                migration
-                   │
-       ┌───────────┴───────────┐
-       │                       │
-ancien PVC                 nouveau PVC
-local-path / rpool         tank / zvol
-       │                       │
-       └────── rollback ───────┘
+UUID=<uuid-disque-vaultwarden> /var/lib/k3s-storage/vaultwarden ext4 defaults,noatime 0 2
 ```
+
+Vérifié : `findmnt`, `df`. Occupation constatée après migration : ~7,8 Gio, 3,4 Mio utilisés côté filesystem ; `du -sh` ~1,4 Mio de fichiers visibles. L'écart n'a pas été investigué ; aucun dysfonctionnement observé.
+
+Ce Local PV est lié au nœud `k3s-01`. Le miroir `tank` persiste le disque côté Proxmox. Ce n'est **pas** un stockage Kubernetes partagé entre nœuds. Snapshots ZFS ≠ sauvegarde.
+
+## Historique `local-path` (conservé)
+
+Avant : PVC `vaultwarden-pvc` 5 Gi, `local-path`, PV `pvc-<uuid-pv-local-path>`, répertoire `/var/lib/rancher/k3s/storage/pvc-<uuid-pv-local-path>_vaultwarden_vaultwarden-pvc`, ext4 sur le disque système (`/dev/sda` / `rpool`).
+
+Ce PVC **existe encore** et reste dans Git (`pvc.yaml`). Il n'est **plus** monté par le Deployment.
+
+**Attention** : depuis la bascule, ce volume n'est plus synchronisé. Un rollback ne consiste pas à changer seulement le `claimName` : il faut d'abord savoir quelle copie est la plus récente, et recopier / restaurer **Vaultwarden arrêté**.
+
+## Migration `local-path` → `tank` (2026-10-14)
+
+Terminée et validée. GitOps : commit `8ccecbc`.
+
+1. Volume ZFS 8 Gio, attaché `scsi1`, ext4, `fstab` par UUID, montage vérifié.
+2. Manifestes `pv-zfs.yaml` / `pvc-zfs.yaml` appliqués ; PV et PVC **Bound**. Ancien PVC conservé.
+3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. Empreinte de `rsa_key.pem` également vérifiée.
+4. `kubectl -n vaultwarden scale deployment vaultwarden --replicas=0`.
+5. Pod temporaire `vaultwarden-data-copy` : ancien PVC en lecture seule (`/source`), nouveau en lecture-écriture (`/destination`) ; `cp -a` + `sync`.
+6. SHA-256 `/source` vs `/destination` : aucune différence. `integrity_check` en lecture seule sur le nouveau volume : `ok`, 29 tables. Pod de copie supprimé.
+7. Deployment : `claimName: vaultwarden-zfs-pvc`. Push, refresh Argo CD, **sync manuel**. Synced / Healthy.
+8. Pod Running, Rocket sur :80, HTTP **200** depuis la VM, coffre OK dans le navigateur.
+
+L'IP Pod observée au test (`10.42.0.56`) n'est **pas** stable. Pour un contrôle durable : Service Kubernetes ou `https://vaultwarden.labo.example`.
 
 ## Restauration si k3s-01 est perdu (`tank` intact)
 
-Nouvelle VM → réattacher le zvol → filesystem → Local PV → PVC → Vaultwarden.
+Nouvelle VM → réattacher le zvol **sans le détruire** → filesystem (UUID) → Local PV → PVC → Vaultwarden.
 
-Cette procédure doit être **écrite et testée** avant de considérer l'architecture pleinement opérationnelle. Le volume ne se recrée pas avec la VM : ne pas le détruire par erreur.
+Cette procédure n'a **pas** encore été testée de bout en bout.
+
+## Contrôles utiles
+
+```
+kubectl -n argocd get application vaultwarden
+kubectl -n vaultwarden get deployment vaultwarden
+kubectl -n vaultwarden get pvc
+kubectl get pv vaultwarden-zfs-pv
+findmnt /var/lib/k3s-storage/vaultwarden
+df -h /var/lib/k3s-storage/vaultwarden
+```
+
+HTTP : Service du namespace, ou le domaine public — pas l'IP du Pod.
 
 ---
 
@@ -218,7 +252,7 @@ Access : Proxmox seulement.
 
 # Argo CD
 
-Géré par l'Application `vaultwarden` : path `kubernetes/vaultwarden`, destination `vaultwarden`, `targetRevision: HEAD`. État constaté : **Synced** / **Healthy** (révision `8322150` au moment de la bascule).
+Géré par l'Application `vaultwarden` : path `kubernetes/vaultwarden`, destination `vaultwarden`, `targetRevision: HEAD`. Sync **manuel**. État constaté après la migration stockage : **Synced** / **Healthy** (révision `8ccecbc`).
 
 Flux, dépôt SSH, patron pour les prochaines applis : [ArgoCD.md](ArgoCD.md).
 
@@ -261,24 +295,29 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 | Namespace `vaultwarden` | OK |
 | Deployment 1/1 Running | OK |
 | Service ClusterIP / Ingress Traefik | OK |
-| PVC Bound / PV local-path | OK (**pas** encore `tank`) |
+| PVC `vaultwarden-zfs-pvc` / PV `vaultwarden-zfs-pv` | OK Bound (`tank`) |
+| PVC historique `vaultwarden-pvc` | conservé (figé, rollback) |
 | SealedSecret Synced | OK |
-| Volume bloc sur `tank` | ⬜ migration ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md) ; POC 2026-10-06 OK) |
-| Argo CD Synced / Healthy | OK |
-| `https://vaultwarden.labo.example` | OK, données post-migration |
+| Volume bloc sur `tank` | ✅ 2026-10-14 ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
+| Argo CD Synced / Healthy | OK (`8ccecbc`) |
+| `https://vaultwarden.labo.example` | OK |
 | Access devant Vaultwarden | volontairement absent |
-| Sauvegarde récurrente | ⬜ après `tank` (copie de migration déjà sur k3s-01) |
+| `ADMIN_TOKEN` en Argon2 PHC | ⬜ logs : encore en texte brut (pas de valeur dans cette doc) |
+| Sauvegarde récurrente | ⬜ copies de migration seulement |
+| Copie hors `tank` | ⬜ |
+| Test de restauration | ⬜ |
+| Suppression de l'ancien PVC | ⬜ après backups + procédure de rollback |
 
 ---
 
 # À retenir
 
-**Kubernetes** — Un namespace isole les ressources namespacées. Un PVC ne migre pas : nouveau volume + restore. `local-path` = disque du nœud. `WaitForFirstConsumer` peut attendre un Pod avant de créer le PV.
+**Kubernetes** — Un namespace isole les ressources namespacées. Un PVC ne migre pas : nouveau volume + restore. Local PV = nœud `k3s-01`. `Retain` : supprimer le PVC ne doit pas effacer les données.
 
-**Réseau** — Service = identité stable ; EndpointSlice = Pods actuels. Traefik lit les Ingress. Deux Ingress / même host = piège.
+**Réseau** — Service = identité stable ; EndpointSlice = Pods actuels. Traefik lit les Ingress. Deux Ingress / même host = piège. L'IP d'un Pod n'est pas un test durable.
 
-**Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change.
+**Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change. `ADMIN_TOKEN` : viser Argon2 PHC (avertissement Vaultwarden).
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Volume / snapshot / backup sont trois choses. Automatisation **après** migration sur `tank`. [Sauvegardes.md](Sauvegardes.md).
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Miroir `tank` ≠ copie indépendante. [Sauvegardes.md](Sauvegardes.md).
