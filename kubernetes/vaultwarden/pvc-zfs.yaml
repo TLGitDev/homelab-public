@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vaultwarden-zfs-pvc
+  namespace: vaultwarden
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: vaultwarden-zfs-local
+  volumeName: vaultwarden-zfs-pv
+  resources:
+    requests:
+      storage: 8Gi
