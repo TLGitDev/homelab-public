@@ -2,7 +2,7 @@
 
 > RAID, snapshots et sauvegardes : trois protections différentes.
 >
-> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Phase 0 : [FeuilleDeRoute.md](FeuilleDeRoute.md).
 
 ---
 

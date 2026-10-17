@@ -52,7 +52,8 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Fichier | Rôle |
 |---------|------|
 | [Journal.md](Journal.md) | Chronologie des séances |
-| [Architecture.md](Architecture.md) | Principes, schéma actuel, feuille de route |
+| [Architecture.md](Architecture.md) | Principes, schéma actuel, as-built |
+| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–6, décisions ouvertes |
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, dépôts, systemd |
 | [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
@@ -81,4 +82,4 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 
 ## Infrastructure cible
 
-Détail et cases à cocher : [Architecture.md](Architecture.md) (feuille de route).
+Cible : [FeuilleDeRoute.md](FeuilleDeRoute.md). As-built : [Architecture.md](Architecture.md).

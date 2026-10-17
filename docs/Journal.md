@@ -850,3 +850,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-06 | Sprint 19 : POC `tank/vmdata` + Local PV validé, puis nettoyé. |
 | 2026-10-14 | Sprint 20 : Vaultwarden migré sur zvol `tank` (Local PV). |
 | 2026-10-17 | Sprint 21 : `ADMIN_TOKEN` Vaultwarden en Argon2id. |
+| 2026-10-17 | Feuille de route cible (phases 0–6) dans [FeuilleDeRoute.md](FeuilleDeRoute.md). |

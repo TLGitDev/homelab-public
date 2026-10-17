@@ -20,7 +20,7 @@
 | HDD 1 | Seagate IronWolf Pro 8 To | ZFS Mirror | ✅ Installé |
 | HDD 2 | Seagate IronWolf Pro 8 To | ZFS Mirror | ✅ Installé |
 | Alimentation | MSI MAG A650BN 650 W | Alimentation | ✅ Installée |
-| Onduleur | Eaton Ellipse 700 VA | Protection électrique | ⏳ À installer |
+| Onduleur | Eaton Ellipse 700 VA | Protection électrique | ✅ En place (protège le serveur) |
 
 ---
 
@@ -110,7 +110,6 @@
 - [ ] Ajouter de la mémoire.
 - [ ] Ajouter un second SSD NVMe.
 - [ ] Ajouter une carte réseau 10 GbE.
-- [ ] Installer l'onduleur.
 
 ## Cartographie du stockage
 

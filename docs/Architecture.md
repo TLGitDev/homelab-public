@@ -3,7 +3,7 @@
 > Principes et état de conception.
 >
 > Ce fichier ne décrit pas les manipulations ([Journal.md](Journal.md)), le matériel ([Materiel.md](Materiel.md)), ni les cours détaillés.
-> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). GitOps : [ArgoCD.md](ArgoCD.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md).
+> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). GitOps : [ArgoCD.md](ArgoCD.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md). Cible : [FeuilleDeRoute.md](FeuilleDeRoute.md).
 > L'index de toute la documentation est dans [README.md](README.md).
 
 ---
@@ -116,7 +116,7 @@ Les services d'infrastructure légers ont chacun leur LXC. Les applications tour
 
 Pourquoi : maintenance plus simple, impact d'une panne limité, mises à jour isolées, possibilité de supprimer ou recréer un service sans affecter les autres.
 
-Exemples : LXC Cloudflare Tunnel ; Vaultwarden, Immich, Paperless sur le cluster.
+Exemples : LXC Cloudflare Tunnel ; Vaultwarden sur le cluster. D'autres applis : [FeuilleDeRoute.md](FeuilleDeRoute.md).
 
 ## Moindre privilège
 
@@ -233,7 +233,7 @@ Conventions LXC :
 - hostname = nom du service ;
 - exemple : `cloudflare`.
 
-Les applications (Vaultwarden, plus tard Paperless, Immich…) sont des ressources Kubernetes sur K3s, pas des LXC.
+Les applications actuelles (Vaultwarden) sont des ressources Kubernetes sur K3s, pas des LXC. Les suivants se choisissent selon le besoin (K3s, LXC, VM). [FeuilleDeRoute.md](FeuilleDeRoute.md).
 
 Disques **système** des LXC/VM : datasets sous `rpool/data` (k3s-01 : `vm-101-disk-1`, 64 Go). Volumes de **données** : `tank/vmdata` (`tank-vmdata`) — Vaultwarden : `vm-101-vaultwarden-data`. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). ISO, templates : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
 
@@ -278,7 +278,9 @@ Cours : [Kubernetes.md](Kubernetes.md).
 
 ---
 
-# Feuille de route
+# État (as-built)
+
+Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en place**.
 
 ## Fondations
 
@@ -290,31 +292,26 @@ Cours : [Kubernetes.md](Kubernetes.md).
 - ✅ MFA
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
-- ⬜ Sauvegardes Proxmox (stratégie écrite, pas encore exécutée)
+- ✅ Onduleur (protège le serveur)
+- ⬜ Sauvegardes (stratégie écrite, pas encore en routine)
 
 ## Infrastructure
 
-- ⬜ Mise en œuvre des sauvegardes
+- ⬜ Snapshots ZFS automatiques + rétention
+- ⬜ Sauvegarde USB + restauration testée
 - ⬜ Copie hors k3s-01 de la clé Sealed Secrets
-- ⬜ Tests de restauration
-- ⬜ Onduleur
 - ⬜ Supervision
 
 ## Plateforme
 
 - ✅ K3s (`<ip-k3s-01>`) + Traefik
 - ✅ Argo CD (GitOps, Vaultwarden)
-- ⬜ Caddy (non utilisé : Traefik remplit le rôle d'Ingress)
 
 ## Services
 
 - ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données sur `tank` (`vaultwarden-zfs-pvc`)
-- ✅ POC `tank/vmdata` (1 GiB, Local PV, 2026-10-06 ; nettoyé)
+- ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
+- ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
 - ⬜ Sauvegardes Vaultwarden automatisées
 - ⬜ Copie hors `tank` + test de restauration
-- ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
-- ⬜ Home Assistant
-- ⬜ Paperless
-- ⬜ Immich
-- ⬜ Site personnel
