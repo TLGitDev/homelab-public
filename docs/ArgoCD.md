@@ -112,6 +112,8 @@ GitOps normal
 
 **Healthy** : l'application est considérée saine (Pods up, etc.). Les deux ne sont pas la même chose : on peut être Synced et Unhealthy.
 
+Un SealedSecret Synced met à jour le Secret. Si l'appli lit ce Secret en **variable d'environnement**, le Pod déjà lancé garde l'ancienne valeur jusqu'à un `rollout restart`. Constaté sur Vaultwarden (Argon2, 2026-10-17) : [Vaultwarden.md](Vaultwarden.md#admin_token-en-argon2id-2026-10-17).
+
 ---
 
 # Dépôt privé

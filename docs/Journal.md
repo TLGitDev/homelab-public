@@ -787,6 +787,38 @@ Formaliser les sauvegardes (SQLite cohérent), une copie hors `tank`, et un test
 
 ---
 
+# 2026-10-17 — Sprint 21 : `ADMIN_TOKEN` en Argon2id
+
+## Objectif
+
+Remplacer le token administrateur Vaultwarden en clair dans le Secret par un hash Argon2id, sans perdre `/admin`.
+
+## Réalisé
+
+- Hash via `/vaultwarden hash --preset owasp` (Pod temporaire, saisie interactive).
+- Premier SealedSecret invalide (`invalid Base64 encoding`, CrashLoop) → revert `a499429`.
+- Second hash resealé : `0e5f528`. Secret OK, mais le Pod déjà lancé gardait l'ancienne variable d'environnement.
+- `rollout restart` du Deployment. Plus d'avertissement « plain text ». Coffre et `/admin` OK.
+
+## Vérifications
+
+- ✅ Argo CD Synced / Healthy (`0e5f528`).
+- ✅ Logs sans « plain text ADMIN_TOKEN » ni erreur Base64 (fenêtre contrôlée).
+- ⬜ Sauvegardes régulières, copie hors `tank`, test de restauration.
+- ⬜ Suppression de l'ancien PVC `local-path` (politique `Delete` : ne pas le faire à la légère).
+- ⬜ Nettoyage du Pod temporaire `vaultwarden-hash` s'il existe encore.
+
+## Compétences acquises
+
+- Hash PHC Argon2id pour Vaultwarden.
+- Un Secret en `env` n'est pas rechargé sans redémarrage du Pod.
+
+## Prochaine étape
+
+Sauvegardes régulières (SQLite cohérent), copie hors `tank`, test de restauration. Ne pas supprimer l'ancien PVC tant que ce n'est pas en place.
+
+---
+
 # Changelog
 
 Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
@@ -817,3 +849,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-04 | ADR-008 : Vaultwarden sur volume bloc `tank` (cible, POC d'abord). |
 | 2026-10-06 | Sprint 19 : POC `tank/vmdata` + Local PV validé, puis nettoyé. |
 | 2026-10-14 | Sprint 20 : Vaultwarden migré sur zvol `tank` (Local PV). |
+| 2026-10-17 | Sprint 21 : `ADMIN_TOKEN` Vaultwarden en Argon2id. |

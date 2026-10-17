@@ -313,7 +313,7 @@ Cours : [Kubernetes.md](Kubernetes.md).
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ⬜ Sauvegardes Vaultwarden automatisées
 - ⬜ Copie hors `tank` + test de restauration
-- ⬜ `ADMIN_TOKEN` en Argon2 PHC
+- ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
 - ⬜ Home Assistant
 - ⬜ Paperless
 - ⬜ Immich

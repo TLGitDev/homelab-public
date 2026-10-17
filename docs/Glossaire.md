@@ -110,7 +110,7 @@ Configuration non sensible (hôte, port, niveau de logs…). Injectée dans le P
 
 ### Secret
 
-Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte.
+Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte **au démarrage** du conteneur (une mise à jour du Secret ne change pas une variable d'environnement déjà lancée).
 
 ### SOPS / age
 

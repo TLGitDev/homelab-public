@@ -50,7 +50,9 @@ Un SealedSecret est lié au cluster, au namespace et au nom : un changement impo
 
 ## Conséquences
 
-- Git contient des SealedSecrets, jamais `ADMIN_TOKEN` (ni équivalent) en clair.
+- Git contient des SealedSecrets, jamais le token administrateur, le hash PHC ni le ciphertext en clair dans la doc.
+- Pour Vaultwarden, le Secret cluster contient un hash Argon2id (`$argon2id$…`), pas le token tapé sur `/admin`. Détail : [Vaultwarden.md](../Vaultwarden.md#admin_token-en-argon2id-2026-10-17).
+- Une variable d'environnement issue d'un Secret n'est pas rechargée toute seule : `rollout restart` après un reseal.
 - Le Secret créé dans le cluster reste lisible via l'API (`kubectl get secret`) : ce n'est pas un coffre-fort interne.
 - SOPS peut rester visible dans l'historique Git ; ce n'est plus le flux opérationnel.
 - La **clé** du controller (TLS) est sauvegardée hors Git sur k3s-01 (`~/backups/sealed-secrets/`, mode `600`). **Pas** dans le dépôt. Une copie hors serveur reste à faire. Sans cette clé, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants.

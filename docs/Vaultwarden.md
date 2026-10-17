@@ -10,7 +10,7 @@
 
 # Objectif
 
-Un Pod Vaultwarden, SQLite, un PVC, Traefik, tunnel Cloudflare `homelab`. Namespace dédié. `ADMIN_TOKEN` via Sealed Secrets, jamais en clair dans Git. Déploiement : [ArgoCD.md](ArgoCD.md).
+Un Pod Vaultwarden, SQLite, un PVC, Traefik, tunnel Cloudflare `homelab`. Namespace dédié. `ADMIN_TOKEN` : hash Argon2id dans le Secret (SealedSecret), jamais le token ni le hash en clair dans Git. Déploiement : [ArgoCD.md](ArgoCD.md).
 
 Cloudflare Access reste sur **Proxmox**, pas devant Vaultwarden.
 
@@ -115,7 +115,7 @@ Deployment → ReplicaSet → Pod
 
 `containerPort: 80` décrit le port ; l'exposition passe par Service puis Ingress.
 
-Depuis le ConfigMap : `DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`. `ADMIN_TOKEN` depuis `Secret/vaultwarden-secret`. Si le Secret change, `kubectl rollout restart deployment vaultwarden -n vaultwarden`.
+Depuis le ConfigMap : `DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`. `ADMIN_TOKEN` depuis `Secret/vaultwarden-secret` (`secretKeyRef`). Kubernetes injecte cette variable **au démarrage** du conteneur : un nouveau Secret ne suffit pas, il faut `kubectl -n vaultwarden rollout restart deployment/vaultwarden`.
 
 ---
 
@@ -138,9 +138,42 @@ Deployment
 
 Un SealedSecret est chiffré **pour un cluster, un namespace et un nom**. Changer uniquement le `namespace` dans le YAML **ne suffit pas** : il faut **resealer**. C'est ce qui a été fait pour `default` → `vaultwarden`.
 
-Le Secret dans etcd reste en clair côté API. Ne pas `kubectl get secret … -o yaml` sans besoin. La valeur réelle d'`ADMIN_TOKEN` n'est ni dans cette doc ni dans une conversation.
+Le Secret dans etcd reste lisible via l'API. Ne pas `kubectl get secret … -o yaml` sans besoin. Ni le token administrateur, ni le hash PHC, ni le ciphertext du SealedSecret ne sont dans cette doc.
 
-**Avant** : SOPS + age (`secret.yaml`). Remplacé par Sealed Secrets pour que le cluster déchiffre tout seul. Journal : sprint 17.
+**Avant** : SOPS + age (`secret.yaml`). Remplacé par Sealed Secrets (sprint 17).
+
+## `ADMIN_TOKEN` en Argon2id (2026-10-17)
+
+Vaultwarden avertissait : *You are using a plain text `ADMIN_TOKEN` which is insecure.*
+
+Objectif : garder le **même** token pour `/admin` (coffre de mots de passe), stocker dans Kubernetes uniquement sa représentation Argon2id (format PHC).
+
+Génération : Pod temporaire `vaultwarden/server:1.37.3`, commande `/vaultwarden hash --preset owasp`, saisie **interactive** (pas le token sur la ligne de commande). Contrôles locaux du hash : préfixe `$argon2id$`, six champs PHC, `v=19`, Base64 valide, pas d'espace ni de retour à la ligne, 118 octets. Le hash lui-même n'est pas documenté.
+
+Reseal : `kubeseal` vers le controller `sealed-secrets` (ns `sealed-secrets`), fichier temporaire à permissions restreintes, puis `kubernetes/vaultwarden/sealed-secret.yaml`. Structure vérifiée : nom `vaultwarden-secret`, ns `vaultwarden`, clé `ADMIN_TOKEN`.
+
+### Premier hash invalide
+
+Au démarrage : `The configured Argon2 PHC in ADMIN_TOKEN is invalid: 'invalid Base64 encoding'`. CrashLoop.
+
+Revert Git : `a499429` (*Revert "Secure Vaultwarden admin token with Argon2"*). Sync Argo CD → retour au token en clair, avertissement de nouveau présent.
+
+### Correction
+
+Nouveau hash, vérifié, resealé. Commit `0e5f528` (*Fix Vaultwarden Argon2 admin token hash*). Sync manuel. Le Secret commençait bien par `$argon2id$`, mais le Pod **déjà lancé** affichait encore l'avertissement « plain text ».
+
+Cause : une variable d'environnement n'est pas rechargée quand le Secret change. Résolution :
+
+```
+kubectl -n vaultwarden rollout restart deployment/vaultwarden
+kubectl -n vaultwarden rollout status deployment/vaultwarden --timeout=120s
+```
+
+Nouveau Pod : plus d'erreur Base64, plus d'avertissement « plain text » dans les logs contrôlés. `/admin` OK avec le token habituel. Argo CD Synced / Healthy (`0e5f528`).
+
+Le token en clair reste dans un gestionnaire de mots de passe : c'est lui qu'on tape sur `/admin`. Le hash n'est pas un second mot de passe.
+
+Le Pod temporaire `vaultwarden-hash` doit être supprimé s'il traîne encore.
 
 ---
 
@@ -196,13 +229,15 @@ Ce PVC **existe encore** et reste dans Git (`pvc.yaml`). Il n'est **plus** mont�
 
 **Attention** : depuis la bascule, ce volume n'est plus synchronisé. Un rollback ne consiste pas à changer seulement le `claimName` : il faut d'abord savoir quelle copie est la plus récente, et recopier / restaurer **Vaultwarden arrêté**.
 
+L'ancien PV `local-path` a une politique **`Delete`**. Ne pas supprimer l'ancien PVC / PV sans avoir compris que Kubernetes peut alors effacer les données restantes. Le PV en service (`vaultwarden-zfs-pv`) est en **`Retain`**.
+
 ## Migration `local-path` → `tank` (2026-10-14)
 
 Terminée et validée. GitOps : commit `8ccecbc`.
 
 1. Volume ZFS 8 Gio, attaché `scsi1`, ext4, `fstab` par UUID, montage vérifié.
 2. Manifestes `pv-zfs.yaml` / `pvc-zfs.yaml` appliqués ; PV et PVC **Bound**. Ancien PVC conservé.
-3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. Empreinte de `rsa_key.pem` également vérifiée.
+3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. SHA-256 de `rsa_key.pem` : `<empreinte-vérifiée>`. Ces empreintes identifient les fichiers de **cette** intervention ; elles ne remplacent pas un test de restauration.
 4. `kubectl -n vaultwarden scale deployment vaultwarden --replicas=0`.
 5. Pod temporaire `vaultwarden-data-copy` : ancien PVC en lecture seule (`/source`), nouveau en lecture-écriture (`/destination`) ; `cp -a` + `sync`.
 6. SHA-256 `/source` vs `/destination` : aucune différence. `integrity_check` en lecture seule sur le nouveau volume : `ok`, 29 tables. Pod de copie supprimé.
@@ -221,14 +256,29 @@ Cette procédure n'a **pas** encore été testée de bout en bout.
 
 ```
 kubectl -n argocd get application vaultwarden
-kubectl -n vaultwarden get deployment vaultwarden
+kubectl -n vaultwarden get pods
 kubectl -n vaultwarden get pvc
 kubectl get pv vaultwarden-zfs-pv
 findmnt /var/lib/k3s-storage/vaultwarden
 df -h /var/lib/k3s-storage/vaultwarden
+kubectl -n vaultwarden logs deployment/vaultwarden --since=10m
 ```
 
-HTTP : Service du namespace, ou le domaine public — pas l'IP du Pod.
+Clés du Secret **sans** les valeurs :
+
+```
+kubectl -n vaultwarden get secret vaultwarden-secret \
+  -o go-template='{{range $k, $v := .data}}{{$k}}{{"\n"}}{{end}}'
+```
+
+Logs liés au token (fenêtre `--since` seulement) :
+
+```
+kubectl -n vaultwarden logs deployment/vaultwarden --since=10m \
+  | grep -Ei 'plain text ADMIN_TOKEN|invalid Base64|Argon2|error|Rocket has launched'
+```
+
+Une absence de message dans ce `grep` ne remplace pas le test du coffre et de `/admin`. HTTP : Service du namespace, ou `https://vaultwarden.labo.example` — pas l'IP du Pod.
 
 ---
 
@@ -252,7 +302,7 @@ Access : Proxmox seulement.
 
 # Argo CD
 
-Géré par l'Application `vaultwarden` : path `kubernetes/vaultwarden`, destination `vaultwarden`, `targetRevision: HEAD`. Sync **manuel**. État constaté après la migration stockage : **Synced** / **Healthy** (révision `8ccecbc`).
+Géré par l'Application `vaultwarden` : path `kubernetes/vaultwarden`, destination `vaultwarden`, `targetRevision: HEAD`. Sync **manuel**. État constaté après Argon2 : **Synced** / **Healthy** (révision `0e5f528`). Migration stockage : `8ccecbc`.
 
 Flux, dépôt SSH, patron pour les prochaines applis : [ArgoCD.md](ArgoCD.md).
 
@@ -299,10 +349,10 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 | PVC historique `vaultwarden-pvc` | conservé (figé, rollback) |
 | SealedSecret Synced | OK |
 | Volume bloc sur `tank` | ✅ 2026-10-14 ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
-| Argo CD Synced / Healthy | OK (`8ccecbc`) |
+| Argo CD Synced / Healthy | OK (`0e5f528`) |
 | `https://vaultwarden.labo.example` | OK |
 | Access devant Vaultwarden | volontairement absent |
-| `ADMIN_TOKEN` en Argon2 PHC | ⬜ logs : encore en texte brut (pas de valeur dans cette doc) |
+| `ADMIN_TOKEN` en Argon2 PHC | ✅ 2026-10-17 (`0e5f528` ; rollout restart requis) |
 | Sauvegarde récurrente | ⬜ copies de migration seulement |
 | Copie hors `tank` | ⬜ |
 | Test de restauration | ⬜ |
@@ -312,11 +362,11 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 # À retenir
 
-**Kubernetes** — Un namespace isole les ressources namespacées. Un PVC ne migre pas : nouveau volume + restore. Local PV = nœud `k3s-01`. `Retain` : supprimer le PVC ne doit pas effacer les données.
+**Kubernetes** — Un namespace isole les ressources namespacées. Un PVC ne migre pas : nouveau volume + restore. Local PV = nœud `k3s-01`. PV en service : `Retain`. Ancien PV `local-path` : `Delete` — ne pas le supprimer à la légère.
 
 **Réseau** — Service = identité stable ; EndpointSlice = Pods actuels. Traefik lit les Ingress. Deux Ingress / même host = piège. L'IP d'un Pod n'est pas un test durable.
 
-**Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change. `ADMIN_TOKEN` : viser Argon2 PHC (avertissement Vaultwarden).
+**Secrets** — Secret K8s ≠ coffre pour Git. Sealed Secrets = représentation chiffrée versionnable. Reseal si namespace ou nom change. `ADMIN_TOKEN` = hash Argon2id dans le cluster ; le token en clair reste dans le gestionnaire de mots de passe pour `/admin`. Un Secret en `env` n'est lu qu'au démarrage du Pod.
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
