@@ -53,7 +53,7 @@ Exemple **actuel** (`tank`) :
 tank
 ├── vmdata          ← zfspool Proxmox `tank-vmdata` (volumes bloc seulement)
 │   └── vm-101-vaultwarden-data
-├── backups         ← rôle éventuel, plus tard
+├── backups         ← copies (ex. `/tank/backups/k3s-01/vaultwarden`)
 └── …
 ```
 
@@ -248,7 +248,7 @@ zfspool: tank-vmdata
 | `rpool` | Infrastructure et disques **système** des VM/CT |
 | `tank` | Données qui doivent survivre à une reconstruction de l'infra |
 | `tank/vmdata` (`tank-vmdata`) | Volumes ZFS **bloc** pour les VM |
-| `tank/backups` | Sauvegardes, si ce rôle est retenu plus tard |
+| `tank/backups` | Copies hors VM (ex. Vaultwarden). **Même pool** que les données : pas un backup USB |
 
 ## Chaîne applicative (Vaultwarden, en service)
 

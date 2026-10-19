@@ -293,12 +293,12 @@ Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en 
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
 - ✅ Onduleur (protège le serveur)
-- ⬜ Sauvegardes (stratégie écrite, pas encore en routine)
+- ⚙️ Sauvegardes Vaultwarden configurées (1er timer ⬜) — [Vaultwarden.md](Vaultwarden.md#sauvegarde)
 
 ## Infrastructure
 
 - ⬜ Snapshots ZFS automatiques + rétention
-- ⬜ Sauvegarde USB + restauration testée
+- ⚙️ USB / Restic configuré (manuel ; restore de test OK, pas un tar Vaultwarden de prod)
 - ⬜ Copie hors k3s-01 de la clé Sealed Secrets
 - ⬜ Supervision
 
@@ -313,5 +313,5 @@ Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en 
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
-- ⬜ Sauvegardes Vaultwarden automatisées
-- ⬜ Copie hors `tank` + test de restauration
+- ⚙️ Sauvegardes Vaultwarden : timers 03:00 / 03:15 (1er run ⬜)
+- ⬜ Copie USB à jour + restauration Vaultwarden depuis un tar
