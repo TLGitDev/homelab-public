@@ -1,3 +1,0 @@
-creation_rules:
-  - path_regex: 'kubernetes[\\/]+vaultwarden[\\/]+secret\.yaml$'
-    age: age1utrl26vp9t06k453kgf2vkplrpz9jzr7rww7n6la705ucgyvtv4qj9f9va
