@@ -282,6 +282,8 @@ Cours : [Kubernetes.md](Kubernetes.md).
 
 Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en place**.
 
+Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). Git ≠ `/usr/local/sbin`. Chaîne : [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle).
+
 ## Fondations
 
 - ✅ Matériel
@@ -293,12 +295,12 @@ Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en 
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
 - ✅ Onduleur (protège le serveur)
-- ⚙️ Sauvegardes Vaultwarden configurées (1er timer ⬜) — [Vaultwarden.md](Vaultwarden.md#sauvegarde)
+- ⚙️ Sauvegardes : timers Vaultwarden + USB Restic manuel (ni les timers ni une restore complète du coffre ne sont validés) — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
 
 ## Infrastructure
 
 - ⬜ Snapshots ZFS automatiques + rétention
-- ⚙️ USB / Restic configuré (manuel ; restore de test OK, pas un tar Vaultwarden de prod)
+- ⚙️ USB / Restic : script `backup-usb` testé à la main (archive restaurée ≠ service Vaultwarden)
 - ⬜ Copie hors k3s-01 de la clé Sealed Secrets
 - ⬜ Supervision
 
@@ -314,4 +316,4 @@ Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en 
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
 - ⚙️ Sauvegardes Vaultwarden : timers 03:00 / 03:15 (1er run ⬜)
-- ⬜ Copie USB à jour + restauration Vaultwarden depuis un tar
+- ⬜ Restauration complète de Vaultwarden + rétention Restic

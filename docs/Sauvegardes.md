@@ -2,7 +2,7 @@
 
 > RAID, snapshots et sauvegardes : trois protections différentes.
 >
-> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Phase 0 : [FeuilleDeRoute.md](FeuilleDeRoute.md).
+> Principes d'architecture : [Architecture.md](Architecture.md). Stockage ZFS : [Stockage.md](Stockage.md). Vaultwarden sur `tank` : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). Phase 0 : [FeuilleDeRoute.md](FeuilleDeRoute.md). Coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
 
 ---
 
@@ -89,27 +89,72 @@ Couche 4    Sauvegarde hors site (future)
             Copie chiffrée sur un support dans un autre lieu.
 ```
 
-État : Vaultwarden a une chaîne quotidienne **configurée** (19 octobre 2026) ; le premier timer n'est pas encore confirmé. Restauration depuis une archive de production : à faire. Détail : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
+---
 
-Copies ponctuelles encore là : migration `…/migration-2026-10-14/` ; clé Sealed Secrets `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire.
+# Chaîne actuelle
+
+```
+03:00  k3s-01   tar Vaultwarden (service arrêté)     → rpool
+03:15  pve      pull SSH + SHA-256 + tar -tf         → /tank/backups/…
+manuel pve      backup-usb (Restic de /tank/backups) → USB
+```
+
+| Niveau | Où | Surviture à… | Ne survit pas à… |
+|--------|-----|----------------|------------------|
+| 1 | Archives sur `k3s-01` (`rpool`) | — | perte de la VM / du NVMe |
+| 2 | `/tank/backups` sur `pve` | reconstruction de `k3s-01` | perte de `tank` ou du serveur |
+| 3 | USB (Restic) | perte du serveur / de `tank` | oubli de brancher le disque |
+
+Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une copie hors `tank`.
+
+Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
+
+Timers Vaultwarden : configurés ; premier run auto **⬜**. Restauration du **service** Vaultwarden **⬜**. USB : manuel, pas de timer.
+
+Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
+
+Copies ponctuelles encore là : migration `…/migration-2026-10-14/` ; clé Sealed Secrets `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Cette clé n'est **pas** encore sur l'USB.
 
 ---
 
-# Vaultwarden
+# USB / Restic
 
-As-built (2026-10-19) : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
+Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb).
 
-```
-03:00  k3s-01  arrêter → tar cohérent → redémarrer → 7 archives (rpool)
-03:15  pve     pull SSH + SHA-256 → 7 archives (/tank/backups/…)
-manuel USB     Restic de /tank/backups/k3s-01/
-```
+- Source : `/tank/backups` (pas les zvol de production).
+- Dépôt : `/mnt/usb-inspect/restic-homelab`.
+- Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
+- **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
 
-Fichiers critiques dans le tar : `db.sqlite3`, `rsa_key.pem` (et WAL, exclus `lost+found`).
+## Comportement
 
-`/tank/backups` survit à k3s-01, **pas** à la perte de `tank`. USB = copie hors serveur.
+1. Root, `flock`, source présente.
+2. Manifeste des fichiers (`find -print0`) pour les noms ambigus.
+3. Si déjà monté : vérifier que c'est bien cet UUID. Sinon monter. Si le disque est monté ailleurs : erreur.
+4. `restic check`, puis snapshot de `/tank/backups`.
+5. Comparer le snapshot au manifeste : fichiers manquants ou inattendus = échec.
+6. `restic check` à nouveau, `sync`.
+7. Démonter **seulement** si le script a monté. Déjà monté au départ → reste monté.
+8. Temp (`/tmp/backup-usb.*`) toujours nettoyé. En cas d'échec, le disque reste monté pour diagnostiquer.
 
-Timers activés ; premier run auto **⬜**. Restauration prod **⬜**. Miroir `tank` + snapshots ≠ cette chaîne.
+## Tests (mise au point)
+
+- USB déjà monté ; montage + démontage auto.
+- `check` avant / après.
+- Manifeste vs snapshot.
+- Restauration d'**une archive** depuis un snapshot ; SHA-256 identique à l'original. Ce n'est **pas** une restauration complète de Vaultwarden.
+- Détection d'un fichier source manquant dans le snapshot.
+- Nettoyage des temporaires après erreur simulée.
+
+## Limites
+
+- Ne copie pas le zvol vivant, seulement `/tank/backups`.
+- Mot de passe requis à chaque run.
+- Disque doit être branché.
+- Rétention des snapshots Restic : **pas encore** définie.
+- Après une erreur : regarder le montage avant de relancer.
+
+Avant de débrancher : plus d'opération Restic, démonter, vérifier que ce n'est plus monté.
 
 ---
 

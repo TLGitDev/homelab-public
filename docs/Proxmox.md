@@ -118,3 +118,21 @@ Avant toute évolution importante :
 - vérifier les sauvegardes.
 
 Sauvegardes : [Sauvegardes.md](Sauvegardes.md).
+
+---
+
+# Exploitation
+
+Scripts et units `pve` : [`infrastructure/pve/`](../infrastructure/pve/). Git = référence versionnée. Actif : `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas. Après copie : permissions, syntaxe, test.
+
+Ne jamais versionner clé SSH privée, mot de passe Restic, ni archive.
+
+| Rôle | Installé | Git |
+|------|----------|-----|
+| Pull Vaultwarden | `/usr/local/sbin/pull-vaultwarden-backup.sh` | [`scripts/pull-vaultwarden-backup.sh`](../infrastructure/pve/scripts/pull-vaultwarden-backup.sh) |
+| Timer pull | 03:15 | [`systemd/pull-vaultwarden-backup.*`](../infrastructure/pve/systemd/) |
+| USB / Restic | `/usr/local/sbin/backup-usb` (**manuel**) | [`scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb) |
+
+Pull : SSH/SCP, clé `/root/.ssh/id_ed25519_backup_k3s`, SHA-256, `tar -tf`, pas d'écrasement si hash différent, 7 archives. Détail : [Vaultwarden.md](Vaultwarden.md#pve--0315).
+
+USB : Restic de `/tank/backups`. [Sauvegardes.md](Sauvegardes.md#usb--restic).

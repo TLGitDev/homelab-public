@@ -14,7 +14,9 @@ L'objectif n'est pas seulement un serveur qui marche : comprendre chaque couche,
 |--------|------|
 | [docs/](docs/) | Journal, architecture, ADR, matériel, compétences |
 | [kubernetes/](kubernetes/) | Manifestes GitOps (Vaultwarden, Argo CD) |
-| Autres dossiers | À venir (scripts, automatisation…) |
+| [infrastructure/](infrastructure/) | Scripts et systemd (`k3s-01`, `pve`). Git ≠ fichiers installés. |
+
+Les sources dans `infrastructure/` ne se déploient pas toutes seules. Chaîne de sauvegarde : [docs/Sauvegardes.md](docs/Sauvegardes.md).
 
 La racine du dépôt est le projet. `docs/` n'est que la partie écrite.
 

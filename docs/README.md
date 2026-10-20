@@ -41,7 +41,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
 | Pool de données | `tank/vmdata` ; Vaultwarden sur zvol `vm-101-vaultwarden-data` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
-| Sauvegardes | Vaultwarden : timers configurés (1er run ⬜) ; USB Restic manuel |
+| Sauvegardes | Timers Vaultwarden (1er run ⬜) ; USB Restic manuel (`backup-usb`) |
 
 ---
 
@@ -55,10 +55,10 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Architecture.md](Architecture.md) | Principes, schéma actuel, as-built |
 | [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–6, décisions ouvertes |
 | [Materiel.md](Materiel.md) | Inventaire physique |
-| [Proxmox.md](Proxmox.md) | Nœud : IP, accès, dépôts, systemd |
+| [Proxmox.md](Proxmox.md) | Nœud : IP, accès, [exploitation](Proxmox.md#exploitation) |
 | [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
-| [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup, RTO/RPO |
+| [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup ; chaîne actuelle ; USB / Restic |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
 | [ArgoCD.md](ArgoCD.md) | GitOps, App of Apps, UI `argocd.labo.example` |
 | [Vaultwarden.md](Vaultwarden.md) | Service, stockage, [sauvegarde](Vaultwarden.md#sauvegarde) |

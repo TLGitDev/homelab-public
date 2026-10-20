@@ -884,3 +884,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-17 | Sprint 21 : `ADMIN_TOKEN` Vaultwarden en Argon2id. |
 | 2026-10-17 | Feuille de route cible (phases 0–6) dans [FeuilleDeRoute.md](FeuilleDeRoute.md). |
 | 2026-10-19 | Sprint 22 : sauvegardes Vaultwarden (timers ; 1er run auto à confirmer). |
+| 2026-10-20 | `backup-usb` (Restic, manifeste, tests) ; scripts/units dans `infrastructure/` (`056e89a`). |
