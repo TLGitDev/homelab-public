@@ -9,3 +9,23 @@ Desktop.ini
 *.pem
 *.key
 secrets/
+
+# Clés privées et identifiants
+id_rsa
+id_ed25519
+id_ecdsa
+*.ppk
+*.p12
+*.pfx
+
+# Sauvegardes et archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.dump
+*.bak
+
+# Fichiers temporaires
+.staging-*/
+*.part

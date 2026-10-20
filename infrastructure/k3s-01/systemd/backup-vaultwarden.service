@@ -1,0 +1,11 @@
+[Unit]
+Description=Backup Vaultwarden data
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+ExecStart=/usr/local/sbin/backup-vaultwarden.sh
+TimeoutStartSec=10min

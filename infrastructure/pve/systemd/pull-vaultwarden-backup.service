@@ -1,0 +1,10 @@
+[Unit]
+Description=Pull and verify Vaultwarden backup from k3s-01
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/pull-vaultwarden-backup.sh
+TimeoutStartSec=10min

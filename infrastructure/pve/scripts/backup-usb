@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+USB_UUID="340F-3DAF"
+MOUNT_POINT="/mnt/usb-inspect"
+REPOSITORY="$MOUNT_POINT/restic-homelab"
+SOURCE_DIR="/tank/backups"
+LOCK_FILE="/run/lock/backup-usb.lock"
+
+log() {
+    printf '[%s] %s\n' "$(date '+%F %T')" "$*"
+}
+
+die() {
+    log "ERREUR : $*"
+    exit 1
+}
+
+[[ "$EUID" -eq 0 ]] || die "Exécuter en root."
+[[ -t 0 ]] || die "Un terminal interactif est nécessaire."
+
+exec 9>"$LOCK_FILE"
+flock -n 9 || die "Une sauvegarde USB est déjà en cours."
+
+[[ -d "$SOURCE_DIR" ]] ||
+    die "Répertoire source introuvable : $SOURCE_DIR"
+
+TEMP_DIR="$(mktemp -d /tmp/backup-usb.XXXXXX)"
+trap 'rm -rf -- "$TEMP_DIR"' EXIT
+
+SOURCE_MANIFEST="$TEMP_DIR/source-files.nul"
+SNAPSHOT_JSON="$TEMP_DIR/snapshot.jsonl"
+
+log "Inventaire récursif des fichiers sources..."
+find "$SOURCE_DIR" -type f -print0 > "$SOURCE_MANIFEST" ||
+    die "Impossible d'inventorier les fichiers sources."
+
+[[ -s "$SOURCE_MANIFEST" ]] ||
+    die "Aucun fichier à sauvegarder sous $SOURCE_DIR."
+
+mkdir -p "$MOUNT_POINT"
+
+DEVICE="$(findfs "UUID=$USB_UUID")" ||
+    die "Clé USB UUID=$USB_UUID introuvable."
+
+[[ -b "$DEVICE" ]] || die "Périphérique invalide : $DEVICE"
+
+MOUNTED_BY_SCRIPT=0
+
+if findmnt -rn -M "$MOUNT_POINT" >/dev/null; then
+    CURRENT_SOURCE="$(findmnt -rn -M "$MOUNT_POINT" -o SOURCE)"
+    CURRENT_UUID="$(blkid -s UUID -o value "$CURRENT_SOURCE" 2>/dev/null || true)"
+    [[ "$CURRENT_UUID" == "$USB_UUID" ]] ||
+        die "Un autre système de fichiers est monté sur $MOUNT_POINT."
+    log "Clé USB déjà montée : $CURRENT_SOURCE"
+else
+    OTHER_TARGET="$(findmnt -rn -S "$DEVICE" -o TARGET || true)"
+    [[ -z "$OTHER_TARGET" ]] ||
+        die "La clé USB est déjà montée ailleurs : $OTHER_TARGET"
+
+    log "Montage de la clé USB..."
+    mount "$DEVICE" "$MOUNT_POINT" ||
+        die "Impossible de monter la clé USB."
+
+    MOUNTED_BY_SCRIPT=1
+fi
+
+# En cas d'erreur, laisser le disque monté pour diagnostic.
+# Le démontage ne sera tenté qu'après toutes les vérifications.
+[[ -f "$REPOSITORY/config" ]] ||
+    die "Dépôt Restic introuvable. Aucun dépôt ne sera créé."
+
+unset RESTIC_PASSWORD RESTIC_PASSWORD_FILE RESTIC_PASSWORD_COMMAND
+read -r -s -p "Mot de passe Restic : " RESTIC_PASSWORD
+printf '\n'
+[[ -n "$RESTIC_PASSWORD" ]] || die "Mot de passe vide."
+export RESTIC_PASSWORD
+
+log "Contrôle Restic complet avant sauvegarde..."
+restic -r "$REPOSITORY" check ||
+    die "Échec du contrôle Restic avant sauvegarde."
+
+log "Sauvegarde de $SOURCE_DIR..."
+if BACKUP_OUTPUT="$(restic -r "$REPOSITORY" backup "$SOURCE_DIR" 2>&1)"; then
+    printf '%s\n' "$BACKUP_OUTPUT"
+else
+    printf '%s\n' "$BACKUP_OUTPUT"
+    die "Échec de la sauvegarde Restic."
+fi
+
+SNAPSHOT_ID="$(
+    printf '%s\n' "$BACKUP_OUTPUT" |
+        sed -nE 's/^snapshot ([0-9a-f]+) saved$/\1/p' |
+        tail -n 1
+)"
+[[ -n "$SNAPSHOT_ID" ]] ||
+    die "Impossible d'identifier le snapshot créé."
+
+log "Vérification récursive du contenu du snapshot $SNAPSHOT_ID..."
+
+restic -r "$REPOSITORY" ls --json "$SNAPSHOT_ID" > "$SNAPSHOT_JSON" ||
+    die "Impossible de lire le contenu du snapshot."
+
+if python3 - "$SOURCE_MANIFEST" "$SNAPSHOT_JSON" "$SOURCE_DIR" <<'PY'
+import json
+import os
+import sys
+
+manifest_path, snapshot_path, source_dir = sys.argv[1:]
+
+with open(manifest_path, "rb") as f:
+    expected = {
+        os.fsdecode(path)
+        for path in f.read().split(b"\0")
+        if path
+    }
+
+actual = set()
+
+with open(snapshot_path, "r", encoding="utf-8") as f:
+    for line in f:
+        if not line.strip():
+            continue
+        entry = json.loads(line)
+        if entry.get("struct_type") != "node":
+            continue
+        if entry.get("type") != "file":
+            continue
+
+        path = entry.get("path")
+        if not isinstance(path, str):
+            raise SystemExit(
+                "ERREUR : entrée de fichier sans chemin dans la sortie JSON Restic."
+            )
+        actual.add(path)
+
+missing = expected - actual
+if missing:
+    print("ERREUR : fichiers sources absents du snapshot :", file=sys.stderr)
+    for path in sorted(missing):
+        print(f"  {path!r}", file=sys.stderr)
+    sys.exit(1)
+
+extra = actual - expected
+extra_under_source = {
+    path for path in extra
+    if path == source_dir or path.startswith(source_dir.rstrip("/") + "/")
+}
+if extra_under_source:
+    print(
+        "ERREUR : des fichiers du snapshot ne figurent pas dans l'inventaire source :",
+        file=sys.stderr,
+    )
+    for path in sorted(extra_under_source):
+        print(f"  {path!r}", file=sys.stderr)
+    sys.exit(1)
+
+print(f"Vérification réussie : {len(expected)} fichier(s) source présent(s) dans le snapshot.")
+PY
+then
+    :
+else
+    die "La comparaison des fichiers source avec le snapshot a échoué."
+fi
+
+log "Contrôle Restic complet après sauvegarde..."
+restic -r "$REPOSITORY" check ||
+    die "Échec du contrôle Restic après sauvegarde."
+
+log "Synchronisation des écritures..."
+sync
+
+if (( MOUNTED_BY_SCRIPT )); then
+    log "Démontage de la clé USB..."
+    umount "$MOUNT_POINT" ||
+        die "Impossible de démonter la clé USB."
+    log "Clé USB démontée : tu peux la débrancher."
+else
+    log "Clé déjà montée avant l'exécution : elle reste montée."
+fi
+
+unset RESTIC_PASSWORD
+log "Sauvegarde terminée avec succès. Snapshot : $SNAPSHOT_ID"
