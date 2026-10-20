@@ -4,7 +4,7 @@
 >
 > Manifestes : [kubernetes/vaultwarden/](../kubernetes/vaultwarden/).
 >
-> Cours Kubernetes : [Kubernetes.md](Kubernetes.md). Tunnel : [Cloudflare.md](Cloudflare.md). GitOps : [ArgoCD.md](ArgoCD.md). IP : [Proxmox.md](Proxmox.md).
+> Cours Kubernetes : [Kubernetes.md](Kubernetes.md). Tunnel : [Cloudflare.md](Cloudflare.md). GitOps : [ArgoCD.md](ArgoCD.md). IP : [Proxmox.md](Proxmox.md). Principes backup : [Sauvegardes.md](Sauvegardes.md).
 
 ---
 
@@ -338,6 +338,234 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 ---
 
+# Sauvegarde
+
+**2026-10-19** — automatisation **configurée**. Premier déclenchement des timers : **à confirmer** (20 octobre, 03:00 / 03:15). Restauration depuis une archive de production : **pas encore** documentée ni testée.
+
+Aucun mot de passe Restic, aucune clé privée SSH, aucun secret applicatif ici. Principes : [Sauvegardes.md](Sauvegardes.md).
+
+## Objectif
+
+Archive cohérente (Vaultwarden arrêté), redémarrage automatique, 7 générations locales, copie vérifiée (SHA-256) sur `pve`, 7 générations sur Proxmox. USB / Restic : **manuel**.
+
+On privilégie des `.tar` identifiables, pas uniquement des snapshots.
+
+## Chaîne
+
+```
+03:00  k3s-01   backup-vaultwarden.timer
+         ↓
+       arrêter le Deployment → archiver → vérifier → redémarrer → rétention 7
+         ↓
+       /home/utilisateur/backups/vaultwarden/daily/*.tar     (disque de la VM → rpool)
+
+03:15  pve      pull-vaultwarden-backup.timer
+         ↓
+       SSH → SHA-256 → fichier .part → tar -tf → 600 → rename → rétention 7
+         ↓
+       /tank/backups/k3s-01/vaultwarden/*.tar        (même pool que le zvol)
+
+manuel  USB / Restic  /mnt/usb-inspect/restic-homelab
+         ↓
+       restic backup /tank/backups/k3s-01/
+```
+
+| Niveau | Où | Surviture à… | Ne survit pas à… |
+|--------|-----|----------------|------------------|
+| 1 | `k3s-01` (`rpool`) | — | perte de la VM / du NVMe |
+| 2 | `pve` (`tank/backups`) | reconstruction de `k3s-01` | perte de `tank` ou du serveur |
+| 3 | USB (Restic) | perte du serveur / de `tank` | oubli de brancher le disque |
+
+Le niveau 2 n'est **pas** hors `tank`. Le niveau 3 l'est.
+
+Horaires : heure locale. Fuseau constaté : CEST (UTC+2). Les 15 minutes ne prouvent pas que le job 03:00 a réussi : lire les journaux.
+
+## Chemins
+
+| Élément | Valeur |
+|---------|--------|
+| VM | `k3s-01` (`<ip-k3s-01>`), user SSH `utilisateur` |
+| Proxmox | `pve` (`<ip-pve>`) |
+| Données | `/var/lib/k3s-storage/vaultwarden` |
+| Archives locales | `/home/utilisateur/backups/vaultwarden/daily` |
+| Archives `pve` | `/tank/backups/k3s-01/vaultwarden` |
+| Script local | `/usr/local/sbin/backup-vaultwarden.sh` (`700` root) |
+| Script pull | `/usr/local/sbin/pull-vaultwarden-backup.sh` (`700` root) |
+| Clé SSH (sur `pve` seulement) | `/root/.ssh/id_ed25519_backup_k3s` |
+| Kubeconfig du job | `/etc/rancher/k3s/k3s.yaml` |
+
+Dans l'archive : `db.sqlite3`, `db.sqlite3-wal`, `rsa_key.pem`, `icon_cache/`, `tmp/`. `lost+found` exclu. WAL : d'où l'arrêt du Deployment.
+
+Nom : `vaultwarden-AAAA-MM-JJ_HHMMSS.tar`. Exemple validé : `vaultwarden-2026-10-19_163746.tar`. Une ancienne `vaultwarden-2026-10-19.tar` existe encore. Rétention des 7 à confirmer après les jobs auto.
+
+## k3s-01 — archive
+
+Script testé à la main. Copie destinée à Git (sur k3s-01) : `/home/utilisateur/homelab/scripts/backup-vaultwarden.sh`. Commit annoncé : `3d86d72` (*Add Vaultwarden backup script*) — présent sur k3s-01 ; à rapprocher de ce dépôt si besoin.
+
+Comportement : `set -Eeuo pipefail`, verrou, scale à 0, attente des Pods, tar temporaire, `tar` lisible, présence de `db.sqlite3` et `rsa_key.pem`, archive `600` `utilisateur:utilisateur`, publication après contrôles, scale retour + attente Available, rétention 7. Trap : tente de relancer Vaultwarden si le script a déjà arrêté le Deployment.
+
+### systemd
+
+`/etc/systemd/system/backup-vaultwarden.service` :
+
+```ini
+[Unit]
+Description=Backup Vaultwarden data
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+ExecStart=/usr/local/sbin/backup-vaultwarden.sh
+TimeoutStartSec=10min
+```
+
+`/etc/systemd/system/backup-vaultwarden.timer` :
+
+```ini
+[Unit]
+Description=Daily Vaultwarden backup timer
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=backup-vaultwarden.service
+
+[Install]
+WantedBy=timers.target
+```
+
+Activé (`enable --now`). Constaté le 19 octobre : `active (waiting)`, prochain run **2026-10-20 03:00 CEST**. `Persistent=true` rattrape un missed start ; ce n'est pas de la supervision.
+
+## pve — pull
+
+Clé dédiée, privée **uniquement** sur `pve`. Publique chez `utilisateur` sur k3s-01. SSH non interactif testé (`IdentitiesOnly`, pas de mot de passe).
+
+Script testé à la main. Pas encore dans Git (à copier après validation, sans altérer les fichiers actifs).
+
+1. Vérifier clé + destination.
+2. Lister `vaultwarden-*.tar` sur k3s-01.
+3. SHA-256 source. Si le fichier existe déjà : même hash → skip ; hash différent → **erreur** (pas d'écrasement).
+4. Sinon : copie en `.part`, comparer les hash, `tar -tf`, `600`, rename.
+5. Rétention 7 (mtime sur la destination — à vérifier en réel).
+
+Une archive partielle ne doit jamais apparaître sous le nom final.
+
+### systemd
+
+`/etc/systemd/system/pull-vaultwarden-backup.service` :
+
+```ini
+[Unit]
+Description=Pull and verify Vaultwarden backup from k3s-01
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/pull-vaultwarden-backup.sh
+TimeoutStartSec=10min
+```
+
+`/etc/systemd/system/pull-vaultwarden-backup.timer` :
+
+```ini
+[Unit]
+Description=Daily Vaultwarden backup pull timer
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+Persistent=true
+Unit=pull-vaultwarden-backup.service
+
+[Install]
+WantedBy=timers.target
+```
+
+Activé. Constaté le 19 octobre : `enabled`, `active (waiting)`, prochain run **2026-10-20 03:15 CEST**.
+
+## Tests du 19 octobre 2026
+
+**Local** : archive `…/daily/vaultwarden-2026-10-19_163746.tar` ; `db.sqlite3` + `rsa_key.pem` ; tar OK ; `600` `utilisateur:utilisateur` ; Deployment `1/1` ; `bash -n` OK.
+
+**Transfert** : SHA-256 `<empreinte-vérifiée>` identique source / `pve`. Publié : `/tank/backups/k3s-01/vaultwarden/vaultwarden-2026-10-19_163746.tar`.
+
+**Pull (dernière version)** : idempotent sur l'archive déjà là. **Pas encore** testé avec une archive absente de la destination.
+
+**systemd-analyze verify** : les quatre unités, sans erreur.
+
+## Contrôles du 20 octobre
+
+Sur `k3s-01` :
+
+```
+sudo journalctl -u backup-vaultwarden.service --since today --no-pager
+sudo systemctl status backup-vaultwarden.timer --no-pager
+sudo systemctl list-timers backup-vaultwarden.timer --all
+ls -lh /home/utilisateur/backups/vaultwarden/daily/
+sudo kubectl --kubeconfig=/etc/rancher/k3s/k3s.yaml \
+  -n vaultwarden get deployment vaultwarden
+```
+
+Sur `pve` :
+
+```
+journalctl -u pull-vaultwarden-backup.service --since today --no-pager
+systemctl status pull-vaultwarden-backup.timer --no-pager
+systemctl list-timers pull-vaultwarden-backup.timer --all
+ls -lh /tank/backups/k3s-01/vaultwarden/
+sha256sum /tank/backups/k3s-01/vaultwarden/NOM_ARCHIVE.tar
+```
+
+Comparer avec le SHA sur k3s-01. Ne pas supprimer d'archives avant d'avoir compté les générations.
+
+Attendu : nouvelle archive auto, tar lisible, fichiers critiques, Vaultwarden up, pull sans erreur, pas de `.part` publié, rétention 7.
+
+## USB / Restic
+
+Dépôt déjà configuré. Un **restore de test** (pas Vaultwarden production) a coincidé avec les fichiers d'origine.
+
+- Repo : `/mnt/usb-inspect/restic-homelab` (le montage peut changer : `findmnt` d'abord).
+- Job : **manuel**, disque branché et monté.
+- Après validation des archives sur `pve` : `restic -r /mnt/usb-inspect/restic-homelab backup /tank/backups/k3s-01/`
+- Puis `snapshots` et `check`.
+- Mot de passe : mécanisme local habituel. **Jamais** dans Git, cette doc ou les logs.
+- Démonter proprement avant de débrancher.
+
+## Git
+
+À versionner **sans** secrets, après comparaison avec les fichiers actifs :
+
+- `scripts/backup-vaultwarden.sh` (copie k3s-01 ; commit `3d86d72` annoncé là-bas)
+- `scripts/pull-vaultwarden-backup.sh`
+- les quatre unités systemd
+
+Les fichiers installés sur les machines restent la source opérationnelle.
+
+## Limites
+
+- Interruption nocturne de Vaultwarden : acceptée (SQLite cohérent).
+- Pull dépend du réseau `pve` → k3s-01.
+- `Persistent=true` ≠ alerte d'échec.
+- Rétention 7 et premier timer : à confirmer.
+- Pull « archive manquante » : pas encore prouvé avec la dernière version du script.
+- Restic pas dans le calendrier quotidien.
+- Restauration Vaultwarden depuis un `.tar` de prod : à écrire et à tester.
+
+## Suite
+
+- ⬜ Premier run auto k3s-01 + pve
+- ⬜ Empreintes et 7 générations
+- ⬜ Test pull d'une archive absente (sans détruire une sauvegarde utile)
+- ⬜ Scripts + units dans Git
+- ⬜ Restic de `/tank/backups/k3s-01/`
+- ⬜ Procédure + test de restauration Vaultwarden
+
+---
+
 # État
 
 | Élément | État |
@@ -353,9 +581,10 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 | `https://vaultwarden.labo.example` | OK |
 | Access devant Vaultwarden | volontairement absent |
 | `ADMIN_TOKEN` en Argon2 PHC | ✅ 2026-10-17 (`0e5f528` ; rollout restart requis) |
-| Sauvegarde récurrente | ⬜ copies de migration seulement |
-| Copie hors `tank` | ⬜ |
-| Test de restauration | ⬜ |
+| Sauvegarde quotidienne | ⚙️ configurée (timers ; 1er run auto ⬜) — [chapitre](#sauvegarde) |
+| Copie sur `pve` (`/tank/backups`) | ⚙️ configurée ; 1er pull auto ⬜ |
+| Copie USB / Restic | manuel ; restore de **test** OK, pas encore un tar de prod |
+| Test de restauration Vaultwarden | ⬜ |
 | Suppression de l'ancien PVC | ⬜ après backups + procédure de rollback |
 
 ---
@@ -370,4 +599,4 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Volume / snapshot / backup sont trois choses. Miroir `tank` ≠ copie indépendante. [Sauvegardes.md](Sauvegardes.md).
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Archive locale → `tank/backups` → USB. [Chapitre Sauvegarde](#sauvegarde).

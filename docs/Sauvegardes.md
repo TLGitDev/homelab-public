@@ -89,50 +89,27 @@ Couche 4    Sauvegarde hors site (future)
             Copie chiffrée sur un support dans un autre lieu.
 ```
 
-État : stratégie écrite, **pas encore mise en œuvre** de façon récurrente. Tests de restauration : à faire.
+État : Vaultwarden a une chaîne quotidienne **configurée** (19 octobre 2026) ; le premier timer n'est pas encore confirmé. Restauration depuis une archive de production : à faire. Détail : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
 
-Copies ponctuelles sur k3s-01 : backups de migration Vaultwarden (dont `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/`) ; clé Sealed Secrets dans `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire. Aucune de ces copies n'est encore hors de `k3s-01` / hors de `tank` de façon régulière.
+Copies ponctuelles encore là : migration `…/migration-2026-10-14/` ; clé Sealed Secrets `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Une copie de cette clé **hors** du nœud reste à faire.
 
 ---
 
 # Vaultwarden
 
-Le coffre est sur `tank` depuis le 2026-10-14. L'automatisation n'est **pas** encore en place. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
-
-V1 prévue :
+As-built (2026-10-19) : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
 
 ```
-03:00
- ├── arrêter Vaultwarden
- ├── attendre l'arrêt réel du Pod
- ├── sauvegarde cohérente (SQLite, pas une copie à chaud arbitraire)
- ├── vérifier le résultat
- ├── redémarrer Vaultwarden
- └── vérifier le service
+03:00  k3s-01  arrêter → tar cohérent → redémarrer → 7 archives (rpool)
+03:15  pve     pull SSH + SHA-256 → 7 archives (/tank/backups/…)
+manuel USB     Restic de /tank/backups/k3s-01/
 ```
 
-Fichiers critiques : `db.sqlite3`, `rsa_key.pem`.
+Fichiers critiques dans le tar : `db.sqlite3`, `rsa_key.pem` (et WAL, exclus `lost+found`).
 
-```
-~/backups/
-├── vaultwarden/
-│   └── <sauvegardes datées>
-└── sealed-secrets/
-```
+`/tank/backups` survit à k3s-01, **pas** à la perte de `tank`. USB = copie hors serveur.
 
-La copie sur k3s-01 est une **étape**. Ensuite : USB, éventuellement offsite chiffré.
-
-```
-k3s-01 → backup local → USB
-```
-
-Plusieurs générations. Une sauvegarde n'est fiable que si une restauration a été testée :
-
-```
-backup → restore test → validation
-```
-
-Miroir `tank` + snapshots ZFS ≠ cette sauvegarde.
+Timers activés ; premier run auto **⬜**. Restauration prod **⬜**. Miroir `tank` + snapshots ≠ cette chaîne.
 
 ---
 

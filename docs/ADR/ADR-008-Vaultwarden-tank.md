@@ -70,5 +70,4 @@ Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultward
 - Le Local PV est lié au nœud `k3s-01`. Pas de HA Kubernetes du stockage — cohérent avec un cluster à un nœud ([ADR-004](ADR-004-K3s.md)).
 - Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure de restauration à **tester**.
 - L'ancien PVC `vaultwarden-pvc` est un rollback **figé** : plus synchronisé depuis la bascule.
-- Miroir + snapshots ≠ backup. Backup indépendant (USB / offsite) et test de restauration : **prochaine étape**.
-- Première version de backup prévue : arrêt Vaultwarden, copie cohérente (`db.sqlite3`, `rsa_key.pem`, …), vérifs, redémarrage — pas une copie à chaud arbitraire.
+- Miroir + snapshots ≠ backup. Chaîne quotidienne configurée (tar cohérent → `pve` → USB manuel) : [Vaultwarden.md](../Vaultwarden.md#sauvegarde). Premier timer et restauration depuis un tar de prod : encore ouverts.

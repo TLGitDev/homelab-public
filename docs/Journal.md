@@ -819,6 +819,38 @@ Sauvegardes régulières (SQLite cohérent), copie hors `tank`, test de restaura
 
 ---
 
+# 2026-10-19 — Sprint 22 : Sauvegardes Vaultwarden automatisées
+
+## Objectif
+
+Archive cohérente quotidienne, transfert vérifié vers `pve`, rétention de 7 de chaque côté.
+
+## Réalisé
+
+- Script `backup-vaultwarden.sh` + timer 03:00 sur k3s-01. Test manuel OK (tar, `db.sqlite3` / `rsa_key.pem`, Deployment 1/1).
+- Clé SSH dédiée `pve` → `utilisateur@k3s-01`. Script `pull-vaultwarden-backup.sh` + timer 03:15. SHA-256, publication atomique, rétention 7.
+- `systemd-analyze verify` OK. Timers `active (waiting)`.
+- USB / Restic déjà en place (restore de test, pas un tar de prod).
+
+## Vérifications
+
+- ✅ Job manuel local + pull idempotent sur l'archive déjà là.
+- ⬜ Premier déclenchement automatique (20 octobre).
+- ⬜ Pull d'une archive vraiment absente.
+- ⬜ Scripts / units dans Git (hors secrets).
+- ⬜ Restic à jour de `/tank/backups/k3s-01/`.
+- ⬜ Restauration Vaultwarden depuis un tar de production.
+
+## Documentation
+
+[Vaultwarden.md](Vaultwarden.md#sauvegarde).
+
+## Prochaine étape
+
+Confirmer les timers, puis Restic USB et une restauration documentée.
+
+---
+
 # Changelog
 
 Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
@@ -851,3 +883,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-14 | Sprint 20 : Vaultwarden migré sur zvol `tank` (Local PV). |
 | 2026-10-17 | Sprint 21 : `ADMIN_TOKEN` Vaultwarden en Argon2id. |
 | 2026-10-17 | Feuille de route cible (phases 0–6) dans [FeuilleDeRoute.md](FeuilleDeRoute.md). |
+| 2026-10-19 | Sprint 22 : sauvegardes Vaultwarden (timers ; 1er run auto à confirmer). |
