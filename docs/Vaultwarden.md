@@ -237,7 +237,7 @@ Terminée et validée. GitOps : commit `8ccecbc`.
 
 1. Volume ZFS 8 Gio, attaché `scsi1`, ext4, `fstab` par UUID, montage vérifié.
 2. Manifestes `pv-zfs.yaml` / `pvc-zfs.yaml` appliqués ; PV et PVC **Bound**. Ancien PVC conservé.
-3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. SHA-256 de `rsa_key.pem` : `<empreinte-vérifiée>`. Ces empreintes identifient les fichiers de **cette** intervention ; elles ne remplacent pas un test de restauration.
+3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. SHA-256 de `rsa_key.pem` : `<empreinte-vérifiée>`. Ces empreintes identifient les fichiers de **cette** intervention. Un test de restauration **technique** a eu lieu le 20 octobre 2026 ([ci-dessous](#test-du-20-octobre-2026-technique)) ; la connexion au coffre n'y a pas été validée.
 4. `kubectl -n vaultwarden scale deployment vaultwarden --replicas=0`.
 5. Pod temporaire `vaultwarden-data-copy` : ancien PVC en lecture seule (`/source`), nouveau en lecture-écriture (`/destination`) ; `cp -a` + `sync`.
 6. SHA-256 `/source` vs `/destination` : aucune différence. `integrity_check` en lecture seule sur le nouveau volume : `ok`, 29 tables. Pod de copie supprimé.
@@ -340,7 +340,7 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 # Sauvegarde
 
-**2026-10-19 / 20** — timers et scripts **configurés**, versionnés sous `infrastructure/`. Premier run auto des timers : **⬜**. Restauration du **service** depuis un tar de prod : **⬜**.
+**2026-10-20** — archive auto `vaultwarden-2026-10-20_030012.tar` présente sur k3s-01 **et** `pve` (SHA identique). Restore **technique** isolée OK (SQLite, Pod, HTTP 200). Connexion au compte / déchiffrement du coffre : **non** testés (HTTPS). Production **non** touchée.
 
 Aucun mot de passe Restic, aucune clé privée, aucun secret applicatif. Chaîne et USB : [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle). `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
@@ -362,7 +362,7 @@ On privilégie des `.tar` identifiables, pas uniquement des snapshots. Interrupt
 
 Git ≠ machines. Après un changement : copier, permissions, syntaxe, tester. Premier commit du script local : `3d86d72`.
 
-Dans le tar : `db.sqlite3`, `db.sqlite3-wal`, `rsa_key.pem`, `icon_cache/`, `tmp/`. `lost+found` exclu. Nom : `vaultwarden-AAAA-MM-JJ_HHMMSS.tar`. Exemple validé : `vaultwarden-2026-10-19_163746.tar`. Une ancienne `vaultwarden-2026-10-19.tar` existe encore.
+Dans le tar : `db.sqlite3`, `db.sqlite3-wal`, `db.sqlite3-shm` (si présent), `rsa_key.pem`, `icon_cache/`, `tmp/`. `lost+found` exclu. Nom : `vaultwarden-AAAA-MM-JJ_HHMMSS.tar`. Exemples : `…-2026-10-19_163746.tar` (manuel) ; `…-2026-10-20_030012.tar` (timer 03:00). Une ancienne `vaultwarden-2026-10-19.tar` a existé. Conserver **ensemble** sqlite + WAL + SHM.
 
 ## k3s-01 — 03:00
 
@@ -411,17 +411,147 @@ Comparer les SHA. Ne pas supprimer d'archives avant d'avoir compté les généra
 
 ## Restauration
 
-Doit couvrir : données (`db.sqlite3`, `rsa_key.pem`, …), config, PVC / zvol, secrets (Sealed Secrets + token `/admin` dans le gestionnaire de mots de passe).
+Doit couvrir, pour une reprise réelle : données, config, PVC / zvol, secrets (Sealed Secrets + token `/admin` dans le gestionnaire de mots de passe).
 
-Un `.tar` a été restauré depuis un snapshot Restic pendant la mise au point USB (SHA identique). **Ce n'est pas** une restauration complète de Vaultwarden.
+Un `.tar` a aussi été sorti d'un snapshot Restic à la mise au point USB. **Ce n'est pas** une restauration du service.
+
+### Test du 20 octobre 2026 (technique)
+
+Archive : `vaultwarden-2026-10-20_030012.tar` (job 03:00). SHA-256 `<empreinte-vérifiée>` — identique k3s-01, `pve`, et copie de test.
+
+**pve** — extraction temporaire. Présents : `db.sqlite3`, WAL, SHM, `rsa_key.pem`, `icon_cache/`, `tmp/`. `PRAGMA integrity_check` = `ok`. 29 tables, 56 migrations, 1 utilisateur, 119 `ciphers`, 8 appareils, 1 enregistrement 2FA, 0 pièce jointe, 0 dossier.
+
+#### Transfert
+
+Depuis `pve` :
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  /tank/backups/k3s-01/vaultwarden/vaultwarden-2026-10-20_030012.tar \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/restore-vaultwarden-test.tar
+```
+
+Sur k3s-01 :
+
+```bash
+sha256sum /home/utilisateur/restore-vaultwarden-test.tar
+# attendu :
+# <empreinte-vérifiée>  /home/utilisateur/restore-vaultwarden-test.tar
+```
+
+#### Extraction isolée
+
+`sudo` : le répertoire est sous `/var/tmp`. Refuse si le chemin existe déjà. **Ne pas** extraire vers `/var/lib/k3s-storage/vaultwarden`.
+
+```bash
+sudo bash -c '
+set -euo pipefail
+RESTORE_DIR=/var/tmp/vaultwarden-restore-test
+if [ -e "$RESTORE_DIR" ]; then
+  echo "ERREUR : le répertoire existe déjà."
+  exit 1
+fi
+install -d -m 700 "$RESTORE_DIR"
+tar -xf /home/utilisateur/restore-vaultwarden-test.tar -C "$RESTORE_DIR"
+find "$RESTORE_DIR" -maxdepth 1 -type f -printf "%f (%s octets)\n" | sort
+'
+```
+
+Fichiers extraits : `db.sqlite3` 421888, SHM 32768, WAL 41232, `rsa_key.pem` 1675.
+
+#### Pod temporaire
+
+```bash
+kubectl create namespace vaultwarden-restore-test
+```
+
+Manifeste `/tmp/vaultwarden-restore-test.yaml` — version **sans** `DOMAIN`. Avec `DOMAIN=http://127.0.0.1:18080`, l'UI a refusé HTTP (`Insecure URL not allowed`).
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vaultwarden-restore-test
+  namespace: vaultwarden-restore-test
+  labels:
+    app: vaultwarden-restore-test
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  containers:
+    - name: vaultwarden
+      image: vaultwarden/server:1.37.3
+      ports:
+        - containerPort: 80
+      env:
+        - name: DATABASE_URL
+          value: "sqlite://data/db.sqlite3"
+        - name: SIGNUPS_ALLOWED
+          value: "false"
+      volumeMounts:
+        - name: restored-data
+          mountPath: /data
+  volumes:
+    - name: restored-data
+      hostPath:
+        path: /var/tmp/vaultwarden-restore-test
+        type: Directory
+```
+
+```bash
+kubectl apply -f /tmp/vaultwarden-restore-test.yaml
+kubectl get pod -n vaultwarden-restore-test -o wide
+kubectl logs -n vaultwarden-restore-test vaultwarden-restore-test --tail=60
+```
+
+Pod `1/1 Running` (IP du moment, pas une constante). Logs : *Starting Vaultwarden* / *Version 1.37.3* / *Rocket has launched from http://0.0.0.0:80*. Aucune erreur de démarrage.
+
+```bash
+kubectl port-forward -n vaultwarden-restore-test \
+  pod/vaultwarden-restore-test 18080:80
+```
+
+Autre terminal :
+
+```bash
+curl -sS -o /dev/null -w 'HTTP %{http_code}\n' \
+  http://127.0.0.1:18080/
+```
+
+Résultat : **HTTP 200**. Firefox : `Insecure URL not allowed. All URLs must use HTTPS.` Pas d'HTTPS temporaire. Connexion au compte / déchiffrement : **non validés**.
+
+#### Nettoyage
+
+```bash
+kubectl delete namespace vaultwarden-restore-test
+kubectl get namespace vaultwarden-restore-test
+# Error from server (NotFound): namespaces "vaultwarden-restore-test" not found
+
+rm -rf -- /var/tmp/vaultwarden-restore-test &&
+rm -f -- /home/utilisateur/restore-vaultwarden-test.tar
+ls -ld /var/tmp/vaultwarden-restore-test \
+  /home/utilisateur/restore-vaultwarden-test.tar
+```
+
+Archives d'origine conservées (`/home/utilisateur/backups/vaultwarden/daily/` et `/tank/backups/k3s-01/vaultwarden/`). Production inchangée. Ce Pod **n'existe plus** dans le cluster.
+
+### Pour un prochain test
+
+- SHA-256 avant extraction.
+- Répertoire + namespace distincts ; ne jamais monter le volume de prod.
+- Garder sqlite + WAL + SHM ensemble.
+- Même version Vaultwarden que la sauvegarde, si elle est connue.
+- Nettoyer seulement après avoir noté les résultats.
+- Pour valider le compte dans le navigateur : HTTPS isolé temporaire.
 
 ## Limites / suite
 
 - Pull dépend du réseau `pve` → k3s-01.
-- ⬜ Premier run auto des deux timers
-- ⬜ Empreintes et 7 générations en réel
+- ✅ Premier tar auto 03:00 (20 oct.) + copie sur `pve` (cette archive)
+- ⬜ Rétention 7 en réel sur plusieurs jours
 - ⬜ Pull d'une archive absente (sans détruire une sauvegarde utile)
-- ⬜ Restauration complète dans un environnement maîtrisé + doc
+- ⬜ Connexion utilisateur + coffre déchiffré sur une instance restaurée
+- ⬜ Reprise sur le PVC / zvol de production (autre procédure)
 - ⬜ Diagnostic d'échec USB : [Sauvegardes.md](Sauvegardes.md#usb--restic)
 
 ---
@@ -441,10 +571,11 @@ Un `.tar` a été restauré depuis un snapshot Restic pendant la mise au point U
 | `https://vaultwarden.labo.example` | OK |
 | Access devant Vaultwarden | volontairement absent |
 | `ADMIN_TOKEN` en Argon2 PHC | ✅ 2026-10-17 (`0e5f528` ; rollout restart requis) |
-| Sauvegarde quotidienne | ⚙️ configurée (timers ; 1er run auto ⬜) — [chapitre](#sauvegarde) |
-| Copie sur `pve` (`/tank/backups`) | ⚙️ configurée ; 1er pull auto ⬜ |
-| Copie USB / Restic | manuel (`backup-usb` de `/tank/backups`) ; archive restaurée ≠ service |
-| Test de restauration Vaultwarden | ⬜ |
+| Sauvegarde quotidienne | ✅ tar auto `…-2026-10-20_030012.tar` — [chapitre](#sauvegarde) |
+| Copie sur `pve` (`/tank/backups`) | ✅ cette archive, SHA identique |
+| Copie USB / Restic | manuel (`backup-usb` de `/tank/backups`) |
+| Restore technique (ns isolé, HTTP 200) | ✅ 2026-10-20 ; prod intacte |
+| Connexion / déchiffrement après restore | ⬜ HTTPS requis |
 | Suppression de l'ancien PVC | ⬜ après backups + procédure de rollback |
 
 ---
@@ -459,4 +590,4 @@ Un `.tar` a été restauré depuis un snapshot Restic pendant la mise au point U
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Volume / snapshot / backup sont trois choses. Archive locale → `tank/backups` → USB. [Chapitre Sauvegarde](#sauvegarde).
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Archive locale → `tank/backups` → USB. Restore technique ≠ login au coffre. [Chapitre Sauvegarde](#sauvegarde).

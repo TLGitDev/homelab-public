@@ -851,6 +851,36 @@ Confirmer les timers, puis Restic USB et une restauration documentée.
 
 ---
 
+# 2026-10-20 — Sprint 23 : Restore technique Vaultwarden
+
+## Objectif
+
+Vérifier qu'un tar de production démarre une instance **isolée**, sans toucher au volume live.
+
+## Réalisé
+
+- Archive timer `vaultwarden-2026-10-20_030012.tar` sur k3s-01 et `pve`, SHA-256 identique.
+- `integrity_check` ok (29 tables, 119 ciphers, 1 utilisateur).
+- Extraction `/var/tmp/…`, ns `vaultwarden-restore-test`, Pod 1.37.3, HTTP 200.
+- Firefox : HTTPS obligatoire — login non testé.
+- Nettoyage complet ; production inchangée.
+
+## Vérifications
+
+- ✅ Restore technique.
+- ⬜ Connexion au compte / déchiffrement.
+- ⬜ Reprise sur le zvol de prod.
+
+## Documentation
+
+[Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique).
+
+## Prochaine étape
+
+HTTPS isolé pour valider le coffre, ou procédure de reprise sur le volume de production. Rétention 7 à confirmer sur plusieurs jours.
+
+---
+
 # Changelog
 
 Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
@@ -885,3 +915,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-17 | Feuille de route cible (phases 0–6) dans [FeuilleDeRoute.md](FeuilleDeRoute.md). |
 | 2026-10-19 | Sprint 22 : sauvegardes Vaultwarden (timers ; 1er run auto à confirmer). |
 | 2026-10-20 | `backup-usb` (Restic, manifeste, tests) ; scripts/units dans `infrastructure/` (`056e89a`). |
+| 2026-10-20 | Sprint 23 : restore technique Vaultwarden (HTTP 200 ; login ⬜). |

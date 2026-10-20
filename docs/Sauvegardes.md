@@ -109,7 +109,7 @@ Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une 
 
 Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
 
-Timers Vaultwarden : configurés ; premier run auto **⬜**. Restauration du **service** Vaultwarden **⬜**. USB : manuel, pas de timer.
+Timers : tar auto du **2026-10-20 03:00** présent sur k3s-01 et `pve` (SHA identique). Restore **technique** isolée OK ; connexion au coffre **⬜**. USB : manuel, pas de timer.
 
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
@@ -142,7 +142,7 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - USB déjà monté ; montage + démontage auto.
 - `check` avant / après.
 - Manifeste vs snapshot.
-- Restauration d'**une archive** depuis un snapshot ; SHA-256 identique à l'original. Ce n'est **pas** une restauration complète de Vaultwarden.
+- Restauration d'**une archive** depuis un snapshot ; SHA-256 identique à l'original. Ce n'est **pas** une restauration du service. Restore technique du coffre (autre procédure, 2026-10-20) : [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique).
 - Détection d'un fichier source manquant dans le snapshot.
 - Nettoyage des temporaires après erreur simulée.
 

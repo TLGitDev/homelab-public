@@ -41,7 +41,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
 | Pool de données | `tank/vmdata` ; Vaultwarden sur zvol `vm-101-vaultwarden-data` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
-| Sauvegardes | Timers Vaultwarden (1er run ⬜) ; USB Restic manuel (`backup-usb`) |
+| Sauvegardes | Tar auto 20 oct. ; restore technique OK ; login coffre ⬜ ; USB manuel |
 
 ---
 
@@ -61,7 +61,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup ; chaîne actuelle ; USB / Restic |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
 | [ArgoCD.md](ArgoCD.md) | GitOps, App of Apps, UI `argocd.labo.example` |
-| [Vaultwarden.md](Vaultwarden.md) | Service, stockage, [sauvegarde](Vaultwarden.md#sauvegarde) |
+| [Vaultwarden.md](Vaultwarden.md) | Service, stockage, [sauvegarde](Vaultwarden.md#sauvegarde) / [restore](Vaultwarden.md#restauration) |
 | [Competences.md](Competences.md) | Niveaux de maîtrise |
 | [Glossaire.md](Glossaire.md) | Définitions |
 

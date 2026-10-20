@@ -189,7 +189,7 @@ Le SSD NVMe (`rpool`) est l'**infrastructure** : Proxmox, disques système des V
 
 **Aujourd'hui** : Vaultwarden est sur `tank/vmdata/vm-101-vaultwarden-data` (zvol → ext4 → Local PV → `vaultwarden-zfs-pvc`). L'ancien PVC `local-path` est conservé figé. Pas de NFS pour SQLite, pas de CSI ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-Prochaine étape stockage : sauvegardes régulières, copie hors `tank`, test de restauration.
+Sauvegardes quotidiennes en place (tar 03:00 → `pve` 03:15). Restore technique isolée OK (2026-10-20) ; login coffre et réattache du zvol : encore ouverts. USB Restic manuel.
 
 Détail : [Stockage.md](Stockage.md). As-built : [Vaultwarden.md](Vaultwarden.md).
 
@@ -295,7 +295,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
 - ✅ Onduleur (protège le serveur)
-- ⚙️ Sauvegardes : timers Vaultwarden + USB Restic manuel (ni les timers ni une restore complète du coffre ne sont validés) — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
+- ⚙️ Sauvegardes : 1er tar auto 20 oct. ; restore technique isolée OK ; login coffre ⬜ — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
 
 ## Infrastructure
 
@@ -315,5 +315,6 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
-- ⚙️ Sauvegardes Vaultwarden : timers 03:00 / 03:15 (1er run ⬜)
-- ⬜ Restauration complète de Vaultwarden + rétention Restic
+- ✅ Sauvegardes Vaultwarden : tar auto `…-2026-10-20_030012.tar` (k3s-01 + pve)
+- ✅ Restore technique isolée (SQLite, Pod, HTTP 200) — [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique)
+- ⬜ Connexion utilisateur après restore + rétention Restic
