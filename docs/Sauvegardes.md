@@ -56,6 +56,8 @@ Adaptés pour : tester une mise à jour, modifier une configuration importante, 
 
 Ils sont stockés sur le **même** pool ZFS. Ils ne protègent pas contre une perte totale du stockage.
 
+Cible v1 (pas encore activée) : [ci-dessous](#snapshots-zfs--cible).
+
 ## Sauvegardes
 
 Stockées sur un support indépendant.
@@ -114,6 +116,100 @@ Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (te
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
 Copies ponctuelles encore là : migration `…/migration-2026-10-14/` ; clé Sealed Secrets `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Cette clé n'est **pas** encore sur l'USB.
+
+---
+
+# Snapshots ZFS — cible
+
+**Statut : scripts versionnés le 21 octobre 2026. Pas encore installés / activés sur `pve`.** Ce n'est pas de l'as-built tant que les timers ne tournent pas.
+
+Un snapshot ZFS n'est **pas** une sauvegarde. Perte de `tank` = perte des snapshots **et** du zvol live.
+
+## Périmètre v1
+
+| Dataset / volume | Snapshot auto v1 | Pourquoi |
+|---|---|---|
+| `tank/vmdata/vm-101-vaultwarden-data` | **oui** | seul volume live dont un rollback en minutes évite de rejouer le tar |
+| `tank/backups` | non | déjà 7 tars ; même pool |
+| `rpool` (disques VM / LXC) | non | infra reconstructible ; meurt avec le NVMe |
+
+Pas de Sanoid pour v1. Script + timers systemd sur `pve` :
+
+| Rôle | Installé | Git |
+|------|----------|-----|
+| Script | `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` | [`infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh`](../infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh) |
+| Horaire | `OnCalendar=hourly` | [`systemd/snapshot-vaultwarden-zvol-hourly.*`](../infrastructure/pve/systemd/) |
+| Quotidien | `04:00` | [`systemd/snapshot-vaultwarden-zvol-daily.*`](../infrastructure/pve/systemd/) |
+
+Git ≠ `pve`. Copier, `700`, `bash -n`, run manuel, **puis** activer les timers.
+
+## Rétention
+
+| Fréquence | Garder | Nom visé |
+|---|---|---|
+| horaire | 24 | `…@auto-hourly-AAAA-MM-JJ_HHMM` |
+| quotidienne | 7 | `…@auto-daily-AAAA-MM-JJ` |
+
+Court volontairement : ça sert le *oops* récent, pas l'archive.
+
+## Cohérence
+
+Les snapshots se font **VM allumée**, Vaultwarden qui tourne : cohérents crash (SQLite + WAL, en général récupérable). La copie **applicative** reste le tar 03:00 (service arrêté). On n'arrête **pas** Vaultwarden toutes les heures.
+
+Un `zfs rollback` sur un zvol attaché exige en pratique Vaultwarden **et** souvent la VM arrêtés, ou le disque détaché. Il **détruit** les snapshots plus récents que la cible. Ce n'est pas un exercice à faire sur le zvol de prod « pour voir ».
+
+Contrôle sans rollback : `zfs list -t snapshot tank/vmdata/vm-101-vaultwarden-data`. Ne détruire que les snaps `auto-hourly-` / `auto-daily-` (le script ne touche pas aux snaps manuels).
+
+### Mise en place (sur `pve`, root)
+
+Dépôt Git sur k3s-01 : `/homelab/`. Copie vers `pve` en SSH (clé de backup). Faire un `git pull` dans `/homelab` sur k3s-01 si les fichiers n'y sont pas encore.
+
+```bash
+install -d -m 700 /tmp/snapshot-vaultwarden-zvol
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh \
+  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.service \
+  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.timer \
+  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.service \
+  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.timer \
+  /tmp/snapshot-vaultwarden-zvol/
+
+install -m 700 /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol.sh \
+  /usr/local/sbin/snapshot-vaultwarden-zvol.sh
+cp /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol-hourly.service \
+   /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol-hourly.timer \
+   /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol-daily.service \
+   /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol-daily.timer \
+   /etc/systemd/system/
+bash -n /usr/local/sbin/snapshot-vaultwarden-zvol.sh
+systemd-analyze verify \
+  /etc/systemd/system/snapshot-vaultwarden-zvol-hourly.service \
+  /etc/systemd/system/snapshot-vaultwarden-zvol-hourly.timer \
+  /etc/systemd/system/snapshot-vaultwarden-zvol-daily.service \
+  /etc/systemd/system/snapshot-vaultwarden-zvol-daily.timer
+systemctl daemon-reload
+/usr/local/sbin/snapshot-vaultwarden-zvol.sh hourly
+/usr/local/sbin/snapshot-vaultwarden-zvol.sh daily
+zfs list -t snapshot tank/vmdata/vm-101-vaultwarden-data
+```
+
+Si les deux snaps `auto-*` sont là, **alors** :
+
+```bash
+systemctl enable --now snapshot-vaultwarden-zvol-hourly.timer
+systemctl enable --now snapshot-vaultwarden-zvol-daily.timer
+systemctl list-timers 'snapshot-vaultwarden-zvol-*'
+```
+
+Ne pas `zfs rollback` le zvol de prod pour tester.
+
+## Hors v1
+
+- `tank/backups`, `rpool`
+- réplication `zfs send` vers un autre pool
+- snapshots Kubernetes / CSI
+
+Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
 
 ---
 

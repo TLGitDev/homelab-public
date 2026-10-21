@@ -295,7 +295,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
 - ✅ Onduleur (protège le serveur)
-- ⚙️ Sauvegardes : tars auto 20–21 oct. ; restore isolée OK (login 21 oct.) ; zvol ⬜ — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
+- ⚙️ Sauvegardes : tars auto + restore isolée OK ; snapshots zvol = cible non activée — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
 
 ## Infrastructure
 

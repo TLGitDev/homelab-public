@@ -1,0 +1,10 @@
+[Unit]
+Description=Hourly ZFS snapshot timer for the Vaultwarden zvol
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=snapshot-vaultwarden-zvol-hourly.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,8 @@
+[Unit]
+Description=Hourly ZFS snapshot of the Vaultwarden zvol
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/snapshot-vaultwarden-zvol.sh hourly
+TimeoutStartSec=2min
