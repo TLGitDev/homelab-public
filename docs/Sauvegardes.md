@@ -56,7 +56,7 @@ Adaptés pour : tester une mise à jour, modifier une configuration importante, 
 
 Ils sont stockés sur le **même** pool ZFS. Ils ne protègent pas contre une perte totale du stockage.
 
-Cible v1 (pas encore activée) : [ci-dessous](#snapshots-zfs--cible).
+v1 activée le 21 oct. (timers) : [ci-dessous](#snapshots-zfs).
 
 ## Sauvegardes
 
@@ -111,17 +111,27 @@ Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une 
 
 Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
 
-Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel, pas de timer.
+Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel, run confirmé **20 oct.** (ça fonctionne). Un run USB ne contient que ce qui était déjà sous `/tank/backups` **ce jour-là**.
 
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
-Copies ponctuelles encore là : migration `…/migration-2026-10-14/` ; clé Sealed Secrets `~/backups/sealed-secrets/` (mode `600`, **pas** dans Git). Cette clé n'est **pas** encore sur l'USB.
+**Deux objets distincts :**
+
+| Objet | Où | Dans Restic via `backup-usb` ? |
+|---|---|---|
+| Tars Vaultwarden | `/tank/backups/k3s-01/vaultwarden/` | oui, s'ils y étaient au moment du run |
+| SealedSecret (`sealed-secret.yaml`) | Git | le ciphertext, pas la clé du controller |
+| Clé TLS du controller Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` **et** copie manuelle `/tank/backups/k3s-01/sealed-secrets/` | oui (dans le périmètre `/tank/backups`) |
+
+Sans cette clé, un cluster neuf ne déchiffre pas les SealedSecrets existants (`ADMIN_TOKEN` hash). Le coffre utilisateur est dans le tar, pas dans cette clé.
+
+Copie vers `pve` : **manuelle** (pas le script de pull des tars). Hors k3s-01 : oui. Encore sur `tank` jusqu'à l'USB. `backup-usb` du 20 oct. inclut ce répertoire s'il y était déjà.
 
 ---
 
-# Snapshots ZFS — cible
+# Snapshots ZFS
 
-**Statut : scripts versionnés le 21 octobre 2026. Pas encore installés / activés sur `pve`.** Ce n'est pas de l'as-built tant que les timers ne tournent pas.
+**2026-10-21** — timers actifs. Runs **timer** horaires OK : `@auto-hourly-2026-10-21_1200` et `_1300` (journal : créé, rétention 2 puis 3 / 24). Snap manuel d'install : `_1140` + `@auto-daily-2026-10-21`. Premier quotidien **timer** : 22 oct. 04:00 ⬜. Rétention 24/7 sur plusieurs jours ⬜.
 
 Un snapshot ZFS n'est **pas** une sauvegarde. Perte de `tank` = perte des snapshots **et** du zvol live.
 
@@ -141,7 +151,7 @@ Pas de Sanoid pour v1. Script + timers systemd sur `pve` :
 | Horaire | `OnCalendar=hourly` | [`systemd/snapshot-vaultwarden-zvol-hourly.*`](../infrastructure/pve/systemd/) |
 | Quotidien | `04:00` | [`systemd/snapshot-vaultwarden-zvol-daily.*`](../infrastructure/pve/systemd/) |
 
-Git ≠ `pve`. Copier, `700`, `bash -n`, run manuel, **puis** activer les timers.
+Git ≠ `pve`. Clone k3s-01 : `/home/utilisateur/homelab` (pas `/homelab`). Copier, `700`, `bash -n`, run manuel, **puis** activer les timers.
 
 ## Rétention
 
@@ -162,16 +172,16 @@ Contrôle sans rollback : `zfs list -t snapshot tank/vmdata/vm-101-vaultwarden-d
 
 ### Mise en place (sur `pve`, root)
 
-Dépôt Git sur k3s-01 : `/homelab/`. Copie vers `pve` en SSH (clé de backup). Faire un `git pull` dans `/homelab` sur k3s-01 si les fichiers n'y sont pas encore.
+Dépôt Git sur k3s-01 : `/home/utilisateur/homelab/` (`~/homelab`). Copie vers `pve` en SSH (clé de backup). `git pull` dans ce répertoire sur k3s-01 si les fichiers n'y sont pas encore.
 
 ```bash
 install -d -m 700 /tmp/snapshot-vaultwarden-zvol
 scp -i /root/.ssh/id_ed25519_backup_k3s \
-  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh \
-  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.service \
-  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.timer \
-  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.service \
-  utilisateur@<ip-k3s-01>:/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.timer \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.service \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-hourly.timer \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.service \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/snapshot-vaultwarden-zvol-daily.timer \
   /tmp/snapshot-vaultwarden-zvol/
 
 install -m 700 /tmp/snapshot-vaultwarden-zvol/snapshot-vaultwarden-zvol.sh \
@@ -203,6 +213,16 @@ systemctl list-timers 'snapshot-vaultwarden-zvol-*'
 
 Ne pas `zfs rollback` le zvol de prod pour tester.
 
+**Activé le 21 oct.** Premier horaire timer : 12:00 (succès), puis 13:00. Quotidien timer : 22 oct. 04:00.
+
+```
+zfs list -t snapshot tank/vmdata/vm-101-vaultwarden-data
+# …@auto-hourly-2026-10-21_1140   ← run manuel d'install
+# …@auto-daily-2026-10-21         ← run manuel d'install
+# …@auto-hourly-2026-10-21_1200   ← timer
+# …@auto-hourly-2026-10-21_1300   ← timer
+```
+
 ## Hors v1
 
 - `tank/backups`, `rpool`
@@ -217,7 +237,7 @@ Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden
 
 Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb).
 
-- Source : `/tank/backups` (pas les zvol de production).
+- Source : **uniquement** `/tank/backups` (pas le zvol live, pas `~/backups/sealed-secrets/` sur k3s-01).
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
 - Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
@@ -242,9 +262,16 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - Détection d'un fichier source manquant dans le snapshot.
 - Nettoyage des temporaires après erreur simulée.
 
+## Clé Sealed Secrets et USB
+
+`backup-usb` ne va pas chercher la clé sur k3s-01. Transfert **manuel** confirmé vers `/tank/backups/k3s-01/sealed-secrets/` (`600`, pas Git). Ce chemin est dans la source USB.
+
+Hors VM : oui. Hors serveur : via `backup-usb` (tout `/tank/backups`). Un `restic ls` du snapshot confirme le **chemin**, jamais le contenu. Relancer `backup-usb` si la copie `pve` est **plus récente** que le dernier snapshot USB.
+
 ## Limites
 
 - Ne copie pas le zvol vivant, seulement `/tank/backups`.
+- Ne copie pas tout seul la clé Sealed Secrets.
 - Mot de passe requis à chaque run.
 - Disque doit être branché.
 - Rétention des snapshots Restic : **pas encore** définie.

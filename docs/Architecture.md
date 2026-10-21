@@ -295,7 +295,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ ZFS (`rpool`)
 - ✅ ZFS (`tank`, miroir 2×8 To)
 - ✅ Onduleur (protège le serveur)
-- ⚙️ Sauvegardes : tars auto + restore isolée OK ; snapshots zvol = cible non activée — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
+- ⚙️ Sauvegardes : tars + restore isolée OK ; snapshots zvol horaires OK — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
 
 ## Infrastructure
 
@@ -318,4 +318,6 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Sauvegardes Vaultwarden : tars auto 20 et 21 oct. (k3s-01 + pve)
 - ✅ Restore technique isolée (SQLite, Pod, HTTP 200) — [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique)
 - ✅ Restore fonctionnel isolé (login + 2FA + coffre, 2026-10-21)
+- ✅ Snapshots zvol Vaultwarden horaires (12:00 et 13:00 le 21 oct.)
+- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) + rétention 24/7
 - ⬜ Reprise réelle zvol (procédure écrite) + rétention Restic

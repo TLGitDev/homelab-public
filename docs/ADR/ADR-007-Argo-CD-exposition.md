@@ -58,7 +58,7 @@ Actuellement : `root` → `vaultwarden`. Enfants : Sync **manuel**.
 
 ### Clé Sealed Secrets
 
-Sauvegardée **hors Git**, sur le serveur : `~/backups/sealed-secrets/` (fichier de clé, `tls.crt` / `tls.key`, permissions `600`). Une copie **hors** k3s-01 reste à faire.
+Sauvegardée **hors Git** : k3s-01 `~/backups/sealed-secrets/` et copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (`600`). USB via `backup-usb`.
 
 Détail opérationnel : [ArgoCD.md](../ArgoCD.md). Tunnel : [Cloudflare.md](../Cloudflare.md). GitOps : [ADR-006](ADR-006-Argo-CD.md). Secrets : [ADR-005](ADR-005-Sealed-Secrets.md).
 

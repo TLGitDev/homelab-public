@@ -249,6 +249,6 @@ Le root reste auto-synchronisé. Les workloads restent sous contrôle manuel.
 | Config / Ingress / bootstrap | Git + `kubectl apply` |
 | Compte | `admin` local ; mot de passe initial changé |
 | API Kubernetes | **non** exposée sur Internet |
-| Clé Sealed Secrets | `~/backups/sealed-secrets/` (ex. `sealed-secrets-keygvck8.yaml`, mode `600`, **hors Git**) ; copie hors k3s-01 ⬜ |
+| Clé Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` + copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (`600`, **hors Git**) ; USB via `backup-usb` |
 
 Aucun mot de passe, jeton Cloudflare ou blob Sealed Secret dans cette page.

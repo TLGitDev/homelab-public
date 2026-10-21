@@ -55,4 +55,4 @@ Un SealedSecret est lié au cluster, au namespace et au nom : un changement impo
 - Une variable d'environnement issue d'un Secret n'est pas rechargée toute seule : `rollout restart` après un reseal.
 - Le Secret créé dans le cluster reste lisible via l'API (`kubectl get secret`) : ce n'est pas un coffre-fort interne.
 - SOPS peut rester visible dans l'historique Git ; ce n'est plus le flux opérationnel.
-- La **clé** du controller (TLS) est sauvegardée hors Git sur k3s-01 (`~/backups/sealed-secrets/`, mode `600`). **Pas** dans le dépôt. Une copie hors serveur reste à faire. Sans cette clé, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants.
+- La **clé** du controller (TLS) est hors Git : k3s-01 `~/backups/sealed-secrets/` (`600`) et copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (puis USB via `backup-usb`). Sans cette clé, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants.

@@ -951,3 +951,7 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-21 | Procédure de reprise réelle Vaultwarden (cas 1–3, non exécutée). |
 | 2026-10-21 | Cible snapshots ZFS v1 (zvol Vaultwarden, 24h + 7j) — pas activée. |
 | 2026-10-21 | Script/timers snapshots zvol Vaultwarden versionnés (pas encore installés sur `pve`). |
+| 2026-10-21 | Timers snapshots zvol activés sur `pve` (1er horaire 12:00 ; daily 22 oct. 04:00). |
+| 2026-10-21 | Snapshots horaires auto OK (`_1200`, `_1300`) ; daily timer encore ouvert. |
+| 2026-10-21 | Noter : `backup-usb` du 20 oct. OK ; clé Sealed Secrets ≠ tars (pas dans Restic tant qu'elle n'est pas sous `/tank/backups`). |
+| 2026-10-21 | Clé Sealed Secrets : copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (périmètre `backup-usb`). |

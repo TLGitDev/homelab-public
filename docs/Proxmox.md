@@ -132,7 +132,7 @@ Ne jamais versionner clé SSH privée, mot de passe Restic, ni archive.
 | Pull Vaultwarden | `/usr/local/sbin/pull-vaultwarden-backup.sh` | [`scripts/pull-vaultwarden-backup.sh`](../infrastructure/pve/scripts/pull-vaultwarden-backup.sh) |
 | Timer pull | 03:15 | [`systemd/pull-vaultwarden-backup.*`](../infrastructure/pve/systemd/) |
 | USB / Restic | `/usr/local/sbin/backup-usb` (**manuel**) | [`scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb) |
-| Snapshots zvol VW | `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` (timers ⬜) | [`scripts/snapshot-vaultwarden-zvol.sh`](../infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh) |
+| Snapshots zvol VW | `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` (horaire + 04:00) | [`scripts/snapshot-vaultwarden-zvol.sh`](../infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh) |
 
 Pull : SSH/SCP, clé `/root/.ssh/id_ed25519_backup_k3s`, SHA-256, `tar -tf`, pas d'écrasement si hash différent, 7 archives. Premier tar auto confirmé : `vaultwarden-2026-10-20_030012.tar`. Détail : [Vaultwarden.md](Vaultwarden.md#pve--0315).
 

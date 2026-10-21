@@ -56,9 +56,9 @@ Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéa
 
 ## Jalon actuel
 
-- ⚙️ Snapshots ZFS : politique v1 écrite (zvol VW, 24h/7j) — pas activée — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs--cible)
+- ✅ Snapshots ZFS zvol VW : timers + 1er horaire auto (12:00 / 13:00) — daily timer ⬜ — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs)
 - ✅ Archives Vaultwarden : 1er tar auto 20 oct. + copie `pve` — [Vaultwarden.md](Vaultwarden.md#sauvegarde)
-- ⚙️ USB / Restic (`backup-usb` ; restore d'une **archive**, pas du service)
+- ✅ USB / Restic : `backup-usb` OK (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/` (copie manuelle)
 - ✅ Restore isolée : technique 20 oct. ; login + coffre 21 oct. (HTTPS local)
 - ⬜ Reprise réelle sur le zvol (procédure [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
 

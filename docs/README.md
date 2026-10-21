@@ -41,7 +41,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
 | Pool de données | `tank/vmdata` ; Vaultwarden sur zvol `vm-101-vaultwarden-data` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
-| Sauvegardes | Tars auto + restore isolée OK ; snapshots zvol = cible ; USB manuel |
+| Sauvegardes | Tars + restore isolée OK ; snapshots zvol horaires OK ; USB manuel |
 
 ---
 

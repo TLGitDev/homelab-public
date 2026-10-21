@@ -272,11 +272,11 @@ zvol `tank/vmdata/vm-101-vaultwarden-data`
 
 ```
 Volume primaire (service)     →  tank
-Snapshot ZFS                  →  rollback rapide (même pool) — cible v1, pas activée
+Snapshot ZFS                  →  rollback rapide (même pool) — timers zvol VW actifs
 Backup indépendant            →  USB / offsite (manuel)
 ```
 
-Cible snapshots : uniquement le zvol Vaultwarden, 24× horaire + 7× quotidien, crash-consistent. [Sauvegardes.md](Sauvegardes.md#snapshots-zfs--cible).
+Snapshots : uniquement le zvol Vaultwarden, 24× horaire + 7× quotidien, crash-consistent. Timers `pve` activés le 21 oct. [Sauvegardes.md](Sauvegardes.md#snapshots-zfs).
 
 Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Procédure écrite, **pas exécutée** : [Vaultwarden.md](Vaultwarden.md#reprise-réelle--non-testée).
 

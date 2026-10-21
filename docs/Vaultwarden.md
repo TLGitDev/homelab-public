@@ -485,7 +485,7 @@ Le coffre est dans le zvol, **pas** dans le disque système de la VM.
 1. Sur `pve` : `zfs list tank/vmdata/vm-101-vaultwarden-data`. S'il n'y est plus → cas 3. S'il y est : **ne pas** créer de disque.
 2. Nouvelle VM : IP `<ip-k3s-01>` si possible, **hostname OS `k3s-01`** (`nodeAffinity` du PV). Disque système neuf sur `rpool`. Attacher le zvol **existant** en `scsi1` / `iothread=1` (disque unused, ou `qm set`). Pas « Add Hard Disk » sur `tank-vmdata`.
 3. Boot. UUID attendu : `<uuid-disque-vaultwarden>` (`blkid`). `fstab` + montage `/var/lib/k3s-storage/vaultwarden` comme [Stockage](#stockage). `findmnt` / `ls` : `db.sqlite3`, `rsa_key.pem`.
-4. Réinstaller K3s, Traefik, Sealed Secrets, Argo CD ([ArgoCD.md](ArgoCD.md), [Kubernetes.md](Kubernetes.md)). Restaurer la clé Sealed Secrets depuis une copie **hors** k3s-01 si elle existe (`~/backups/sealed-secrets/` sur l'ancienne VM est perdue avec `rpool`). Sans cette clé : nouveau `ADMIN_TOKEN`, reseal ; le coffre utilisateur est dans le tar/zvol, pas dans ce Secret.
+4. Réinstaller K3s, Traefik, Sealed Secrets, Argo CD ([ArgoCD.md](ArgoCD.md), [Kubernetes.md](Kubernetes.md)). Restaurer la clé Sealed Secrets depuis `/tank/backups/k3s-01/sealed-secrets/` ou l'USB (`~/backups/sealed-secrets/` sur l'ancienne VM meurt avec `rpool`). Sans cette clé : nouveau `ADMIN_TOKEN`, reseal ; le coffre utilisateur est dans le tar/zvol, pas dans ce Secret.
 5. GitOps : Application Vaultwarden, **sync manuel**. PV `Retain` → chemin `/var/lib/k3s-storage/vaultwarden`. PVC Bound, Deployment `1/1`.
 6. Login sur l'URL publique. Si le zvol est sain, **pas** d'extraction de tar. Tar seulement si les fichiers montés sont mauvais (cas 1 une fois la VM là).
 
