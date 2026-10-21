@@ -189,7 +189,7 @@ Le SSD NVMe (`rpool`) est l'**infrastructure** : Proxmox, disques système des V
 
 **Aujourd'hui** : Vaultwarden est sur `tank/vmdata/vm-101-vaultwarden-data` (zvol → ext4 → Local PV → `vaultwarden-zfs-pvc`). L'ancien PVC `local-path` est conservé figé. Pas de NFS pour SQLite, pas de CSI ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
-Sauvegardes quotidiennes en place (tar 03:00 → `pve` 03:15). Restore isolée OK (technique 20 oct. ; login + coffre 21 oct.). Réattache du zvol : encore ouverte. USB Restic manuel.
+Sauvegardes quotidiennes en place (tar 03:00 → `pve` 03:15). Restore isolée OK (technique 20 oct. ; login + coffre 21 oct.). Reprise réelle (zvol) : procédure écrite, non exécutée. USB Restic manuel.
 
 Détail : [Stockage.md](Stockage.md). As-built : [Vaultwarden.md](Vaultwarden.md).
 
@@ -318,4 +318,4 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Sauvegardes Vaultwarden : tars auto 20 et 21 oct. (k3s-01 + pve)
 - ✅ Restore technique isolée (SQLite, Pod, HTTP 200) — [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique)
 - ✅ Restore fonctionnel isolé (login + 2FA + coffre, 2026-10-21)
-- ⬜ Reprise sur le zvol de prod + rétention Restic
+- ⬜ Reprise réelle zvol (procédure écrite) + rétention Restic

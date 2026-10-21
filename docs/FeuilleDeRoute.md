@@ -60,7 +60,7 @@ Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéa
 - ✅ Archives Vaultwarden : 1er tar auto 20 oct. + copie `pve` — [Vaultwarden.md](Vaultwarden.md#sauvegarde)
 - ⚙️ USB / Restic (`backup-usb` ; restore d'une **archive**, pas du service)
 - ✅ Restore isolée : technique 20 oct. ; login + coffre 21 oct. (HTTPS local)
-- ⬜ Reprise complète sur le stockage de production
+- ⬜ Reprise réelle sur le zvol (procédure [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
 
 ---
 

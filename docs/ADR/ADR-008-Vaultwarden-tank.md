@@ -68,6 +68,6 @@ Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultward
 
 - Provisioning des volumes **manuel** (Proxmox + PV statique).
 - Le Local PV est lié au nœud `k3s-01`. Pas de HA Kubernetes du stockage — cohérent avec un cluster à un nœud ([ADR-004](ADR-004-K3s.md)).
-- Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure de restauration à **tester**.
+- Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure : [Vaultwarden.md](../Vaultwarden.md#reprise-réelle--non-testée) (écrite, non exécutée).
 - L'ancien PVC `vaultwarden-pvc` est un rollback **figé** : plus synchronisé depuis la bascule.
 - Miroir + snapshots ≠ backup. Chaîne quotidienne : [Vaultwarden.md](../Vaultwarden.md#sauvegarde). Tars auto 20–21 oct. ; restore isolée OK (login 21 oct.) ; reprise sur le zvol de prod : encore ouverte.

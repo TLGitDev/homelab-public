@@ -276,11 +276,11 @@ Snapshot ZFS                  →  rollback rapide (même pool)
 Backup indépendant            →  USB / offsite (pas encore en routine)
 ```
 
-Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Procédure **pas encore testée**.
+Reconstruction visée : `rpool` / k3s-01 perdus, `tank` intact → nouvelle VM, réattacher le zvol existant, filesystem, Local PV, PVC, Vaultwarden. Le volume **ne** se recrée **pas** avec la VM. Procédure écrite, **pas exécutée** : [Vaultwarden.md](Vaultwarden.md#reprise-réelle--non-testée).
 
 Un Local PV est lié au nœud `k3s-01`. Le cluster n'a qu'un nœud ; le stockage physique est hors du disque système de la VM.
 
-Sauvegardes SQLite cohérentes : tar auto 03:00 + pull `pve`. Restore isolée OK (technique 20 oct. ; login 21 oct.). Réattache du zvol : encore ouverte. Ne pas détruire l'ancien PVC tant que le rollback n'est pas documenté. USB hors `tank` : manuel. Détail : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
+Sauvegardes SQLite cohérentes : tar auto 03:00 + pull `pve`. Restore isolée OK. Reprise réelle zvol : écrite, non exécutée. Ne pas détruire l'ancien PVC maintenant. USB hors `tank` : manuel. Détail : [Vaultwarden.md](Vaultwarden.md#sauvegarde).
 
 Service : [Vaultwarden.md](Vaultwarden.md). Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 

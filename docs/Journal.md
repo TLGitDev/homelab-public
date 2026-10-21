@@ -948,3 +948,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-20 | `backup-usb` (Restic, manifeste, tests) ; scripts/units dans `infrastructure/` (`056e89a`). |
 | 2026-10-20 | Sprint 23 : restore technique Vaultwarden (HTTP 200 ; login ⬜). |
 | 2026-10-21 | Sprint 24 : restore fonctionnel Vaultwarden (HTTPS local, 2FA, coffre lisible). |
+| 2026-10-21 | Procédure de reprise réelle Vaultwarden (cas 1–3, non exécutée). |

@@ -248,9 +248,7 @@ L'IP Pod observée au test (`10.42.0.56`) n'est **pas** stable. Pour un contrôl
 
 ## Restauration si k3s-01 est perdu (`tank` intact)
 
-Nouvelle VM → réattacher le zvol **sans le détruire** → filesystem (UUID) → Local PV → PVC → Vaultwarden.
-
-Cette procédure n'a **pas** encore été testée de bout en bout.
+Voir [Reprise réelle](#reprise-réelle--non-testée), cas 2. Procédure **écrite**, pas exécutée de bout en bout.
 
 ## Contrôles utiles
 
@@ -411,9 +409,99 @@ Comparer les SHA. Ne pas supprimer d'archives avant d'avoir compté les généra
 
 ## Restauration
 
-Doit couvrir, pour une reprise réelle : données, config, PVC / zvol, secrets (Sealed Secrets + token `/admin` dans le gestionnaire de mots de passe).
+Les tests du 20 et 21 octobre prouvent qu'un tar **démarre un coffre isolé**. Ils ne remettent **pas** le volume de production.
 
-Un `.tar` a aussi été sorti d'un snapshot Restic à la mise au point USB. **Ce n'est pas** une restauration du service.
+Un `.tar` sorti d'un snapshot Restic à la mise au point USB n'est pas non plus une restauration du service.
+
+### Reprise réelle — non testée
+
+**Statut : écrite le 21 octobre 2026, jamais jouée sur la prod.** Ne pas improviser dans l'UI Proxmox.
+
+Choisir le cas **avant** d'écrire sur un disque.
+
+| Situation | Faire |
+|---|---|
+| VM et zvol OK, coffre OK | Ne pas restaurer. Diagnostiquer. |
+| VM OK, `tank` OK, données zvol corrompues / coffre illisible | **Cas 1** — tar sur le volume live |
+| `k3s-01` / `rpool` perdu, `tank` intact, zvol encore là | **Cas 2** — réattacher le zvol, **ne pas** en créer un autre |
+| `tank` perdu | **Cas 3** — USB / Restic, puis **nouveau** zvol + tar |
+
+L'ancien PVC `vaultwarden-pvc` (`local-path`) **n'est pas** un rollback.
+
+#### Interdits
+
+- `zfs destroy` / supprimer le disque dans l'UI / `qm destroy … --purge` sur `vm-101-vaultwarden-data`.
+- Extraire un tar vers `/var/lib/k3s-storage/vaultwarden` **tant que** le Deployment a des Pods.
+- Monter ce chemin dans un Pod de *test*.
+- Recréer un volume `tank-vmdata` du même nom si le zvol existe encore (l'UI « Add Hard Disk » **crée**).
+- Restaurer sans SHA-256, ou une archive plus vieille que nécessaire.
+
+Arrêter les timers le temps de la manœuvre (`backup-vaultwarden.timer` sur k3s-01, `pull-vaultwarden-backup.timer` sur `pve`), les réactiver après.
+
+#### Cas 1 — tar sur le volume live
+
+VM `k3s-01` joignable, zvol monté, SQLite ou coffre inutilisable.
+
+1. Dernière archive saine sur `pve` : `/tank/backups/k3s-01/vaultwarden/vaultwarden-*.tar`. SHA-256. Transfert comme au [test](#transfert), nom local distinct (`restore-vaultwarden-prod.tar`).
+2. Si le live est encore lisible, copie de précaution **hors** du zvol :
+
+```bash
+sudo tar --exclude='./lost+found' \
+  -cpf /home/utilisateur/backups/vaultwarden/pre-restore-$(date +%F_%H%M%S).tar \
+  -C /var/lib/k3s-storage/vaultwarden .
+```
+
+3. Arrêter Vaultwarden, attendre zéro Pod (comme le script de backup) :
+
+```bash
+kubectl -n vaultwarden scale deployment/vaultwarden --replicas=0
+# boucle jusqu'à : kubectl -n vaultwarden get pods → rien
+findmnt /var/lib/k3s-storage/vaultwarden
+```
+
+4. Extraire **dans** le montage de prod (sqlite + WAL + SHM ensemble). `sudo` : le répertoire est root.
+
+```bash
+sudo tar -xf /home/utilisateur/restore-vaultwarden-prod.tar \
+  -C /var/lib/k3s-storage/vaultwarden
+sudo sqlite3 /var/lib/k3s-storage/vaultwarden/db.sqlite3 'PRAGMA integrity_check;'
+```
+
+Attendu : `ok`. `lost+found` n'est pas dans l'archive ; le laisser.
+
+5. Relancer, **même** image `1.37.3` :
+
+```bash
+kubectl -n vaultwarden scale deployment/vaultwarden --replicas=1
+kubectl -n vaultwarden rollout status deployment/vaultwarden --timeout=180s
+```
+
+6. Contrôle : `https://vaultwarden.labo.example` (HTTPS public, pas le test `localhost`). Login + 2FA + un élément lisible. Prod `1/1`. Réactiver les timers. Supprimer le tar de transfert, **pas** les archives `pve` / daily / pré-restore.
+
+#### Cas 2 — k3s-01 perdu, `tank` intact
+
+Le coffre est dans le zvol, **pas** dans le disque système de la VM.
+
+1. Sur `pve` : `zfs list tank/vmdata/vm-101-vaultwarden-data`. S'il n'y est plus → cas 3. S'il y est : **ne pas** créer de disque.
+2. Nouvelle VM : IP `<ip-k3s-01>` si possible, **hostname OS `k3s-01`** (`nodeAffinity` du PV). Disque système neuf sur `rpool`. Attacher le zvol **existant** en `scsi1` / `iothread=1` (disque unused, ou `qm set`). Pas « Add Hard Disk » sur `tank-vmdata`.
+3. Boot. UUID attendu : `<uuid-disque-vaultwarden>` (`blkid`). `fstab` + montage `/var/lib/k3s-storage/vaultwarden` comme [Stockage](#stockage). `findmnt` / `ls` : `db.sqlite3`, `rsa_key.pem`.
+4. Réinstaller K3s, Traefik, Sealed Secrets, Argo CD ([ArgoCD.md](ArgoCD.md), [Kubernetes.md](Kubernetes.md)). Restaurer la clé Sealed Secrets depuis une copie **hors** k3s-01 si elle existe (`~/backups/sealed-secrets/` sur l'ancienne VM est perdue avec `rpool`). Sans cette clé : nouveau `ADMIN_TOKEN`, reseal ; le coffre utilisateur est dans le tar/zvol, pas dans ce Secret.
+5. GitOps : Application Vaultwarden, **sync manuel**. PV `Retain` → chemin `/var/lib/k3s-storage/vaultwarden`. PVC Bound, Deployment `1/1`.
+6. Login sur l'URL publique. Si le zvol est sain, **pas** d'extraction de tar. Tar seulement si les fichiers montés sont mauvais (cas 1 une fois la VM là).
+
+#### Cas 3 — `tank` perdu
+
+`/tank/backups` part avec `tank`. Seul le niveau USB reste ([Sauvegardes.md](Sauvegardes.md#usb--restic)).
+
+1. Recréer `tank` / `tank/vmdata` si besoin. **Nouveau** zvol (l'ancien n'existe plus), 8 Gio, `scsi1`, ext4, UUID **nouveau** → mettre à jour `fstab` (l'UUID `b4913e83-…` est mort avec l'ancien filesystem).
+2. Sortir le tar depuis Restic (SHA identique). Puis cas 1 sur ce volume neuf.
+3. Cluster : comme cas 2 si k3s-01 est aussi perdu.
+
+#### Après une reprise
+
+- Timers de nouveau actifs.
+- Une sauvegarde **après** validation du coffre, pour ne pas n'avoir que l'archive d'avant incident.
+- Cette procédure reste ⬜ jusqu'à une exécution réelle (ou un exercice volontaire sur un zvol **de test**, jamais le zvol live).
 
 ### Test du 20 octobre 2026 (technique)
 
@@ -701,7 +789,7 @@ Si Firefox refuse encore HTTP/HTTPS : vérifier que l'URL est exactement `https:
 - ⬜ Pull d'une archive absente (sans détruire une sauvegarde utile)
 - ✅ Connexion utilisateur + coffre déchiffré (HTTPS local, 21 oct.)
 - ✅ Nettoyage du test du 21 oct. (prod `1/1`)
-- ⬜ Reprise sur le PVC / zvol de production (autre procédure)
+- ⬜ Reprise réelle (cas 1–3 [écrits](#reprise-réelle--non-testée), jamais exécutés)
 - ⬜ Diagnostic d'échec USB : [Sauvegardes.md](Sauvegardes.md#usb--restic)
 
 ---
@@ -726,7 +814,8 @@ Si Firefox refuse encore HTTP/HTTPS : vérifier que l'URL est exactement `https:
 | Copie USB / Restic | manuel (`backup-usb` de `/tank/backups`) |
 | Restore technique (ns isolé, HTTP 200) | ✅ 2026-10-20 ; prod intacte |
 | Connexion / déchiffrement après restore | ✅ 2026-10-21 (HTTPS local, 2FA, coffre lisible) |
-| Suppression de l'ancien PVC | ⬜ après backups + procédure de rollback |
+| Reprise réelle (zvol / tar sur prod) | ⬜ [procédure écrite](#reprise-réelle--non-testée), non exécutée |
+| Suppression de l'ancien PVC | ⬜ plus tard (ménage, pas un rollback) |
 
 ---
 
