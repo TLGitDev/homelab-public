@@ -237,7 +237,7 @@ Terminée et validée. GitOps : commit `8ccecbc`.
 
 1. Volume ZFS 8 Gio, attaché `scsi1`, ext4, `fstab` par UUID, montage vérifié.
 2. Manifestes `pv-zfs.yaml` / `pvc-zfs.yaml` appliqués ; PV et PVC **Bound**. Ancien PVC conservé.
-3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. SHA-256 de `rsa_key.pem` : `<empreinte-vérifiée>`. Ces empreintes identifient les fichiers de **cette** intervention. Un test de restauration **technique** a eu lieu le 20 octobre 2026 ([ci-dessous](#test-du-20-octobre-2026-technique)) ; la connexion au coffre n'y a pas été validée.
+3. Sauvegarde arrêtée : `/home/utilisateur/backups/vaultwarden/migration-2026-10-14/` (permissions restreintes). `PRAGMA integrity_check` → `ok`, 29 tables. SHA-256 de `db.sqlite3` : `<empreinte-vérifiée>`. SHA-256 de `rsa_key.pem` : `<empreinte-vérifiée>`. Ces empreintes identifient les fichiers de **cette** intervention. Un test de restauration **technique** a eu lieu le 20 octobre 2026 ([ci-dessous](#test-du-20-octobre-2026-technique)). Login + coffre : 21 octobre ([test fonctionnel](#test-fonctionnel--https-local)).
 4. `kubectl -n vaultwarden scale deployment vaultwarden --replicas=0`.
 5. Pod temporaire `vaultwarden-data-copy` : ancien PVC en lecture seule (`/source`), nouveau en lecture-écriture (`/destination`) ; `cp -a` + `sync`.
 6. SHA-256 `/source` vs `/destination` : aucune différence. `integrity_check` en lecture seule sur le nouveau volume : `ok`, 29 tables. Pod de copie supprimé.
@@ -340,7 +340,7 @@ Après validation (coffre, données, Pod, PVC Bound, Argo CD Synced/Healthy) : s
 
 # Sauvegarde
 
-**2026-10-20** — archive auto `vaultwarden-2026-10-20_030012.tar` présente sur k3s-01 **et** `pve` (SHA identique). Restore **technique** isolée OK (SQLite, Pod, HTTP 200). Connexion au compte / déchiffrement du coffre : **non** testés (HTTPS). Production **non** touchée.
+**2026-10-21** — tar auto du 21 oct. restauré en isolé : SHA vérifié, HTTPS local, login + 2FA, coffre lisible. Nettoyage confirmé (`sudo` pour `/var/tmp/…`). Production `1/1`, archives d'origine conservées.
 
 Aucun mot de passe Restic, aucune clé privée, aucun secret applicatif. Chaîne et USB : [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle). `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
@@ -362,7 +362,7 @@ On privilégie des `.tar` identifiables, pas uniquement des snapshots. Interrupt
 
 Git ≠ machines. Après un changement : copier, permissions, syntaxe, tester. Premier commit du script local : `3d86d72`.
 
-Dans le tar : `db.sqlite3`, `db.sqlite3-wal`, `db.sqlite3-shm` (si présent), `rsa_key.pem`, `icon_cache/`, `tmp/`. `lost+found` exclu. Nom : `vaultwarden-AAAA-MM-JJ_HHMMSS.tar`. Exemples : `…-2026-10-19_163746.tar` (manuel) ; `…-2026-10-20_030012.tar` (timer 03:00). Une ancienne `vaultwarden-2026-10-19.tar` a existé. Conserver **ensemble** sqlite + WAL + SHM.
+Dans le tar : `db.sqlite3`, `db.sqlite3-wal`, `db.sqlite3-shm` (si présent), `rsa_key.pem`, `icon_cache/`, `tmp/`. `lost+found` exclu. Nom : `vaultwarden-AAAA-MM-JJ_HHMMSS.tar`. Exemples : `…-2026-10-19_163746.tar` (manuel) ; `…-2026-10-20_030012.tar` et archive du **21 oct.** (timers 03:00). Une ancienne `vaultwarden-2026-10-19.tar` a existé. Conserver **ensemble** sqlite + WAL + SHM.
 
 ## k3s-01 — 03:00
 
@@ -535,22 +535,172 @@ ls -ld /var/tmp/vaultwarden-restore-test \
 
 Archives d'origine conservées (`/home/utilisateur/backups/vaultwarden/daily/` et `/tank/backups/k3s-01/vaultwarden/`). Production inchangée. Ce Pod **n'existe plus** dans le cluster.
 
-### Pour un prochain test
+### Test fonctionnel — HTTPS local
 
-- SHA-256 avant extraction.
-- Répertoire + namespace distincts ; ne jamais monter le volume de prod.
-- Garder sqlite + WAL + SHM ensemble.
-- Même version Vaultwarden que la sauvegarde, si elle est connue.
-- Nettoyer seulement après avoir noté les résultats.
-- Pour valider le compte dans le navigateur : HTTPS isolé temporaire.
+**2026-10-21** — réussi. Archive du 21 octobre 2026 (dernière sur `pve`), SHA vérifié. Production non montée. Nom exact du tar et empreinte : non recopiés ici.
+
+Objectif : sur une instance **isolée**, se connecter et déchiffrer le coffre. Pas de Traefik, pas de DNS public, pas de Cloudflare.
+
+`ROCKET_TLS` n'est **pas** un modèle pour la prod (le HTTPS public reste Cloudflare). Ici, c'est uniquement pour obtenir un contexte sécurisé dans Firefox.
+
+#### Contraintes
+
+- Certificat **RSA** (Rocket refuse l'ECC).
+- `DOMAIN` = URL exacte du navigateur, **port compris**.
+- Certificats **hors** du répertoire restauré (`/ssl` ≠ `/data`).
+- 2FA : un enregistrement existe dans la base — avoir le TOTP sous la main.
+- Ne **pas** modifier le coffre pendant le test (instance jetable, mais autant ne pas s'habituer à écrire dedans).
+- Si Firefox est sur Windows : `kubectl port-forward` sur k3s-01 **et** un tunnel SSH vers ce port.
+
+#### 1. Transfert et extraction
+
+Reprendre [Transfert](#transfert) et [Extraction isolée](#extraction-isolée) avec l'archive choisie (la plus récente sur `pve`, SHA vérifié). Mêmes chemins : `/home/utilisateur/restore-vaultwarden-test.tar` et `/var/tmp/vaultwarden-restore-test`. Ne jamais extraire vers `/var/lib/k3s-storage/vaultwarden`.
+
+#### 2. Certificat jetable (k3s-01)
+
+```bash
+sudo bash -c '
+set -euo pipefail
+SSL_DIR=/var/tmp/vaultwarden-restore-test-ssl
+if [ -e "$SSL_DIR" ]; then
+  echo "ERREUR : $SSL_DIR existe déjà."
+  exit 1
+fi
+install -d -m 700 "$SSL_DIR"
+openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
+  -keyout "$SSL_DIR/key.pem" \
+  -out "$SSL_DIR/cert.pem" \
+  -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+chmod 600 "$SSL_DIR/key.pem" "$SSL_DIR/cert.pem"
+openssl x509 -in "$SSL_DIR/cert.pem" -noout -subject -dates -ext subjectAltName
+'
+```
+
+#### 3. Namespace et Pod
+
+```bash
+kubectl create namespace vaultwarden-restore-test
+```
+
+`/tmp/vaultwarden-restore-test.yaml` :
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vaultwarden-restore-test
+  namespace: vaultwarden-restore-test
+  labels:
+    app: vaultwarden-restore-test
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  containers:
+    - name: vaultwarden
+      image: vaultwarden/server:1.37.3
+      ports:
+        - containerPort: 80
+      env:
+        - name: DOMAIN
+          value: "https://localhost:18443"
+        - name: DATABASE_URL
+          value: "sqlite://data/db.sqlite3"
+        - name: SIGNUPS_ALLOWED
+          value: "false"
+        - name: ROCKET_TLS
+          value: '{certs="/ssl/cert.pem",key="/ssl/key.pem"}'
+      volumeMounts:
+        - name: restored-data
+          mountPath: /data
+        - name: tls
+          mountPath: /ssl
+          readOnly: true
+  volumes:
+    - name: restored-data
+      hostPath:
+        path: /var/tmp/vaultwarden-restore-test
+        type: Directory
+    - name: tls
+      hostPath:
+        path: /var/tmp/vaultwarden-restore-test-ssl
+        type: Directory
+```
+
+```bash
+kubectl apply -f /tmp/vaultwarden-restore-test.yaml
+kubectl get pod -n vaultwarden-restore-test -o wide
+kubectl logs -n vaultwarden-restore-test vaultwarden-restore-test --tail=60
+```
+
+Attendu dans les logs : démarrage 1.37.3, Rocket lancé en HTTPS, **pas** d'erreur `ROCKET_TLS` / certificat. Le port 80 du conteneur sert alors du **HTTPS**.
+
+Observé le 21 oct. : `Rocket has launched from https://0.0.0.0:80`. Avertissements HSTS (`TLS-enabled liftoff without enabling HSTS`, politique HSTS par défaut) : **normaux** pour ce test, pas un échec.
+
+#### 4. Accès depuis le navigateur
+
+Sur k3s-01 :
+
+```bash
+kubectl port-forward -n vaultwarden-restore-test \
+  pod/vaultwarden-restore-test 18443:80
+```
+
+Si Firefox est sur Windows, dans un autre terminal **local** :
+
+```bash
+ssh -L 18443:127.0.0.1:18443 utilisateur@<ip-k3s-01>
+```
+
+Contrôle (sur la machine où le port 18443 est ouvert) :
+
+```bash
+curl -skS -o /dev/null -w 'HTTPS %{http_code}\n' \
+  https://localhost:18443/
+```
+
+Attendu : **HTTPS 200** (`-k` : certificat auto-signé). Observé le 21 oct.
+
+Firefox : **`https://localhost:18443`** (pas `http://`, pas `127.0.0.1`). Accepter l'exception de certificat.
+
+**21 oct.** : warning certificat → site local HTTPS ; login + 2FA OK ; entrées visibles ; mots de passe lisibles / éditables. Coffre déchiffré.
+
+#### 5. Nettoyage
+
+**21 oct.** : confirmé. Les répertoires sous `/var/tmp` ont été créés en `sudo` : le `rm` aussi.
+
+Après avoir noté le résultat :
+
+```bash
+kubectl delete namespace vaultwarden-restore-test
+sudo rm -rf -- /var/tmp/vaultwarden-restore-test \
+  /var/tmp/vaultwarden-restore-test-ssl
+rm -f -- /home/utilisateur/restore-vaultwarden-test.tar /tmp/vaultwarden-restore-test.yaml
+```
+
+Vérifier l'absence des chemins et `kubectl -n vaultwarden get deploy vaultwarden` → `1/1`. Archives d'origine conservées. Observé le 21 oct. : chemins absents, Deployment prod `1/1`, archives conservées.
+
+#### Critères de succès
+
+| Contrôle | Attendu |
+|---|---|
+| SHA de l'archive | ✅ vérifié (21 oct.) |
+| Pod de test | ✅ `Running`, HTTPS sur :80 |
+| `curl -sk https://localhost:18443/` | ✅ 200 |
+| Login + 2FA + coffre lisible | ✅ 2026-10-21 |
+| Production | ✅ `1/1` (21 oct., après nettoyage) |
+| Nettoyage | ✅ ns et `/var/tmp/…` absents (`sudo` pour `/var/tmp`) |
+
+Si Firefox refuse encore HTTP/HTTPS : vérifier que l'URL est exactement `https://localhost:18443` (alignée sur `DOMAIN`).
 
 ## Limites / suite
 
 - Pull dépend du réseau `pve` → k3s-01.
-- ✅ Premier tar auto 03:00 (20 oct.) + copie sur `pve` (cette archive)
+- ✅ Tars auto 03:00 (20 et 21 oct.) + copie sur `pve`
 - ⬜ Rétention 7 en réel sur plusieurs jours
 - ⬜ Pull d'une archive absente (sans détruire une sauvegarde utile)
-- ⬜ Connexion utilisateur + coffre déchiffré sur une instance restaurée
+- ✅ Connexion utilisateur + coffre déchiffré (HTTPS local, 21 oct.)
+- ✅ Nettoyage du test du 21 oct. (prod `1/1`)
 - ⬜ Reprise sur le PVC / zvol de production (autre procédure)
 - ⬜ Diagnostic d'échec USB : [Sauvegardes.md](Sauvegardes.md#usb--restic)
 
@@ -571,11 +721,11 @@ Archives d'origine conservées (`/home/utilisateur/backups/vaultwarden/daily/` e
 | `https://vaultwarden.labo.example` | OK |
 | Access devant Vaultwarden | volontairement absent |
 | `ADMIN_TOKEN` en Argon2 PHC | ✅ 2026-10-17 (`0e5f528` ; rollout restart requis) |
-| Sauvegarde quotidienne | ✅ tar auto `…-2026-10-20_030012.tar` — [chapitre](#sauvegarde) |
-| Copie sur `pve` (`/tank/backups`) | ✅ cette archive, SHA identique |
+| Sauvegarde quotidienne | ✅ tars auto 20 et 21 oct. — [chapitre](#sauvegarde) |
+| Copie sur `pve` (`/tank/backups`) | ✅ SHA vérifié (dont 21 oct.) |
 | Copie USB / Restic | manuel (`backup-usb` de `/tank/backups`) |
 | Restore technique (ns isolé, HTTP 200) | ✅ 2026-10-20 ; prod intacte |
-| Connexion / déchiffrement après restore | ⬜ HTTPS requis |
+| Connexion / déchiffrement après restore | ✅ 2026-10-21 (HTTPS local, 2FA, coffre lisible) |
 | Suppression de l'ancien PVC | ⬜ après backups + procédure de rollback |
 
 ---
@@ -590,4 +740,4 @@ Archives d'origine conservées (`/home/utilisateur/backups/vaultwarden/daily/` e
 
 **GitOps** — [ArgoCD.md](ArgoCD.md). Manuel = exception.
 
-**Sauvegardes** — Volume / snapshot / backup sont trois choses. Archive locale → `tank/backups` → USB. Restore technique ≠ login au coffre. [Chapitre Sauvegarde](#sauvegarde).
+**Sauvegardes** — Volume / snapshot / backup sont trois choses. Archive locale → `tank/backups` → USB. Restore isolée (technique + login) ≠ reprise sur le zvol de prod. [Chapitre Sauvegarde](#sauvegarde).

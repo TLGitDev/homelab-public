@@ -109,7 +109,7 @@ Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une 
 
 Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
 
-Timers : tar auto du **2026-10-20 03:00** présent sur k3s-01 et `pve` (SHA identique). Restore **technique** isolée OK ; connexion au coffre **⬜**. USB : manuel, pas de timer.
+Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). USB : manuel, pas de timer.
 
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 

@@ -881,6 +881,37 @@ HTTPS isolé pour valider le coffre, ou procédure de reprise sur le volume de p
 
 ---
 
+# 2026-10-21 — Sprint 24 : Restore fonctionnel Vaultwarden
+
+## Objectif
+
+Valider login + déchiffrement sur une instance isolée en HTTPS local, sans toucher à la production.
+
+## Réalisé
+
+- Archive du 21 octobre 2026 (dernière sur `pve`) ; SHA vérifié.
+- Certificat RSA jetable ; Pod 1.37.3 ; Rocket en HTTPS sur :80.
+- `curl -sk https://localhost:18443/` → 200. Warning Firefox accepté.
+- Login + 2FA ; coffre lisible (entrées, mots de passe).
+- Avertissements HSTS Rocket : attendus, pas un échec.
+- Nettoyage : namespace supprimé ; `sudo rm -rf` des `/var/tmp/vaultwarden-restore-test*` (créés en root) ; chemins absents ; prod `1/1` ; archives d'origine conservées.
+
+## Vérifications
+
+- ✅ Restore fonctionnel (coffre déchiffré).
+- ✅ Nettoyage.
+- ⬜ Reprise sur le zvol de prod.
+
+## Documentation
+
+[Vaultwarden.md](Vaultwarden.md#test-fonctionnel--https-local).
+
+## Prochaine étape
+
+Reprise sur le stockage de production : autre procédure. Rétention 7 à confirmer.
+
+---
+
 # Changelog
 
 Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint = évolution de doc seulement.
@@ -916,3 +947,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-19 | Sprint 22 : sauvegardes Vaultwarden (timers ; 1er run auto à confirmer). |
 | 2026-10-20 | `backup-usb` (Restic, manifeste, tests) ; scripts/units dans `infrastructure/` (`056e89a`). |
 | 2026-10-20 | Sprint 23 : restore technique Vaultwarden (HTTP 200 ; login ⬜). |
+| 2026-10-21 | Sprint 24 : restore fonctionnel Vaultwarden (HTTPS local, 2FA, coffre lisible). |
