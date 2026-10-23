@@ -54,14 +54,20 @@ La comparaison des forges peut commencer tôt. L'inventaire Android aussi. Les s
 
 Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéalement hors ligne. [Sauvegardes.md](Sauvegardes.md).
 
-## Jalon actuel
+## Jalons
 
-Phase 0 **assez solide** pour la suite (restore zvol et rollback snapshot : écrits / non joués sur la prod — volontaire).
+Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : écrits, **non joués** sur la prod (volontaire).
 
-- ✅ Phase 1 : `tank/documents` + `images` / `musique` / `projets` / `videos` copiés depuis le PC (23 oct., originaux conservés) — (document privé)
-- ⚙️ Phase 1 ensuite : élargir `backup-usb` aux dossiers live
-- ⬜ Phase 1 plus tard : SMB LAN — `Documents`, `Images`, `Musique`, `Projets`, `Vidéos`
-- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) — suivi, pas un chantier
+- ✅ Snapshots zvol Vaultwarden : script + timers horaires (rétention 24) ; runs auto `_1200` / `_1300` — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs)
+- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) et rétention 7 j sur la durée
+- ⬜ Restauration par rollback snapshot (prod)
+- ✅ USB / Restic : `backup-usb` (20 oct.) ; restore d'une archive testée
+- ⬜ Rétention des snapshots Restic
+- ✅ Restore isolée Vaultwarden (technique 20 oct. + login 21 oct.) — [Vaultwarden.md](Vaultwarden.md)
+- ⬜ Reprise réelle sur le zvol de prod ([écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
+- ✅ Clé Sealed Secrets sous `/tank/backups` (périmètre USB)
+- ✅ État du stockage documenté — [Stockage.md](Stockage.md)
+- ✅ Documentation des opérations déjà faites (sauvegarde, restore isolée, USB)
 
 ---
 
@@ -87,6 +93,16 @@ Phase 0 **assez solide** pour la suite (restore zvol et rollback snapshot : écr
 | ZFS seul | Protection locale et organisation | Pas une UX complète |
 
 **Critère** : organisation documentée, permissions testées, une première restauration de fichiers OK.
+
+## Jalons
+
+- ✅ Inventaire — (document privé)
+- ✅ Datasets + copies PC (23 oct., originaux conservés) : `documents`, `images`, `musique`, `projets`, `videos`
+- ✅ Décision : pas Nextcloud / Syncthing ; SMB visé plus tard ; pas de doublon sous `/tank/backups`
+- ⚙️ Élargir `backup-usb` aux dossiers live
+- ⬜ Partage SMB LAN (`Documents`, `Images`, `Musique`, `Projets`, `Vidéos`)
+- ⬜ Permissions testées
+- ⬜ Première restauration de fichiers perso OK
 
 ---
 
@@ -224,7 +240,7 @@ Les médias récupérables n'ont pas le même besoin de backup que les photos ou
 | Sujet | Décision | Quand |
 |-------|----------|-------|
 | Forge Git | Gitea vs Forgejo | Phase 1–3 |
-| Stockage personnel | Partages, Nextcloud, Syncthing, ou mélange | Phase 1 |
+| Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
 | Musique | Jellyfin seul ou + Navidrome | Phase 4 |
