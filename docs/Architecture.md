@@ -299,10 +299,10 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 
 ## Infrastructure
 
-- ⬜ Snapshots ZFS automatiques + rétention
-- ⚙️ USB / Restic : script `backup-usb` testé à la main (archive restaurée ≠ service Vaultwarden)
-- ⬜ Copie hors k3s-01 de la clé Sealed Secrets
+- ✅ Snapshots zvol Vaultwarden (horaires auto ; daily timer 22 oct.)
+- ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/`
 - ⬜ Supervision
+- ⚙️ Phase 1 : perso sur `tank` (documents / images / musique / projets / videos, 23 oct.) ; `backup-usb` élargi à la fin ; SMB plus tard — (document privé)
 
 ## Plateforme
 

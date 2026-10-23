@@ -29,7 +29,7 @@ Phase 0  Fiabiliser l'existant
     ├── Phase 3  Forge Git et CI/CD
     │       └── Phase 5  Site CV public
     │
-    └── Phase 4  Multimédia
+    └── Phase 4  Mediatheques
             │
             └── Phase 6  Accès distant et exploitation
 ```
@@ -56,11 +56,12 @@ Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéa
 
 ## Jalon actuel
 
-- ✅ Snapshots ZFS zvol VW : timers + 1er horaire auto (12:00 / 13:00) — daily timer ⬜ — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs)
-- ✅ Archives Vaultwarden : 1er tar auto 20 oct. + copie `pve` — [Vaultwarden.md](Vaultwarden.md#sauvegarde)
-- ✅ USB / Restic : `backup-usb` OK (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/` (copie manuelle)
-- ✅ Restore isolée : technique 20 oct. ; login + coffre 21 oct. (HTTPS local)
-- ⬜ Reprise réelle sur le zvol (procédure [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
+Phase 0 **assez solide** pour la suite (restore zvol et rollback snapshot : écrits / non joués sur la prod — volontaire).
+
+- ✅ Phase 1 : `tank/documents` + `images` / `musique` / `projets` / `videos` copiés depuis le PC (23 oct., originaux conservés) — (document privé)
+- ⚙️ Phase 1 ensuite : élargir `backup-usb` aux dossiers live
+- ⬜ Phase 1 plus tard : SMB LAN — `Documents`, `Images`, `Musique`, `Projets`, `Vidéos`
+- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) — suivi, pas un chantier
 
 ---
 
@@ -70,13 +71,13 @@ Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéa
 
 **Dépendance** : phase 0 suffisamment validée.
 
-- Catégories : documents, photos, vidéos, archives, projets, données applicatives, médias.
+- Catégories : documents, photos, vidéos, archives, projets, données applicatives, Mediatheques.
 - Distinguer : synchroniser / archiver / sauvegarder.
 - Datasets ZFS, montages, permissions, quotas si besoin.
 - Stratégie de sauvegarde par catégorie (surtout l'irremplaçable).
 - Besoin « NAS » : partages, plusieurs appareils, utilisateurs, protocoles.
 
-**Décision encore ouverte** : partages réseau, Nextcloud, Syncthing, ou un mélange.
+**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB visé plus tard** (LAN) : `Documents`, `Images`, `Musique`, `Projets`, `Vidéos`. Copies PC → `tank` = faits (23 oct.). Pas de doublon sous `/tank/backups`. Élargir `backup-usb` à la fin.
 
 | Solution | Rôle | Limite |
 |----------|------|--------|
@@ -157,7 +158,7 @@ Décision **pas encore prise**. Critères à remplir au moment du choix (version
 
 ---
 
-# Phase 4 — Multimédia
+# Phase 4 — Mediatheques
 
 **Objectif** : bibliothèque organisée, accessible, maintenable.
 

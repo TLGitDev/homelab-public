@@ -57,6 +57,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, [exploitation](Proxmox.md#exploitation) |
 | [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
+| (document privé) | Phase 1 : inventaire perso (sync ≠ archive ≠ backup) |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup ; chaîne actuelle ; USB / Restic |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |

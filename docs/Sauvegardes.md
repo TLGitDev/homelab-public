@@ -122,6 +122,7 @@ Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [P
 | Tars Vaultwarden | `/tank/backups/k3s-01/vaultwarden/` | oui, s'ils y étaient au moment du run |
 | SealedSecret (`sealed-secret.yaml`) | Git | le ciphertext, pas la clé du controller |
 | Clé TLS du controller Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` **et** copie manuelle `/tank/backups/k3s-01/sealed-secrets/` | oui (dans le périmètre `/tank/backups`) |
+| Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | **pas encore** — `backup-usb` élargi **à la fin**, sans staging sous `/tank/backups/pc/` |
 
 Sans cette clé, un cluster neuf ne déchiffre pas les SealedSecrets existants (`ADMIN_TOKEN` hash). Le coffre utilisateur est dans le tar, pas dans cette clé.
 
@@ -237,7 +238,7 @@ Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden
 
 Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb).
 
-- Source : **uniquement** `/tank/backups` (pas le zvol live, pas `~/backups/sealed-secrets/` sur k3s-01).
+- Source **actuelle** : uniquement `/tank/backups` (pas le zvol live, pas `~/backups/sealed-secrets/` sur k3s-01). Dossiers perso live (`/tank/documents`, `images`, `musique`, `projets`, `videos`) : **pas encore** dans Restic. Cible : élargir le script **à la fin** (plusieurs chemins, pas de `rsync` vers `/tank/backups/pc/`). (document privé).
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
 - Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
