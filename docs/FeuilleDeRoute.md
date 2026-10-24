@@ -110,7 +110,9 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 
 **Objectif** : procédure reproductible pour changer de téléphone ou récupérer après une perte.
 
-**Dépendances** : phase 0 (protection) et phase 1 (stockage cible).
+**Dépendances** : phase 0 (protection) et phase 1 (stockage cible). Les deux sont assez solides (24 oct.).
+
+Travail : (document privé).
 
 Aucune solution unique ne copie tout un Android. On sépare par type, et on **écrit les exceptions** plutôt que de promettre une image complète du téléphone.
 
@@ -136,6 +138,16 @@ Ordre utile :
 6. Tester une restauration **sans** effacer l'original.
 
 **Critère** : une matrice (méthode, fréquence, lieu, limites, dernier test de restauration) par type de donnée.
+
+## Jalons
+
+Périmètre de ce téléphone (24 oct.) : photos, contacts, SMS si possible. Calendrier et secrets : hors périmètre. La procédure vise LineageOS **et** GrapheneOS. (document privé).
+
+- ✅ Inventaire (LineageOS 22.2 / Android 15, pas de sauvegarde constructeur)
+- ⚙️ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. GrapheneOS : Play en bac à sable, pas microG. Export JSON Obtainium plus tard, sur `tank`.
+- ✅ Photos : pellicule déclarée dans `/tank/images/telephone` (24 oct., via le PC). SHA-256 sur une photo. Snapshot `<snapshot>`.
+- ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches identiques au carnet (24 oct.). Restore `<snapshot>` → `/tmp`, SHA-256 identique, live conservé.
+- ✅ SMS : Fossify Messages, `Messages_20261024_151932.json`, un message reconnu sur `pve` (24 oct.). Appli pas figée. Snapshot `<snapshot>`. Ce JSON n'a pas été restauré.
 
 ---
 

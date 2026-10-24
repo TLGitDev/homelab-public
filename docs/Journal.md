@@ -967,3 +967,21 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-24 | LXC `samba` as-built : cinq partages, Windows `\\<ip-samba>`, user `utilisateur` (sans l'IP). |
 | 2026-10-24 | SMB : lecture + écriture Windows validées. |
 | 2026-10-24 | Restore perso : `<snapshot>` → `/tmp`, SHA-256 identique. Phase 1 close. |
+| 2026-10-24 | Phase 2 : inventaire (document privé). |
+| 2026-10-24 | Android : LineageOS 22.2 / Android 15, aussi GrapheneOS. Périmètre : photos → `tank/images`, contacts, SMS si possible. |
+| 2026-10-24 | Apps : liste déclarée. Obtainium (GitHub ou APK éditeur). Export JSON plus tard sur `tank`, pas dans Git. |
+| 2026-10-24 | Apps : liste (document privé). Scanner QR hors périmètre. Aurora Store visé pour le reste, compte à part, pas le mode anonyme. |
+| 2026-10-24 | Choix d'applications (document privé). LineageOS a microG. GrapheneOS : Play bac à sable, pas microG. Intégrité BASIC seulement. |
+| 2026-10-24 | Procédure essai photo : `/tank/images/telephone`, Material Files, une copie, SHA-256. Pas jouée. |
+| 2026-10-24 | `/tank/images/telephone` créé (`drwxrws--- utilisateur perso`). Copie depuis le tel ⬜. |
+| 2026-10-24 | Material Files ouvre `\\<ip-samba>\images\telephone` (vide). Copie ⬜. |
+| 2026-10-24 | Photo tel : copie vers `/tank/images/telephone`, SHA-256 identique. Reste de la pellicule et USB ⬜. |
+| 2026-10-24 | Contacts : `.vcf` copié par SMB. Relecture sans import dans le carnet ⬜. |
+| 2026-10-24 | Contacts : nombre de fiches du `.vcf` identique au carnet. Chemin non relevé. USB ⬜. |
+| 2026-10-24 | `.vcf` et SMS (JSON) dans `/tank/documents/telephone/`. Appli SMS pas nommée. Relecture SMS ⬜. |
+| 2026-10-24 | Carnet : Fossify Contacts. SMS : Fossify Messages. Pas figés. Le JSON SMS ne se rouvre qu'avec Fossify Messages. |
+| 2026-10-24 | SMS : un message du JSON reconnu sur `pve`. Photo, `.vcf` et JSON hors USB ⬜. |
+| 2026-10-24 | Copie photo en masse : Material Files lève `InterruptedException` (crédits SMB libres). Samba muet. Tas entier via le PC. |
+| 2026-10-24 | Pellicule du tel déclarée copiée dans `/tank/images/telephone` (via le PC). SHA-256 sur une photo. USB ⬜. |
+| 2026-10-24 | `backup-usb` bloqué : verrou Restic du PID 1382228 (11:57), processus absent. `restic unlock` (1 verrou). Run OK : snapshot `<snapshot>`, parent `<snapshot>`, 363180 fichiers, 197 nouveaux, ~470 Mio ajoutés. Clé restée montée. |
+| 2026-10-24 | Restore `contacts_20261024_151331.vcf` depuis `<snapshot>` vers `/tmp`. SHA-256 identique, 52 fiches, live conservé. JSON vu : `Messages_20261024_151932.json`, pas restauré. `/tmp` effacé, clé démontée. |

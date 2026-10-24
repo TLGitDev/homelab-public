@@ -303,6 +303,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/`
 - ⬜ Supervision
 - ✅ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LXC `samba` (CT 102, `.40`) — (document privé)
+- ⚙️ Phase 2 : pellicule et SMS JSON dans le snapshot USB `<snapshot>` (24 oct.). Restore du `.vcf` vers `/tmp` OK. — (document privé)
 
 ## Plateforme
 

@@ -243,6 +243,7 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
 - Installé sur `pve`. Premier run élargi **24 oct.** : snapshot `<snapshot>`, manifeste OK, `check` OK, clé démontée.
+- Second run **24 oct. 16:08** : snapshot `<snapshot>`, parent `<snapshot>`. 363180 fichiers (197 nouveaux), 469,8 Mio ajoutés (358,6 Mio stockés), manifeste OK, `check` OK (9 snapshots). Avant ce run : verrou orphelin du PID 1382228 (créé 11:57, processus absent), retiré par `restic unlock`. La clé était déjà montée : elle est **restée** montée.
 
 ## Comportement
 
@@ -279,6 +280,7 @@ Clé USB branchée, assez de place pour le **premier** ingest des dossiers perso
 - Manifeste vs snapshot.
 - Restauration d'**une archive** depuis un snapshot ; SHA-256 identique à l'original. Ce n'est **pas** une restauration du service. Restore technique du coffre (autre procédure, 2026-10-20) : [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique).
 - Restore d'**un fichier perso** (24 oct., snapshot `<snapshot>` → `/tmp`, SHA-256 = live). (document privé).
+- Restore du `.vcf` téléphone (24 oct., `<snapshot>` → `/tmp`, SHA-256 = live, 52 fiches). (document privé).
 - Détection d'un fichier source manquant dans le snapshot.
 - Nettoyage des temporaires après erreur simulée.
 
@@ -295,7 +297,7 @@ Hors VM : oui. Hors serveur : via `backup-usb` (chemins listés dans le script).
 - Mot de passe requis à chaque run.
 - Disque doit être branché.
 - Rétention des snapshots Restic : **pas encore** définie.
-- Après une erreur : regarder le montage avant de relancer.
+- Après une erreur : regarder le montage avant de relancer. Un `repository is already locked` : `ps -p <PID>`. Processus absent → `restic unlock` sur ce dépôt, puis relancer. Processus encore là → ne pas unlock.
 
 Avant de débrancher : plus d'opération Restic, démonter, vérifier que ce n'est plus monté.
 
