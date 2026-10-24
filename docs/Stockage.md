@@ -58,7 +58,7 @@ tank
 ├── images
 ├── musique
 ├── projets
-└── videos          ← copies PC 2026-10-23 ; dans `backup-usb` (Git 24 oct.)
+└── videos          ← copies PC 2026-10-23 ; dans Restic USB (24 oct., `<snapshot>`)
 ```
 
 Pas de dataset `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.

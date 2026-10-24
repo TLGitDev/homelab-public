@@ -961,3 +961,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-23 | Dossier / phase 4 : `Multimedia` → `Mediatheques`. |
 | 2026-10-23 | Phase 1 : `tank/images`, `musique`, `projets`, `videos` copiés depuis le PC (originaux conservés). |
 | 2026-10-24 | `backup-usb` : plusieurs chemins (`/tank/backups` + dossiers perso live). Install `pve` / premier run ⬜. |
+| 2026-10-24 | Premier `backup-usb` élargi OK : snapshot `<snapshot>`, 362983 fichiers, clé démontée. |

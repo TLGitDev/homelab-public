@@ -111,7 +111,7 @@ Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une 
 
 Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
 
-Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel, run confirmé **20 oct.** (périmètre `/tank/backups` seulement). Script Git élargi **24 oct.** aux dossiers perso live — **pas encore** installé / joué sur `pve`. Un run USB ne contient que les chemins du script **ce jour-là**.
+Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel. Run **20 oct.** : `/tank/backups` seulement. Script élargi installé sur `pve` ; premier run des dossiers live **24 oct.** snapshot `<snapshot>` (362983 fichiers, ~105,5 Gio lus, ~80,7 Gio stockés). `no parent snapshot` = premier ingest de ces chemins, attendu. Un run USB ne contient que les chemins du script **ce jour-là**.
 
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
@@ -122,7 +122,7 @@ Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [P
 | Tars Vaultwarden | `/tank/backups/k3s-01/vaultwarden/` | oui, s'ils y étaient au moment du run |
 | SealedSecret (`sealed-secret.yaml`) | Git | le ciphertext, pas la clé du controller |
 | Clé TLS du controller Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` **et** copie manuelle `/tank/backups/k3s-01/sealed-secrets/` | oui (dans le périmètre `/tank/backups`) |
-| Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | **oui** après install du script élargi **et** un run USB (pas de staging sous `/tank/backups/pc/`) |
+| Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | oui (run 24 oct., snapshot `<snapshot>`) |
 
 Sans cette clé, un cluster neuf ne déchiffre pas les SealedSecrets existants (`ADMIN_TOKEN` hash). Le coffre utilisateur est dans le tar, pas dans cette clé.
 
@@ -242,7 +242,7 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
 - Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
-- Un commit ne déploie pas. Installé sur `pve` : ⬜. Premier run élargi : ⬜.
+- Installé sur `pve`. Premier run élargi **24 oct.** : snapshot `<snapshot>`, manifeste OK, `check` OK, clé démontée.
 
 ## Comportement
 
