@@ -985,3 +985,10 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-24 | Pellicule du tel déclarée copiée dans `/tank/images/telephone` (via le PC). SHA-256 sur une photo. USB ⬜. |
 | 2026-10-24 | `backup-usb` bloqué : verrou Restic du PID 1382228 (11:57), processus absent. `restic unlock` (1 verrou). Run OK : snapshot `<snapshot>`, parent `<snapshot>`, 363180 fichiers, 197 nouveaux, ~470 Mio ajoutés. Clé restée montée. |
 | 2026-10-24 | Restore `contacts_20261024_151331.vcf` depuis `<snapshot>` vers `/tmp`. SHA-256 identique, 52 fiches, live conservé. JSON vu : `Messages_20261024_151932.json`, pas restauré. `/tmp` effacé, clé démontée. |
+| 2026-10-24 | Procédure d'installation GrapheneOS écrite (Obtainium, SMB, carnet, SMS, Play bac à sable). Pas jouée. |
+| 2026-10-24 | Signal : `/tank/documents/telephone/SignalBackups` (`signal-backup-2026-10-24-18-46-57` + `files/`, 228 fichiers, 198 Mio). Clé hors dossier. Pas dans `<snapshot>`. Restore ⬜. |
+| 2026-10-24 | Signal : restore du dossier `SignalBackups` sur le nouveau téléphone. OK. Pas recompté message par message. |
+| 2026-10-24 | Firefox : installé sur le nouveau téléphone via Obtainium (HTML Mozilla, `download.cdn.mozilla.net`, trois liens intermédiaires, arm64). |
+| 2026-10-24 | WhatsApp : transfert de téléphone à téléphone via l'appli. Pas de fichier sur `tank`. |
+| 2026-10-24 | Bitwarden et Bitwarden Authenticator configurés sur le nouveau téléphone. Coffre = compte Vaultwarden. Codes hors `tank`. |
+| 2026-10-24 | Contacts : importés sur le nouveau téléphone, sans Fossify Contacts. Déclaré complet. Appli non nommée. Fichier source : `contacts_20261024_151331.vcf` (52 fiches). |

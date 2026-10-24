@@ -144,10 +144,12 @@ Ordre utile :
 Périmètre de ce téléphone (24 oct.) : photos, contacts, SMS si possible. Calendrier et secrets : hors périmètre. La procédure vise LineageOS **et** GrapheneOS. (document privé).
 
 - ✅ Inventaire (LineageOS 22.2 / Android 15, pas de sauvegarde constructeur)
-- ⚙️ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. GrapheneOS : Play en bac à sable, pas microG. Export JSON Obtainium plus tard, sur `tank`.
+- ⚙️ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. GrapheneOS : Play en bac à sable, pas microG. Installation en cours (24 oct.) : Firefox, Bitwarden, Bitwarden Authenticator. Export JSON Obtainium ensuite, sur `tank`.
 - ✅ Photos : pellicule déclarée dans `/tank/images/telephone` (24 oct., via le PC). SHA-256 sur une photo. Snapshot `<snapshot>`.
-- ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches identiques au carnet (24 oct.). Restore `<snapshot>` → `/tmp`, SHA-256 identique, live conservé.
+- ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches identiques au carnet d'origine (24 oct.). Restore `<snapshot>` → `/tmp`, SHA-256 identique, live conservé. Import sur le nouveau téléphone le 24 oct., sans Fossify Contacts, déclaré complet.
 - ✅ SMS : Fossify Messages, `Messages_20261024_151932.json`, un message reconnu sur `pve` (24 oct.). Appli pas figée. Snapshot `<snapshot>`. Ce JSON n'a pas été restauré.
+- ✅ Signal : `/tank/documents/telephone/SignalBackups` (24 oct. 20:47). Restore sur le nouveau téléphone, 24 oct. Clé hors dossier. Pas dans `<snapshot>`.
+- ✅ WhatsApp : transfert de téléphone à téléphone via l'appli (24 oct.). Pas de fichier sur `tank`.
 
 ---
 
