@@ -811,7 +811,7 @@ Si Firefox refuse encore HTTP/HTTPS : vérifier que l'URL est exactement `https:
 | `ADMIN_TOKEN` en Argon2 PHC | ✅ 2026-10-17 (`0e5f528` ; rollout restart requis) |
 | Sauvegarde quotidienne | ✅ tars auto 20 et 21 oct. — [chapitre](#sauvegarde) |
 | Copie sur `pve` (`/tank/backups`) | ✅ SHA vérifié (dont 21 oct.) |
-| Copie USB / Restic | manuel (`backup-usb` de `/tank/backups`) |
+| Copie USB / Restic | manuel (`backup-usb` : `/tank/backups` + dossiers perso live, script Git 24 oct.) |
 | Restore technique (ns isolé, HTTP 200) | ✅ 2026-10-20 ; prod intacte |
 | Connexion / déchiffrement après restore | ✅ 2026-10-21 (HTTPS local, 2FA, coffre lisible) |
 | Reprise réelle (zvol / tar sur prod) | ⬜ [procédure écrite](#reprise-réelle--non-testée), non exécutée |

@@ -83,7 +83,7 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 - Stratégie de sauvegarde par catégorie (surtout l'irremplaçable).
 - Besoin « NAS » : partages, plusieurs appareils, utilisateurs, protocoles.
 
-**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB visé plus tard** (LAN) : `Documents`, `Images`, `Musique`, `Projets`, `Vidéos`. Copies PC → `tank` = faits (23 oct.). Pas de doublon sous `/tank/backups`. Élargir `backup-usb` à la fin.
+**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB visé plus tard** (LAN) : `Documents`, `Images`, `Musique`, `Projets`, `Vidéos`. Copies PC → `tank` = faits (23 oct.). Pas de doublon sous `/tank/backups`. `backup-usb` (Git) liste les dossiers live ; install / run `pve` encore ouverts.
 
 | Solution | Rôle | Limite |
 |----------|------|--------|
@@ -99,7 +99,7 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 - ✅ Inventaire — (document privé)
 - ✅ Datasets + copies PC (23 oct., originaux conservés) : `documents`, `images`, `musique`, `projets`, `videos`
 - ✅ Décision : pas Nextcloud / Syncthing ; SMB visé plus tard ; pas de doublon sous `/tank/backups`
-- ⚙️ Élargir `backup-usb` aux dossiers live
+- ⚙️ `backup-usb` élargi (Git, 24 oct.) : install `pve` + premier run USB ⬜
 - ⬜ Partage SMB LAN (`Documents`, `Images`, `Musique`, `Projets`, `Vidéos`)
 - ⬜ Permissions testées
 - ⬜ Première restauration de fichiers perso OK

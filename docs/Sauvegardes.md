@@ -98,7 +98,7 @@ Couche 4    Sauvegarde hors site (future)
 ```
 03:00  k3s-01   tar Vaultwarden (service arrêté)     → rpool
 03:15  pve      pull SSH + SHA-256 + tar -tf         → /tank/backups/…
-manuel pve      backup-usb (Restic de /tank/backups) → USB
+manuel pve      backup-usb (Restic : backups + dossiers perso live) → USB
 ```
 
 | Niveau | Où | Surviture à… | Ne survit pas à… |
@@ -111,7 +111,7 @@ Le niveau 2 est sur **le même pool** que le zvol Vaultwarden. Ce n'est pas une 
 
 Git (`infrastructure/`) = sources versionnées. Actif = `/usr/local/sbin/` et `/etc/systemd/system/`. Un commit ne déploie pas tout seul.
 
-Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel, run confirmé **20 oct.** (ça fonctionne). Un run USB ne contient que ce qui était déjà sous `/tank/backups` **ce jour-là**.
+Timers : tars auto **20 et 21 oct.** sur k3s-01 et `pve`. Restore isolée OK (technique + login 21 oct.). Reprise réelle : [écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée. USB : manuel, run confirmé **20 oct.** (périmètre `/tank/backups` seulement). Script Git élargi **24 oct.** aux dossiers perso live — **pas encore** installé / joué sur `pve`. Un run USB ne contient que les chemins du script **ce jour-là**.
 
 Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [Proxmox.md](Proxmox.md#exploitation).
 
@@ -122,7 +122,7 @@ Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [P
 | Tars Vaultwarden | `/tank/backups/k3s-01/vaultwarden/` | oui, s'ils y étaient au moment du run |
 | SealedSecret (`sealed-secret.yaml`) | Git | le ciphertext, pas la clé du controller |
 | Clé TLS du controller Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` **et** copie manuelle `/tank/backups/k3s-01/sealed-secrets/` | oui (dans le périmètre `/tank/backups`) |
-| Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | **pas encore** — `backup-usb` élargi **à la fin**, sans staging sous `/tank/backups/pc/` |
+| Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | **oui** après install du script élargi **et** un run USB (pas de staging sous `/tank/backups/pc/`) |
 
 Sans cette clé, un cluster neuf ne déchiffre pas les SealedSecrets existants (`ADMIN_TOKEN` hash). Le coffre utilisateur est dans le tar, pas dans cette clé.
 
@@ -238,21 +238,39 @@ Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden
 
 Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb).
 
-- Source **actuelle** : uniquement `/tank/backups` (pas le zvol live, pas `~/backups/sealed-secrets/` sur k3s-01). Dossiers perso live (`/tank/documents`, `images`, `musique`, `projets`, `videos`) : **pas encore** dans Restic. Cible : élargir le script **à la fin** (plusieurs chemins, pas de `rsync` vers `/tank/backups/pc/`). (document privé).
+- Sources (script Git, 24 oct.) : `/tank/backups`, `/tank/documents`, `/tank/images`, `/tank/musique`, `/tank/projets`, `/tank/videos`. Pas le zvol, pas `Mediatheques`, pas `~/backups/sealed-secrets/` sur k3s-01, pas de `rsync` vers `/tank/backups/pc/`. (document privé).
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
 - Disque : UUID `340F-3DAF` (`findfs`). Montage `/mnt/usb-inspect`. Vérifier `findmnt` si le chemin change.
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
+- Un commit ne déploie pas. Installé sur `pve` : ⬜. Premier run élargi : ⬜.
 
 ## Comportement
 
-1. Root, `flock`, source présente.
-2. Manifeste des fichiers (`find -print0`) pour les noms ambigus.
+1. Root, `flock`, **tous** les répertoires sources présents.
+2. Manifeste des fichiers (`find` sur la liste, `-print0`) pour les noms ambigus.
 3. Si déjà monté : vérifier que c'est bien cet UUID. Sinon monter. Si le disque est monté ailleurs : erreur.
-4. `restic check`, puis snapshot de `/tank/backups`.
+4. `restic check`, puis **un** snapshot Restic des six chemins (incrémental après le premier run).
 5. Comparer le snapshot au manifeste : fichiers manquants ou inattendus = échec.
 6. `restic check` à nouveau, `sync`.
 7. Démonter **seulement** si le script a monté. Déjà monté au départ → reste monté.
 8. Temp (`/tmp/backup-usb.*`) toujours nettoyé. En cas d'échec, le disque reste monté pour diagnostiquer.
+
+### Mise à jour du script (sur `pve`, root)
+
+Dépôt Git sur k3s-01 : `/home/utilisateur/homelab/` (`~/homelab`). `git pull` dans ce répertoire si le script n'y est pas encore.
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/scripts/backup-usb \
+  /tmp/backup-usb
+install -m 700 /tmp/backup-usb /usr/local/sbin/backup-usb
+```
+
+Clé USB branchée, assez de place pour le **premier** ingest des dossiers perso, puis :
+
+```bash
+/usr/local/sbin/backup-usb
+```
 
 ## Tests (mise au point)
 
@@ -267,12 +285,12 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 
 `backup-usb` ne va pas chercher la clé sur k3s-01. Transfert **manuel** confirmé vers `/tank/backups/k3s-01/sealed-secrets/` (`600`, pas Git). Ce chemin est dans la source USB.
 
-Hors VM : oui. Hors serveur : via `backup-usb` (tout `/tank/backups`). Un `restic ls` du snapshot confirme le **chemin**, jamais le contenu. Relancer `backup-usb` si la copie `pve` est **plus récente** que le dernier snapshot USB.
+Hors VM : oui. Hors serveur : via `backup-usb` (chemins listés dans le script). Un `restic ls` du snapshot confirme le **chemin**, jamais le contenu. Relancer `backup-usb` si la copie `pve` est **plus récente** que le dernier snapshot USB.
 
 ## Limites
 
-- Ne copie pas le zvol vivant, seulement `/tank/backups`.
-- Ne copie pas tout seul la clé Sealed Secrets.
+- Ne copie pas le zvol vivant.
+- Ne copie pas tout seul la clé Sealed Secrets (elle doit déjà être sous `/tank/backups`).
 - Mot de passe requis à chaque run.
 - Disque doit être branché.
 - Rétention des snapshots Restic : **pas encore** définie.

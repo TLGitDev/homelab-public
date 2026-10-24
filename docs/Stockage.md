@@ -53,12 +53,12 @@ Exemple **actuel** (`tank`) :
 tank
 ├── vmdata          ← zfspool Proxmox `tank-vmdata` (volumes bloc seulement)
 │   └── vm-101-vaultwarden-data
-├── backups         ← source actuelle `backup-usb` : `k3s-01/…` (tars, Sealed Secrets) ; pas de staging perso
+├── backups         ← tars / Sealed Secrets ; une des sources `backup-usb` ; pas de staging perso
 ├── documents       ← archive de travail 2026-10-23
 ├── images
 ├── musique
 ├── projets
-└── videos          ← copies PC 2026-10-23 ; USB via script élargi à la fin
+└── videos          ← copies PC 2026-10-23 ; dans `backup-usb` (Git 24 oct.)
 ```
 
 Pas de dataset `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.

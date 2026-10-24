@@ -960,3 +960,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-23 | Pas de staging `/tank/backups/pc/documents`. Copier d'abord PC → `tank` ; élargir `backup-usb` à la fin. SMB plus tard. |
 | 2026-10-23 | Dossier / phase 4 : `Multimedia` → `Mediatheques`. |
 | 2026-10-23 | Phase 1 : `tank/images`, `musique`, `projets`, `videos` copiés depuis le PC (originaux conservés). |
+| 2026-10-24 | `backup-usb` : plusieurs chemins (`/tank/backups` + dossiers perso live). Install `pve` / premier run ⬜. |

@@ -4,8 +4,17 @@ set -Eeuo pipefail
 USB_UUID="340F-3DAF"
 MOUNT_POINT="/mnt/usb-inspect"
 REPOSITORY="$MOUNT_POINT/restic-homelab"
-SOURCE_DIR="/tank/backups"
 LOCK_FILE="/run/lock/backup-usb.lock"
+
+# Live + copies hors VM. Pas le zvol, pas Mediatheques, pas de doublon sous backups/pc.
+SOURCE_DIRS=(
+    /tank/backups
+    /tank/documents
+    /tank/images
+    /tank/musique
+    /tank/projets
+    /tank/videos
+)
 
 log() {
     printf '[%s] %s\n' "$(date '+%F %T')" "$*"
@@ -22,21 +31,23 @@ die() {
 exec 9>"$LOCK_FILE"
 flock -n 9 || die "Une sauvegarde USB est déjà en cours."
 
-[[ -d "$SOURCE_DIR" ]] ||
-    die "Répertoire source introuvable : $SOURCE_DIR"
+for dir in "${SOURCE_DIRS[@]}"; do
+    [[ -d "$dir" ]] || die "Répertoire source introuvable : $dir"
+done
 
 TEMP_DIR="$(mktemp -d /tmp/backup-usb.XXXXXX)"
 trap 'rm -rf -- "$TEMP_DIR"' EXIT
 
 SOURCE_MANIFEST="$TEMP_DIR/source-files.nul"
 SNAPSHOT_JSON="$TEMP_DIR/snapshot.jsonl"
+BACKUP_LOG="$TEMP_DIR/backup.log"
 
 log "Inventaire récursif des fichiers sources..."
-find "$SOURCE_DIR" -type f -print0 > "$SOURCE_MANIFEST" ||
+find "${SOURCE_DIRS[@]}" -type f -print0 > "$SOURCE_MANIFEST" ||
     die "Impossible d'inventorier les fichiers sources."
 
 [[ -s "$SOURCE_MANIFEST" ]] ||
-    die "Aucun fichier à sauvegarder sous $SOURCE_DIR."
+    die "Aucun fichier à sauvegarder sous les répertoires sources."
 
 mkdir -p "$MOUNT_POINT"
 
@@ -80,17 +91,15 @@ log "Contrôle Restic complet avant sauvegarde..."
 restic -r "$REPOSITORY" check ||
     die "Échec du contrôle Restic avant sauvegarde."
 
-log "Sauvegarde de $SOURCE_DIR..."
-if BACKUP_OUTPUT="$(restic -r "$REPOSITORY" backup "$SOURCE_DIR" 2>&1)"; then
-    printf '%s\n' "$BACKUP_OUTPUT"
+log "Sauvegarde de ${SOURCE_DIRS[*]}..."
+if restic -r "$REPOSITORY" backup "${SOURCE_DIRS[@]}" 2>&1 | tee "$BACKUP_LOG"; then
+    :
 else
-    printf '%s\n' "$BACKUP_OUTPUT"
     die "Échec de la sauvegarde Restic."
 fi
 
 SNAPSHOT_ID="$(
-    printf '%s\n' "$BACKUP_OUTPUT" |
-        sed -nE 's/^snapshot ([0-9a-f]+) saved$/\1/p' |
+    sed -nE 's/^snapshot ([0-9a-f]+) saved$/\1/p' "$BACKUP_LOG" |
         tail -n 1
 )"
 [[ -n "$SNAPSHOT_ID" ]] ||
@@ -101,12 +110,15 @@ log "Vérification récursive du contenu du snapshot $SNAPSHOT_ID..."
 restic -r "$REPOSITORY" ls --json "$SNAPSHOT_ID" > "$SNAPSHOT_JSON" ||
     die "Impossible de lire le contenu du snapshot."
 
-if python3 - "$SOURCE_MANIFEST" "$SNAPSHOT_JSON" "$SOURCE_DIR" <<'PY'
+if python3 - "$SOURCE_MANIFEST" "$SNAPSHOT_JSON" "${SOURCE_DIRS[@]}" <<'PY'
 import json
 import os
 import sys
 
-manifest_path, snapshot_path, source_dir = sys.argv[1:]
+manifest_path, snapshot_path, *source_dirs = sys.argv[1:]
+
+if not source_dirs:
+    raise SystemExit("ERREUR : aucun répertoire source fourni.")
 
 with open(manifest_path, "rb") as f:
     expected = {
@@ -141,11 +153,17 @@ if missing:
         print(f"  {path!r}", file=sys.stderr)
     sys.exit(1)
 
+
+def under_source(path):
+    for source_dir in source_dirs:
+        root = source_dir.rstrip("/")
+        if path == root or path.startswith(root + "/"):
+            return True
+    return False
+
+
 extra = actual - expected
-extra_under_source = {
-    path for path in extra
-    if path == source_dir or path.startswith(source_dir.rstrip("/") + "/")
-}
+extra_under_source = {path for path in extra if under_source(path)}
 if extra_under_source:
     print(
         "ERREUR : des fichiers du snapshot ne figurent pas dans l'inventaire source :",
