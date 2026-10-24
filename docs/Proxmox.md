@@ -46,7 +46,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-pve-prévue>` | — | Adresse initialement prévue pour Proxmox, **jamais appliquée** |
 | `<ip-cloudflare>` | LXC `cloudflare` (CT 100) | Tunnel Cloudflare |
 | `<ip-k3s-01>` | K3s (Traefik :80) | Cluster applicatif |
-| `<ip-samba>` | LXC `samba` (CT 102) | SMB LAN — cible, pas encore as-built |
+| `<ip-samba>` | LXC `samba` (CT 102) | SMB LAN (as-built 24 oct.) |
 | `<ip-pve>` | Proxmox (`pve`) | Adresse réelle du nœud |
 
 ## Particularités
@@ -134,7 +134,7 @@ Ne jamais versionner clé SSH privée, mot de passe Restic, ni archive.
 | Timer pull | 03:15 | [`systemd/pull-vaultwarden-backup.*`](../infrastructure/pve/systemd/) |
 | USB / Restic | `/usr/local/sbin/backup-usb` (**manuel**) | [`scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb) |
 | Snapshots zvol VW | `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` (horaire + 04:00) | [`scripts/snapshot-vaultwarden-zvol.sh`](../infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh) |
-| Samba (LAN) | LXC `samba` CT 102 / `smbd` ⬜ (plus sur `pve`) | [`samba/smb.conf`](../infrastructure/pve/samba/smb.conf) |
+| Samba (LAN) | LXC `samba` CT 102 / `smbd` (plus sur `pve`) | [`samba/smb.conf`](../infrastructure/pve/samba/smb.conf) |
 
 Pull : SSH/SCP, clé `/root/.ssh/id_ed25519_backup_k3s`, SHA-256, `tar -tf`, pas d'écrasement si hash différent, 7 archives. Premier tar auto confirmé : `vaultwarden-2026-10-20_030012.tar`. Détail : [Vaultwarden.md](Vaultwarden.md#pve--0315).
 

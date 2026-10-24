@@ -278,6 +278,7 @@ Clé USB branchée, assez de place pour le **premier** ingest des dossiers perso
 - `check` avant / après.
 - Manifeste vs snapshot.
 - Restauration d'**une archive** depuis un snapshot ; SHA-256 identique à l'original. Ce n'est **pas** une restauration du service. Restore technique du coffre (autre procédure, 2026-10-20) : [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique).
+- Restore d'**un fichier perso** (24 oct., snapshot `<snapshot>` → `/tmp`, SHA-256 = live). (document privé).
 - Détection d'un fichier source manquant dans le snapshot.
 - Nettoyage des temporaires après erreur simulée.
 

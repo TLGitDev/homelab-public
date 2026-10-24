@@ -83,7 +83,7 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 - Stratégie de sauvegarde par catégorie (surtout l'irremplaçable).
 - Besoin « NAS » : partages, plusieurs appareils, utilisateurs, protocoles.
 
-**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB** (LAN, LXC `samba` CT 102) : `documents`, `images`, `musique`, `projets`, `videos`. Samba sur `pve` : à retirer s'il y est. Copies PC → `tank` = faits (23 oct.). `backup-usb` élargi joué (24 oct.).
+**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB** (LAN, LXC `samba` CT 102, `\\<ip-samba>`, user `utilisateur`). Copies PC → `tank` = faits (23 oct.). `backup-usb` élargi joué (24 oct.). Samba retiré de `pve`.
 
 | Solution | Rôle | Limite |
 |----------|------|--------|
@@ -98,11 +98,11 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 
 - ✅ Inventaire — (document privé)
 - ✅ Datasets + copies PC (23 oct., originaux conservés) : `documents`, `images`, `musique`, `projets`, `videos`
-- ✅ Décision : pas Nextcloud / Syncthing ; SMB LAN sur `pve` ; pas de doublon sous `/tank/backups`
+- ✅ Décision : pas Nextcloud / Syncthing ; SMB = LXC `samba` ; pas de doublon sous `/tank/backups`
 - ✅ `backup-usb` élargi : run 24 oct. snapshot `<snapshot>` (dossiers live + `/tank/backups`)
-- ⚙️ SMB LAN : LXC `samba` (défaire `pve` d'abord) — (document privé)
-- ⬜ Permissions testées (après le premier accès Windows)
-- ⬜ Première restauration de fichiers perso OK
+- ✅ SMB LAN : LXC `samba` CT 102, `\\<ip-samba>`, cinq partages, user `utilisateur` — (document privé)
+- ✅ Permissions : lecture + écriture depuis Windows (24 oct.)
+- ✅ Première restauration de fichiers perso : `<snapshot>` → `/tmp`, SHA-256 identique (24 oct.)
 
 ---
 
