@@ -302,7 +302,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Snapshots zvol Vaultwarden (horaires auto ; daily timer 22 oct.)
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/`
 - ⬜ Supervision
-- ⚙️ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LAN sur `pve` (install ⬜) — (document privé)
+- ⚙️ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB → LXC `samba` (CT 102) — (document privé)
 
 ## Plateforme
 

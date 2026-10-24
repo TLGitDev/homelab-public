@@ -963,3 +963,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-24 | `backup-usb` : plusieurs chemins (`/tank/backups` + dossiers perso live). Install `pve` / premier run ⬜. |
 | 2026-10-24 | Premier `backup-usb` élargi OK : snapshot `<snapshot>`, 362983 fichiers, clé démontée. |
 | 2026-10-24 | SMB LAN v1 : `smb.conf` (cinq partages, `utilisateur` / `perso`, bind `.50`). Install `pve` ⬜. |
+| 2026-10-24 | SMB : viser LXC `samba` (CT 102, `.40`) ; procédure pour retirer Samba de `pve`. |
