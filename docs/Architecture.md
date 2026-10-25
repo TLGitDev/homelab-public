@@ -303,7 +303,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/`
 - ⬜ Supervision
 - ✅ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LXC `samba` (CT 102, `.40`) — (document privé)
-- ⚙️ Phase 2 : pellicule et SMS JSON dans le snapshot USB `<snapshot>` (24 oct.). Restore du `.vcf` vers `/tmp` OK. Carnet importé sur le nouveau téléphone le 24 oct., sans Fossify Contacts. Signal dans `/tank/documents/telephone/SignalBackups` (20:47), restore sur le nouveau téléphone OK, pas encore sur la clé. WhatsApp transféré de téléphone à téléphone. Bitwarden et l'Authenticator configurés. — (document privé)
+- ✅ Phase 2 : close le 25 oct. Snapshot `<snapshot>`. Restore du `.vcf` OK. Photos et SMS gardés en sauvegarde, sans restore. — (document privé)
 
 ## Plateforme
 

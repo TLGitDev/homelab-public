@@ -244,6 +244,7 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - **Manuel**, terminal interactif. Mot de passe saisi au clavier. Jamais dans Git, cette doc ou les logs. Pas de timer systemd.
 - Installé sur `pve`. Premier run élargi **24 oct.** : snapshot `<snapshot>`, manifeste OK, `check` OK, clé démontée.
 - Second run **24 oct. 16:08** : snapshot `<snapshot>`, parent `<snapshot>`. 363180 fichiers (197 nouveaux), 469,8 Mio ajoutés (358,6 Mio stockés), manifeste OK, `check` OK (9 snapshots). Avant ce run : verrou orphelin du PID 1382228 (créé 11:57, processus absent), retiré par `restic unlock`. La clé était déjà montée : elle est **restée** montée.
+- Troisième run **25 oct. 13:26** : snapshot `<snapshot>`, parent `<snapshot>`. 363413 fichiers (234 nouveaux, 0 modifiés), 154 dossiers nouveaux, 200,3 Mio ajoutés (199,0 Mio stockés), 106,009 Gio lus en 1:21. Manifeste OK (363413 fichiers). `check` OK (10 snapshots, 13 index). Clé démontée. Avant le run : `find` voit le `.vcf`, le JSON SMS et le JSON Obtainium ; `ls` voit `files` et `signal-backup-2026-10-24-18-46-57`.
 
 ## Comportement
 

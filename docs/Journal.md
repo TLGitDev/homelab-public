@@ -992,3 +992,7 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-24 | WhatsApp : transfert de téléphone à téléphone via l'appli. Pas de fichier sur `tank`. |
 | 2026-10-24 | Bitwarden et Bitwarden Authenticator configurés sur le nouveau téléphone. Coffre = compte Vaultwarden. Codes hors `tank`. |
 | 2026-10-24 | Contacts : importés sur le nouveau téléphone, sans Fossify Contacts. Déclaré complet. Appli non nommée. Fichier source : `contacts_20261024_151331.vcf` (52 fiches). |
+| 2026-10-25 | GrapheneOS : Play Services installés. Compte Google à part ajouté à Aurora. Play Store non utilisé pour la liste. Aurora : liste des applications (document privé). Toutes déclarées fonctionnelles. |
+| 2026-10-25 | Mullvad en place. Export Obtainium dans `/tank/documents/telephone/` (nom non relevé). `find` : `.vcf`, JSON SMS, JSON Obtainium. `ls` : `files` et `signal-backup-2026-10-24-18-46-57`. |
+| 2026-10-25 | `backup-usb` OK : snapshot `<snapshot>`, parent `<snapshot>`. 363413 fichiers, 234 nouveaux, 0 modifiés, 154 dossiers nouveaux, 200,3 Mio ajoutés. Manifeste OK. `check` OK (10 snapshots). Clé démontée. |
+| 2026-10-25 | Phase 2 close. Photos : sauvegarde suffisante, pas de restore du dossier. SMS : pas restaurés, pas de besoin ; `Messages_20261024_151932.json` reste dans `<snapshot>`. |

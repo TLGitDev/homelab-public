@@ -108,6 +108,8 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 
 # Phase 2 — Sauvegarde Android
 
+**Close le 25 oct.** Photos : la copie sur `tank` et le snapshot suffisent, pas de restore du dossier. SMS : pas restaurés, pas de besoin pour l'instant ; le JSON reste dans `<snapshot>`.
+
 **Objectif** : procédure reproductible pour changer de téléphone ou récupérer après une perte.
 
 **Dépendances** : phase 0 (protection) et phase 1 (stockage cible). Les deux sont assez solides (24 oct.).
@@ -144,11 +146,11 @@ Ordre utile :
 Périmètre de ce téléphone (24 oct.) : photos, contacts, SMS si possible. Calendrier et secrets : hors périmètre. La procédure vise LineageOS **et** GrapheneOS. (document privé).
 
 - ✅ Inventaire (LineageOS 22.2 / Android 15, pas de sauvegarde constructeur)
-- ⚙️ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. GrapheneOS : Play en bac à sable, pas microG. Installation en cours (24 oct.) : Firefox, Bitwarden, Bitwarden Authenticator. Export JSON Obtainium ensuite, sur `tank`.
-- ✅ Photos : pellicule déclarée dans `/tank/images/telephone` (24 oct., via le PC). SHA-256 sur une photo. Snapshot `<snapshot>`.
+- ✅ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. Ce GrapheneOS : Play Services + Aurora, compte Google à part. Liste Play installée le 25 oct. une application : Play Store, les autres : Aurora. Mullvad en place. Export JSON Obtainium sur `tank` (nom non relevé), dans le snapshot `<snapshot>`.
+- ✅ Photos : pellicule déclarée dans `/tank/images/telephone` (24 oct., via le PC). SHA-256 sur une photo. Snapshots `<snapshot>` et `<snapshot>`. Restore du dossier non exigé (25 oct.).
 - ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches identiques au carnet d'origine (24 oct.). Restore `<snapshot>` → `/tmp`, SHA-256 identique, live conservé. Import sur le nouveau téléphone le 24 oct., sans Fossify Contacts, déclaré complet.
-- ✅ SMS : Fossify Messages, `Messages_20261024_151932.json`, un message reconnu sur `pve` (24 oct.). Appli pas figée. Snapshot `<snapshot>`. Ce JSON n'a pas été restauré.
-- ✅ Signal : `/tank/documents/telephone/SignalBackups` (24 oct. 20:47). Restore sur le nouveau téléphone, 24 oct. Clé hors dossier. Pas dans `<snapshot>`.
+- ✅ SMS : Fossify Messages, `Messages_20261024_151932.json`, un message reconnu sur `pve` (24 oct.). Appli pas figée. Dans `<snapshot>`. Pas restauré : pas de besoin (25 oct.). Le fichier reste.
+- ✅ Signal : `/tank/documents/telephone/SignalBackups` (24 oct. 20:47). Restore sur le nouveau téléphone, 24 oct. Clé hors dossier. Dans le snapshot `<snapshot>` (25 oct.).
 - ✅ WhatsApp : transfert de téléphone à téléphone via l'appli (24 oct.). Pas de fichier sur `tank`.
 
 ---
