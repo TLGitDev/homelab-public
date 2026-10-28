@@ -1001,3 +1001,10 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-28 | Jellyfin : LXC retenu (dataset hôte en bind mount ; K3s est une VM qui héberge déjà le coffre). Procédure CT 103 / `.60` écrite, pas jouée. [Mediatheques.md](Mediatheques.md). |
 | 2026-10-28 | Jellyfin hors LAN, plus tard : Cloudflare Access, origine le LXC `.60:8096`. Pas dans le pas d'installation. |
 | 2026-10-28 | CT 103 `jellyfin` running (`nesting=1`, `mp0` ro). Paquet 12.4+deb13. Compte dans `media`, `ls` des films OK, `/health` = `Healthy`. Assistant web pas fait. |
+| 2026-10-28 | Jellyfin : scan terminé, un film lu jusqu'au bout. Titre non relevé. LAN seulement. |
+| 2026-10-28 | qBittorrent : LXC 104 / `.70`, Mullvad WireGuard pour le seul compte du client. Montage limité à `telechargements/`. Procédure écrite, pas jouée. [Mediatheques.md](Mediatheques.md#qbittorrent--décision-28-oct). |
+| 2026-10-28 | qBittorrent, constat : pas de CT 104, `.70` libre, `media` 987, `wireguard.ko` présent, 20 Gio libres. Blocs 1–5 pas lancés. |
+| 2026-10-28 | CT 104 créé. Compte `qbittorrent` (UID 102) dans `media`. Écriture dans `complets/` OK. nftables `inet torrent` chargé après `restart`. Fichier Mullvad pas encore posé. |
+| 2026-10-28 | qBittorrent : tunnel Mullvad OK (compte = Marseille, root = box, coupure `000`). `wg-quick@wg0` actif. Service qBittorrent actif, mot de passe au coffre. Pare-feu `104.fw` écrit. UI pas réglée. |
+| 2026-10-28 | qBittorrent : image Debian `792723456` octets, `-rw-rw----`, groupe `media`, propriétaire hôte `100102`. Torrent et fichiers supprimés. `complets/` et `incomplets/` vides. |
+| 2026-10-28 | qBittorrent ne retire pas le torrent en fin de download. Sonarr / Radarr le retireront après import réussi. Fichiers conservés. |

@@ -220,12 +220,12 @@ Travail : [Mediatheques.md](Mediatheques.md).
 
 ## Jalons
 
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. Le critère général VM / LXC / K3s reste ouvert pour les autres services.
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Mullvad WireGuard pour le seul compte du client. En service le 28 oct. Le critère général VM / LXC / K3s reste ouvert pour les autres services.
 
 - ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
-- ⚙️ Jellyfin LXC 103 (`<ip-jellyfin>`), 12.4+deb13, `/health` OK, films lisibles. Reste : assistant web et un fichier lu — [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct)
-- ⬜ qBittorrent isolé, chemins dans le même dataset
+- ✅ Jellyfin LXC 103 (`<ip-jellyfin>`), 12.4+deb13. Scan terminé, un film lu (28 oct.) — [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct)
+- ✅ qBittorrent : LXC 104, `.70`, Mullvad. Fichier de test en `0660` `media` (28 oct.) — [Mediatheques.md](Mediatheques.md#qbittorrent--décision-28-oct)
 - ⬜ Prowlarr, puis Sonarr / Radarr
 - ⬜ Bazarr / Recyclarr
 - ⬜ Lidarr

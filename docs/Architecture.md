@@ -313,7 +313,8 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 ## Services
 
 - ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données sur `tank` (`vaultwarden-zfs-pvc`)
-- ⚙️ Jellyfin : LXC 103, `<ip-jellyfin>:8096`, lecture seule sur `tank/mediatheques`. Service `Healthy` (28 oct.). Assistant web pas encore fait. [Mediatheques.md](Mediatheques.md)
+- ✅ Jellyfin : LXC 103, `<ip-jellyfin>:8096`, lecture seule sur `tank/mediatheques`. Scan terminé, un film lu (28 oct.). [Mediatheques.md](Mediatheques.md)
+- ✅ qBittorrent : LXC 104, `<ip-qbittorrent>:8080`, écriture sur `telechargements/` seulement. Mullvad pour ce compte. Image Debian de test en `0660` (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
