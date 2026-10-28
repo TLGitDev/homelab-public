@@ -996,3 +996,8 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-25 | Mullvad en place. Export Obtainium dans `/tank/documents/telephone/` (nom non relevé). `find` : `.vcf`, JSON SMS, JSON Obtainium. `ls` : `files` et `signal-backup-2026-10-24-18-46-57`. |
 | 2026-10-25 | `backup-usb` OK : snapshot `<snapshot>`, parent `<snapshot>`. 363413 fichiers, 234 nouveaux, 0 modifiés, 154 dossiers nouveaux, 200,3 Mio ajoutés. Manifeste OK. `check` OK (10 snapshots). Clé démontée. |
 | 2026-10-25 | Phase 2 close. Photos : sauvegarde suffisante, pas de restore du dossier. SMS : pas restaurés, pas de besoin ; `Messages_20261024_151932.json` reste dans `<snapshot>`. |
+| 2026-10-27 | Phase 4 : `tank/mediatheques` créé (vide, 7,04 Tio libres). Groupe `media` GID 987. Dossiers en `2770` (`telechargements` aligné à 10:17). [Mediatheques.md](Mediatheques.md). |
+| 2026-10-28 | Phase 4 : copie PC sur `tank/mediatheques`, 2,1 Tio. `chgrp` `media`, dossiers `2770`, fichiers `0660`. Détail par dossier non relevé. |
+| 2026-10-28 | Jellyfin : LXC retenu (dataset hôte en bind mount ; K3s est une VM qui héberge déjà le coffre). Procédure CT 103 / `.60` écrite, pas jouée. [Mediatheques.md](Mediatheques.md). |
+| 2026-10-28 | Jellyfin hors LAN, plus tard : Cloudflare Access, origine le LXC `.60:8096`. Pas dans le pas d'installation. |
+| 2026-10-28 | CT 103 `jellyfin` running (`nesting=1`, `mp0` ro). Paquet 12.4+deb13. Compte dans `media`, `ls` des films OK, `/health` = `Healthy`. Assistant web pas fait. |

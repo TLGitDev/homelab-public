@@ -216,6 +216,22 @@ Les médias récupérables n'ont pas le même besoin de backup que les photos ou
 
 **Critère** : un fichier de test suit le parcours prévu ; les configs se restaurent.
 
+Travail : [Mediatheques.md](Mediatheques.md).
+
+## Jalons
+
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. Le critère général VM / LXC / K3s reste ouvert pour les autres services.
+
+- ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
+- ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
+- ⚙️ Jellyfin LXC 103 (`<ip-jellyfin>`), 12.4+deb13, `/health` OK, films lisibles. Reste : assistant web et un fichier lu — [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct)
+- ⬜ qBittorrent isolé, chemins dans le même dataset
+- ⬜ Prowlarr, puis Sonarr / Radarr
+- ⬜ Bazarr / Recyclarr
+- ⬜ Lidarr
+- ⬜ Navidrome seulement si Jellyfin ne suffit pas pour la musique
+- ⬜ Configs sauvegardées, restauration testée
+
 ---
 
 # Phase 5 — Site CV public

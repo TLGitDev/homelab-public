@@ -107,6 +107,8 @@ MFA : application TOTP (KeePassXC).
 
 **Argo CD** (`argocd.labo.example`) : Access actif (même logique que Proxmox : outil d'admin). Puis login Argo CD. [ArgoCD.md](ArgoCD.md), [ADR-007](ADR/ADR-007-Argo-CD-exposition.md).
 
+**Jellyfin** : pas de route. Visé après la mise en service LAN : Access, puis le tunnel vers le LXC `http://<ip-jellyfin>:8096`, pas vers Traefik. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct).
+
 ## Deux authentifications indépendantes (Proxmox)
 
 Cloudflare Access répond à : « Qui peut accéder au service ? »

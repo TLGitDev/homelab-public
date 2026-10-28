@@ -48,6 +48,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-k3s-01>` | K3s (Traefik :80) | Cluster applicatif |
 | `<ip-samba>` | LXC `samba` (CT 102) | SMB LAN (as-built 24 oct.) |
 | `<ip-pve>` | Proxmox (`pve`) | Adresse réelle du nœud |
+| `<ip-jellyfin>` | LXC `jellyfin` (CT 103) | LAN, port 8096. En service le 28 oct. Access : plus tard. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct) |
 
 ## Particularités
 

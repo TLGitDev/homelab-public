@@ -59,6 +59,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
 | (document privé) | Phase 1 : inventaire perso (sync ≠ archive ≠ backup) |
 | (document privé) | Phase 2 close (25 oct.) : sauvegarde du téléphone |
+| [Mediatheques.md](Mediatheques.md) | Phase 4 : `tank/mediatheques` (28 oct., 2,1 Tio) |
 | [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
 | [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup ; chaîne actuelle ; USB / Restic |
 | [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |

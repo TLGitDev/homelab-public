@@ -58,7 +58,8 @@ tank
 ├── images
 ├── musique
 ├── projets
-└── videos          ← copies PC 2026-10-23 ; dans Restic USB (24 oct., `<snapshot>`)
+├── videos          ← copies PC 2026-10-23 ; dans Restic USB (24 oct., `<snapshot>`)
+└── mediatheques    ← 2026-10-28, 2,1 Tio (copie PC, originaux conservés). Pas dans `backup-usb`. [Mediatheques.md](Mediatheques.md)
 ```
 
 Pas de dataset `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.
