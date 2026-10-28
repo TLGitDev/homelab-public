@@ -839,7 +839,813 @@ Garder `root:987:1` dans `/etc/subgid` : le CT 103 s'en sert. Garder le groupe h
 
 ---
 
+# Prowlarr — décision (28 oct.)
+
+Prowlarr, Sonarr et Radarr tournent dans **un** LXC Debian, CT **105** `servarr`, `<ip-servarr>`. Ce pas installe **Prowlarr seul**. Sonarr et Radarr viendront dans ce CT, une fois l'interface ouverte. Pas de Docker. Pas dans K3s. Pas dans le CT 103 ni le CT 104.
+
+Pourquoi ce LXC, et pas la VM :
+
+- Sonarr et Radarr font un lien physique depuis `telechargements/` vers `films/` ou `series/`. Le lien reste dans `tank/mediatheques`. `k3s-01` ne voit pas ce dataset. Un partage NFS ou un zvol sous `tank/vmdata` rangerait 2,1 Tio au mauvais endroit (ADR-008).
+- Cette VM héberge Vaultwarden. Les imports n'y passent pas.
+- Le CT 103 monte le dataset en lecture seule, pour Jellyfin.
+- Le CT 104 envoie le compte `qbittorrent` dans Mullvad. Prowlarr joint des indexeurs et, plus tard, qBittorrent sur le LAN : son trafic sort par la box, comme Jellyfin.
+
+Montage de ce CT : **tout** `/tank/mediatheques`, en écriture, sur `/mnt/mediatheques`. Prowlarr n'écrit pas dedans. Le montage est posé maintenant : Sonarr et Radarr s'en serviront sans recréer le CT. qBittorrent continue de ne voir que `telechargements/`, sous `/mnt/telechargements` **chez lui**. Le chemin n'est pas le même. Sonarr et Radarr auront un mappage de chemin distant. Pas dans ce pas.
+
+qBittorrent ne retire pas le torrent en fin de téléchargement. Sonarr et Radarr le retireront après un import réussi. Les fichiers restent.
+
+Le compte `prowlarr` ne rejoint pas `media` : il ne lit pas les fichiers. Le groupe `media` (GID 1000 dans le CT = 987 sur l'hôte) existe pour que le montage porte le bon nom, et pour Sonarr / Radarr ensuite. Les fichiers déposés par qBittorrent sont déjà `0660` `media`.
+
+Config (`/var/lib/prowlarr`) et binaire (`/opt/Prowlarr`) : disque du CT, sur `rpool`. C'est elle qu'il faudra sauvegarder plus tard, pas les médias. Pas dans ce pas. Mot de passe web : dans le coffre. Pas dans Git, pas dans ce fichier, pas collé dans le chat.
+
+Ressources prévues pour les trois applis : 4 Gio de RAM, 2 cœurs, disque 16 Gio. On n'en installe qu'une. Le pare-feu du CT s'écrit (TCP 9696 depuis le LAN). Les ports 8989 et 7878 attendront Sonarr et Radarr. Le pare-feu datacenter reste éteint. On ne l'allume pas ici. LAN seulement, pas de hostname dans le tunnel.
+
+Pas d'ADR : un hébergement est tranché pour Prowlarr, Sonarr et Radarr. Bazarr : même CT, procédure plus bas. Le critère VM / LXC / K3s reste ouvert pour Recyclarr, Lidarr, Navidrome.
+
+Branche `master` du binaire : c'est la branche stable chez Servarr. `develop` est la branche de test.
+
+---
+
+# Prowlarr — procédure
+
+**As-built 28 oct.** CT **105** `servarr`, `<ip-servarr>`, **running**. Prowlarr **2.7.0.5723**, service `active`, `curl` local `200`. Compte web `utilisateur`, authentification Forms, **Enabled**. Mot de passe dans le coffre. **Allowed Hosts** vide. Pas d'indexeur. `/etc/pve/firewall/105.fw` écrit (TCP 9696 depuis le LAN). Le pare-feu datacenter reste éteint.
+
+Pas le script d'installation Servarr : il est interactif et il efface `/opt` s'il réinstalle. Les commandes du wiki, une par une. Pas d'`apt upgrade`.
+
+## 0. Constat (sur `pve`, root)
+
+```bash
+pct list
+qm list
+ping -c 1 -W 1 <ip-servarr> || true
+getent group media
+grep -E '^root:' /etc/subgid
+free -h
+ls /var/lib/vz/template/cache/
+pve-firewall status || true
+ls -ld /tank/mediatheques \
+  /tank/mediatheques/films \
+  /tank/mediatheques/series \
+  /tank/mediatheques/sons \
+  /tank/mediatheques/telechargements \
+  /tank/mediatheques/telechargements/complets
+```
+
+Attendu : pas de CT 105, pas de VM 105, `.80` sans réponse, `media` = 987, `root:987:1` déjà présent, au moins 4 Gio disponibles, template `debian-13-standard_13.1-2_amd64.tar.zst`, pare-feu `disabled/running`, dossiers `drwxrws---` `root:media`.
+
+**Constat 28 oct., 17:38.** CT 100, 102, 103, 104 en service. VM 101 seule. Pas de 105. `.80` : 100 % de perte. `media` = 987. `subgid` : `root:100000:65536`, `root:988:1`, `root:987:1`. RAM disponible 20 Gio. Template Debian 13 présent. Pare-feu : `disabled/running`. Dossiers `drwxrws---` `root media`. `complets/` vide (deux liens, le dossier lui-même). Swap hôte à 0 : sans effet, le CT a son propre swap.
+
+## 1. Créer le LXC (arrêté)
+
+Même socle que Jellyfin : `vmbr0`, `local-zfs`, non privilégié, Debian 13, `nesting=1`. 4 Gio, 2 cœurs, 16 Gio : la config des trois applis vivra ici, les médias restent sur le bind mount. `root:987:1` est déjà dans `/etc/subgid`. Ne pas l'ajouter une seconde fois.
+
+```bash
+pct create 105 local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst \
+  --hostname servarr \
+  --memory 4096 \
+  --swap 512 \
+  --cores 2 \
+  --rootfs local-zfs:16 \
+  --net0 name=eth0,bridge=vmbr0,firewall=1,ip=<ip-servarr>/24,gw=<ip-box> \
+  --nameserver <ip-box> \
+  --unprivileged 1 \
+  --features nesting=1 \
+  --ostype debian \
+  --onboot 1 \
+  --start 0
+pct set 105 -mp0 /tank/mediatheques,mp=/mnt/mediatheques
+grep mp0 /etc/pve/lxc/105.conf
+```
+
+Attendu : une ligne `mp0` **sans** `ro=1`. Si `ro=1` est là : s'arrêter, ne pas démarrer.
+
+**28 oct., 17:43.** CT 105 créé, architecture `amd64`. `mp0: /tank/mediatheques,mp=/mnt/mediatheques`, sans `ro=1`.
+
+## 2. Idmap
+
+Même map que les CT 103 et 104. Le GID 1000 **dans** le CT est le GID 987 **sur l'hôte**. Pas de `/dev/net/tun` : ce CT ne fait pas de WireGuard.
+
+`unprivileged: 1` ne écrit pas toujours les lignes `lxc.idmap`. Dès qu'on en pose, elles remplacent la map implicite : les quatre lignes, entières. Le script retire les `lxc.idmap` déjà présentes, puis écrit celles du CT 103. On peut le relancer.
+
+```bash
+python3 - << 'PY'
+from pathlib import Path
+p = Path("/etc/pve/lxc/105.conf")
+idmap = [
+    "lxc.idmap: u 0 100000 65536",
+    "lxc.idmap: g 0 100000 1000",
+    "lxc.idmap: g 1000 987 1",
+    "lxc.idmap: g 1001 101001 64535",
+]
+kept = [line for line in p.read_text().splitlines() if not line.startswith("lxc.idmap:")]
+kept.extend(idmap)
+p.write_text("\n".join(kept) + "\n")
+PY
+grep idmap /etc/pve/lxc/105.conf
+pct start 105
+pct status 105
+```
+
+Attendu au `grep` : les quatre lignes, dans cet ordre. `pct status` : `running`. Si `newgidmap` / `not allowed` : coller, ne pas continuer.
+
+`python3` tourne sur **`pve`**. S'il manque : s'arrêter, ne pas installer un paquet sur l'hôte pour ça.
+
+**28 oct., 17:43.** Quatre lignes `lxc.idmap`, dans l'ordre. `pct start` sans erreur. `status: running`.
+
+## 3. Groupe
+
+```bash
+pct exec 105 -- bash -lc 'getent group media >/dev/null || groupadd --gid 1000 media'
+pct exec 105 -- ls -ld /mnt/mediatheques
+```
+
+Attendu : `drwxrws---` `nobody media`. Le propriétaire `nobody` est le même cas que Jellyfin (UID 0 de l'hôte hors map). Le groupe `media` prouve la map. Root du CT n'entre pas dans `films/` : il n'est pas dans `media`. C'est attendu. On ne teste pas l'écriture dans ce pas : Prowlarr ne touche pas aux fichiers. Sonarr le fera.
+
+**28 oct., 17:46.** `groupadd` sans erreur. `/mnt/mediatheques` : `drwxrws---` `nobody media`.
+
+## 4. Compte et binaire
+
+```bash
+pct exec 105 -- bash -lc 'cat /etc/os-release; dpkg --print-architecture'
+```
+
+Attendu : `VERSION_CODENAME=trixie` et `amd64`. Sinon, s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'apt update && apt install -y curl ca-certificates sqlite3'
+pct exec 105 -- bash -lc 'getent passwd prowlarr || adduser --system --group --home /var/lib/prowlarr --shell /usr/sbin/nologin prowlarr'
+pct exec 105 -- bash -lc 'install -d -o prowlarr -g prowlarr -m 0750 /var/lib/prowlarr'
+pct exec 105 -- bash -lc 'id prowlarr; getent passwd prowlarr'
+```
+
+`prowlarr` existe, home `/var/lib/prowlarr`, shell `nologin`. Le groupe `media` n'est **pas** dans `id` : voulu. `adduser` peut prévenir que `LANG=en_US.UTF-8` manque : le compte est créé quand même, comme sur le CT 104. Pas de paquet `locales` dans ce pas.
+
+**28 oct., 17:46.** `trixie`, `amd64`. `curl`, `ca-certificates` et `sqlite3` installés. `apt` a aussi mis à jour `ca-certificates` et `libsqlite3-0`, tirés par cette installation. 85 paquets restent non mis à jour : pas d'`apt upgrade`. Avertissements de locale (`LANG=en_US.UTF-8` absent) : compte créé quand même. `prowlarr` UID 102, GID 105, home `/var/lib/prowlarr`, shell `nologin`, groupe `prowlarr` seul. Archive `92.2M` téléchargée. `tar -tzf | head` liste `Prowlarr/` en tête, puis `tar: stdout: write error` : `head` ferme le tuyau, l'archive n'est pas en cause. Pas encore extraite.
+
+Puis le binaire. L'archive vient de `https://prowlarr.servarr.com` (branche `master`). Si `/opt/Prowlarr` existe déjà : s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'test ! -e /opt/Prowlarr'
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/Prowlarr.tar.gz "https://prowlarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"'
+pct exec 105 -- bash -lc 'tar -tzf /tmp/Prowlarr.tar.gz | head'
+```
+
+Les chemins de l'archive commencent par `Prowlarr/`. Sinon : s'arrêter, ne pas extraire.
+
+```bash
+pct exec 105 -- bash -lc 'tar -xzf /tmp/Prowlarr.tar.gz -C /opt && chown -R prowlarr:prowlarr /opt/Prowlarr && rm -f /tmp/Prowlarr.tar.gz'
+pct exec 105 -- bash -lc 'ls -ld /opt/Prowlarr /opt/Prowlarr/Prowlarr'
+```
+
+Le répertoire et le binaire appartiennent à `prowlarr`. L'utilisateur du service doit pouvoir mettre à jour `/opt/Prowlarr` tout seul.
+
+Unité systemd, celle du wiki :
+
+```bash
+pct exec 105 -- tee /etc/systemd/system/prowlarr.service >/dev/null << 'EOF'
+[Unit]
+Description=Prowlarr Daemon
+After=syslog.target network.target
+
+[Service]
+User=prowlarr
+Group=prowlarr
+Type=simple
+ExecStart=/opt/Prowlarr/Prowlarr -nobrowser -data=/var/lib/prowlarr/
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- systemctl enable --now prowlarr
+pct exec 105 -- systemctl is-active prowlarr
+pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 20 http://127.0.0.1:9696 || true'
+```
+
+`active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status prowlarr` et `journalctl -u prowlarr -b --no-pager | tail -n 20`. Ne pas retélécharger l'archive.
+
+**28 oct., 17:49.** `gzip -t` : `OK`. Binaire extrait, `prowlarr:prowlarr`, horodaté 26 oct. 18:06 dans l'archive. Unité activée. `is-active` : `active`. `curl` local : `200`. Journal : `Starting Prowlarr - /opt/Prowlarr/Prowlarr - Version 2.7.0.5723`.
+
+## 5. Pare-feu du CT
+
+Même geste que Jellyfin. **Ne pas** activer le pare-feu datacenter.
+
+```bash
+cat > /etc/pve/firewall/105.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 9696
+EOF
+```
+
+Le pare-feu du datacenter reste éteint : ce fichier ne filtre pas tant qu'il l'est. On ne l'allume pas. Sortie vers Internet : autorisée. Entrée : TCP 9696 depuis le LAN. Pas de 8989, pas de 7878, pas de redirection sur la box.
+
+**28 oct., 17:53.** `/etc/pve/firewall/105.fw` écrit. Datacenter toujours éteint.
+
+## 6. Interface web
+
+Depuis un poste du LAN : `http://<ip-servarr>:9696`.
+
+La première page demande une authentification. Créer le compte. Mot de passe dans le coffre. Ne pas le coller ici.
+
+S'arrêter là. Pas d'indexeur, pas de Sonarr, pas de Radarr : les deux applis n'existent pas encore. Un indexeur se branche quand Sonarr est là pour le recevoir.
+
+**28 oct., 17:53.** Page d'authentification : Forms, **Enabled**, utilisateur `utilisateur`, **Allowed Hosts** vide. Mot de passe dans le coffre. Connecté. Pas d'indexeur.
+
+## Retour arrière
+
+Le montage ne contient pas une copie. Détruire le CT ne touche pas à `tank/mediatheques`. Il emporte la config Prowlarr qui est sur son disque.
+
+```bash
+pct stop 105
+pct destroy 105
+rm -f /etc/pve/firewall/105.fw
+```
+
+Garder `root:987:1` dans `/etc/subgid` : les CT 103 et 104 s'en servent. Garder le groupe hôte `media`.
+
+---
+
+# Sonarr — décision (28 oct.)
+
+Sonarr s'installe dans le CT **105**, à côté de Prowlarr. Même montage `/mnt/mediatheques`, en écriture. Le dossier des séries sera `/mnt/mediatheques/series`. Pas un nouveau CT. Pas de Docker. Pas le script d'installation : les commandes du wiki, une par une.
+
+Le compte `sonarr` rejoint `media`. qBittorrent dépose des fichiers `0660` `media`. Sonarr doit pouvoir les lire et créer le lien physique dans `series/`. Les dossiers du dataset sont `2770` (setgid) : un fichier créé dedans prend le groupe `media`.
+
+L'unité systemd pose `UMask=0007`. Le wiki propose `0002`, qui laisse les fichiers lisibles par les autres (`0664`). Ici les autres n'ont rien : `0660` et `2770`. `Group=sonarr`, avec `SupplementaryGroups=media`. La config (`/var/lib/sonarr`) reste à `sonarr` seul. Le groupe `media` ne sert qu'aux fichiers du dataset.
+
+Branche `main`, Sonarr v4. Chez Sonarr la branche stable s'appelle `main`. Chez Prowlarr elle s'appelle `master`.
+
+Le mappage de chemin vers qBittorrent (`/mnt/telechargements` chez lui, `/mnt/mediatheques/telechargements` ici) et le dossier racine des séries viennent **après** le compte web. Pas dans les blocs d'installation.
+
+Port **8989**. On l'ajoute à `105.fw` à côté du 9696. On ne retire pas la règle Prowlarr. Le pare-feu datacenter reste éteint.
+
+---
+
+# Sonarr — procédure
+
+**As-built 28 oct., installation.** CT 105 déjà en service. Sonarr **4.0.20.3014**, `active`, `curl` local `200`. Compte web créé, connecté. `/etc/pve/firewall/105.fw` : TCP 9696 et 8989 depuis le LAN. Datacenter éteint. Dossier racine, client et Prowlarr : pas encore branchés.
+
+`curl` et `sqlite3` sont déjà là. Pas d'`apt upgrade`.
+
+## 1. Compte
+
+```bash
+pct exec 105 -- bash -lc 'getent passwd sonarr || adduser --system --group --home /var/lib/sonarr --shell /usr/sbin/nologin sonarr'
+pct exec 105 -- bash -lc 'install -d -o sonarr -g sonarr -m 0750 /var/lib/sonarr'
+pct exec 105 -- bash -lc 'usermod -aG media sonarr && id sonarr'
+```
+
+`id` contient `media` (1000). Home `/var/lib/sonarr`, shell `nologin`. `adduser` peut prévenir que `LANG=en_US.UTF-8` manque : le compte est créé quand même. Pas de paquet `locales`.
+
+**28 oct., 17:56.** Avertissement de locale, compte créé. UID 103, GID 106, groupes `sonarr` et `media` (1000).
+
+## 2. Écriture
+
+Le `umask` du service n'est pas celui d'un `touch` lancé à la main. On le pose dans la commande. Le fichier d'essai est effacé tout de suite.
+
+```bash
+pct exec 105 -- bash -lc 'runuser -u sonarr -- bash -c "umask 0007; touch /mnt/mediatheques/telechargements/complets/.ecriture-sonarr"'
+ls -l /tank/mediatheques/telechargements/complets/.ecriture-sonarr
+rm -f /tank/mediatheques/telechargements/complets/.ecriture-sonarr
+```
+
+Attendu : `-rw-rw----`, groupe `media`. Le propriétaire affiché sur l'hôte est l'UID du CT décalé de `100000`. `Permission denied` : s'arrêter, ne pas télécharger Sonarr.
+
+**28 oct., 17:56.** `-rw-rw---- 1 100103 media`. Fichier effacé.
+
+## 3. Binaire
+
+L'archive vient de `https://services.sonarr.tv`, branche `main`, v4. Si `/opt/Sonarr` existe déjà : s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'test ! -e /opt/Sonarr'
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/Sonarr.tar.gz "https://services.sonarr.tv/v1/download/main/latest?version=4&os=linux&arch=x64"'
+pct exec 105 -- bash -lc 'gzip -t /tmp/Sonarr.tar.gz && echo OK'
+pct exec 105 -- bash -lc 'tar -tzf /tmp/Sonarr.tar.gz | head'
+```
+
+`OK`. Les chemins commencent par `Sonarr/`. Un `tar: stdout: write error` après ces lignes vient de `head`, comme pour Prowlarr. Sinon : s'arrêter, ne pas extraire.
+
+**28 oct., 17:57.** Archive `97.4M`. `gzip -t` : `OK`. Liste en tête `Sonarr/`, puis `tar: stdout: write error` (`head`). Pas encore extraite.
+
+```bash
+pct exec 105 -- bash -lc 'tar -xzf /tmp/Sonarr.tar.gz -C /opt && chown -R sonarr:sonarr /opt/Sonarr && rm -f /tmp/Sonarr.tar.gz'
+pct exec 105 -- bash -lc 'ls -ld /opt/Sonarr /opt/Sonarr/Sonarr'
+pct exec 105 -- tee /etc/systemd/system/sonarr.service >/dev/null << 'EOF'
+[Unit]
+Description=Sonarr Daemon
+After=syslog.target network.target
+
+[Service]
+User=sonarr
+Group=sonarr
+SupplementaryGroups=media
+UMask=0007
+Type=simple
+ExecStart=/opt/Sonarr/Sonarr -nobrowser -data=/var/lib/sonarr/
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- systemctl enable --now sonarr
+pct exec 105 -- systemctl is-active sonarr
+pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 30 http://127.0.0.1:8989 || true'
+```
+
+Le répertoire et le binaire appartiennent à `sonarr`. `active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status sonarr` et `journalctl -u sonarr -b --no-pager | tail -n 20`. Ne pas retélécharger l'archive.
+
+**28 oct., 17:59.** Binaire extrait, `sonarr:sonarr`, horodaté 16 sep. 16:37 dans l'archive. Unité activée. `is-active` : `active`. `curl` local : `200`. Journal : `Starting Sonarr - /opt/Sonarr/Sonarr - Version 4.0.20.3014`.
+
+## 4. Pare-feu du CT
+
+Les deux ports. Remplacer le fichier : la règle 9696 reste.
+
+```bash
+cat > /etc/pve/firewall/105.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 9696
+IN ACCEPT -source <réseau-lan> -p tcp -dport 8989
+EOF
+```
+
+**Ne pas** activer le pare-feu datacenter. Pas de 7878 dans ce pas.
+
+**28 oct., 18:01.** Fichier réécrit : 9696 et 8989. Datacenter toujours éteint.
+
+## 5. Interface web
+
+Depuis un poste du LAN : `http://<ip-servarr>:8989`.
+
+Même page que Prowlarr. **Forms**, **Enabled**, un mot de passe dans le coffre. **Allowed Hosts** vide. Ne pas coller le mot de passe ici.
+
+S'arrêter là. Pas de dossier racine, pas de client de téléchargement, pas de Prowlarr, pas de série. Ça se branche au pas d'après.
+
+**28 oct., 18:01.** Connecté. Nom du compte non relevé. Mot de passe dans le coffre. Pas de dossier racine, pas de client, pas de série.
+
+## Retour arrière
+
+Arrêter Sonarr et retirer ses fichiers ne touche pas à Prowlarr ni à `tank/mediatheques`.
+
+```bash
+pct exec 105 -- systemctl disable --now sonarr
+pct exec 105 -- rm -rf /opt/Sonarr /var/lib/sonarr /etc/systemd/system/sonarr.service
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- bash -lc 'deluser sonarr || true'
+```
+
+Remettre `105.fw` avec la seule règle 9696. Garder le groupe `media` et le compte `prowlarr`.
+
+---
+
+# Sonarr — branchement
+
+**As-built 28 oct., 18:14.** Dossier `series/`, client qBittorrent, mappage de chemin, application Prowlarr : **Test** réussi. Pas d'indexeur. Pas de série ajoutée.
+
+## 1. Dossier et liens
+
+`http://<ip-servarr>:8989` → **Settings** → **Media Management**.
+
+1. **Root Folders** → **Add Root Folder** → `/mnt/mediatheques/series` → OK.
+2. **Importing** → **Use Hardlinks instead of Copy** : coché.
+3. **Permissions** → **Set Permissions** : décoché. Le `UMask=0007` du service suffit. Cocher cette case ferait un `chmod` qui enlève le setgid des dossiers.
+
+**Save** s'il y a un bouton en haut de la page.
+
+**28 oct., 18:05.** Dossier racine `/mnt/mediatheques/series`. 5 Tio libres, 78 dossiers non suivis : la copie déjà là, pas des séries ajoutées dans Sonarr. Case des liens physiques : ouverte via **Show Advanced**, pas relue à l'écran.
+
+## 2. qBittorrent
+
+**Settings** → **Download Clients**.
+
+En haut : **Completed Download Handling** coché. **Remove Completed Downloads** : le laisser comme Sonarr le propose. Sonarr retire le torrent du client quand le seed est terminé. Le lien physique dans `series/` garde le fichier. On ne règle pas de ratio ici. qBittorrent, de son côté, ne retire rien tout seul.
+
+**+** → **qBittorrent**.
+
+| Champ | Valeur |
+|-------|--------|
+| Name | `qBittorrent` |
+| Host | `<ip-qbittorrent>` |
+| Port | `8080` |
+| Username | le compte web déjà posé sur qBittorrent |
+| Password | celui du coffre |
+| Category | `tv-sonarr` |
+
+**Test**. Il doit réussir. **Save**.
+
+En bas de la même page, **Remote Path Mappings** → **+**.
+
+| Champ | Valeur |
+|-------|--------|
+| Host | `<ip-qbittorrent>` |
+| Remote Path | `/mnt/telechargements/` |
+| Local Path | `/mnt/mediatheques/telechargements/` |
+
+Le Host est exactement celui du client. Le chemin distant est celui que qBittorrent annonce. Le chemin local est le même dossier, vu depuis ce CT. **Save**.
+
+**28 oct., 18:12.** Client `qBittorrent`, `<ip-qbittorrent>:8080`, compte `admin`, catégorie `tv-sonarr`. SSL, URL base et clé d'API vides. **Remove Completed** coché. **Post-Import Category** vide. Mappage enregistré avec les barres finales. Un `Invalid Path` est apparu puis a disparu sur le même chemin : l'interface, pas le dossier.
+
+## 3. Prowlarr
+
+Dans Prowlarr, `http://<ip-servarr>:9696` → **Settings** → **Apps** → **+** → **Sonarr**.
+
+La clé d'API est dans Sonarr → **Settings** → **General** → **Security**. La copier dans le coffre et dans ce formulaire. Ne pas la coller ici.
+
+| Champ | Valeur |
+|-------|--------|
+| Prowlarr Server | `http://<ip-servarr>:9696` |
+| Sonarr Server | `http://<ip-servarr>:8989` |
+| API Key | la clé Sonarr |
+| Sync Level | Full Sync |
+
+**Test**, puis **Save**. Pas d'indexeur dans ce pas.
+
+S'arrêter. Pas de série ajoutée. Le fichier de test viendra après.
+
+**28 oct., 18:14.** Application Sonarr dans Prowlarr : **Test** réussi. Pas d'indexeur.
+
+**28 oct., 18:20.** Série *Cold Case* ajoutée. Chemin `/mnt/mediatheques/series/Cold Case`, 178,9 Gio, profil **Any**, surveillée. Saisons vues complètes : 7 (22/22), 6 (23/23), 5 (18/18), 4 (24/24). Les fichiers déjà là sont reconnus. Pas de téléchargement.
+
+---
+
+# Radarr — décision (28 oct.)
+
+Radarr s'installe dans le CT **105**, à côté de Prowlarr et Sonarr. Même montage. Le dossier des films sera `/mnt/mediatheques/films`. Même compte que Sonarr pour le groupe : `radarr` dans `media`, `UMask=0007`, `Group=radarr`, `SupplementaryGroups=media`. La config reste dans `/var/lib/radarr`.
+
+Branche `master`. Chez Radarr, comme chez Prowlarr, la branche stable s'appelle `master`.
+
+Le client qBittorrent, le mappage de chemin et Prowlarr viennent **après** le compte web. Pas dans les blocs d'installation. Catégorie prévue : on la lira dans le formulaire, on ne l'invente pas.
+
+Port **7878**, ajouté à `105.fw` à côté de 9696 et 8989. Le pare-feu datacenter reste éteint.
+
+---
+
+# Radarr — procédure
+
+**As-built 28 oct., installation.** Radarr **6.4.4.10685**, `active`, `curl` local `200`. Compte web créé, connecté. `/etc/pve/firewall/105.fw` : TCP 9696, 8989 et 7878 depuis le LAN. Datacenter éteint. Dossier racine, client et Prowlarr : pas encore branchés.
+
+`curl` et `sqlite3` sont déjà là. Pas d'`apt upgrade`. Pas le script d'installation.
+
+## 1. Compte
+
+```bash
+pct exec 105 -- bash -lc 'getent passwd radarr || adduser --system --group --home /var/lib/radarr --shell /usr/sbin/nologin radarr'
+pct exec 105 -- bash -lc 'install -d -o radarr -g radarr -m 0750 /var/lib/radarr'
+pct exec 105 -- bash -lc 'usermod -aG media radarr && id radarr'
+```
+
+`id` contient `media` (1000). Home `/var/lib/radarr`. Avertissement de locale : le compte est créé quand même.
+
+## 2. Écriture
+
+```bash
+pct exec 105 -- bash -lc 'runuser -u radarr -- bash -c "umask 0007; touch /mnt/mediatheques/telechargements/complets/.ecriture-radarr"'
+ls -l /tank/mediatheques/telechargements/complets/.ecriture-radarr
+rm -f /tank/mediatheques/telechargements/complets/.ecriture-radarr
+```
+
+Attendu : `-rw-rw----`, groupe `media`. `Permission denied` : s'arrêter, ne pas télécharger Radarr.
+
+## 3. Binaire
+
+Branche `master`. Si `/opt/Radarr` existe déjà : s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'test ! -e /opt/Radarr'
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/Radarr.tar.gz "https://radarr.servarr.com/v1/update/master/updatefile?os=linux&runtime=netcore&arch=x64"'
+pct exec 105 -- bash -lc 'gzip -t /tmp/Radarr.tar.gz && echo OK'
+pct exec 105 -- bash -lc 'tar -tzf /tmp/Radarr.tar.gz | head'
+```
+
+`OK`. Les chemins commencent par `Radarr/`. Un `tar: stdout: write error` vient de `head`. Sinon : s'arrêter, ne pas extraire.
+
+```bash
+pct exec 105 -- bash -lc 'tar -xzf /tmp/Radarr.tar.gz -C /opt && chown -R radarr:radarr /opt/Radarr && rm -f /tmp/Radarr.tar.gz'
+pct exec 105 -- bash -lc 'ls -ld /opt/Radarr /opt/Radarr/Radarr'
+pct exec 105 -- tee /etc/systemd/system/radarr.service >/dev/null << 'EOF'
+[Unit]
+Description=Radarr Daemon
+After=syslog.target network.target
+
+[Service]
+User=radarr
+Group=radarr
+SupplementaryGroups=media
+UMask=0007
+Type=simple
+ExecStart=/opt/Radarr/Radarr -nobrowser -data=/var/lib/radarr/
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- systemctl enable --now radarr
+pct exec 105 -- systemctl is-active radarr
+pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 30 http://127.0.0.1:7878 || true'
+```
+
+`active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status radarr` et `journalctl -u radarr -b --no-pager | tail -n 20`.
+
+**28 oct., 18:24.** Compte UID 104, GID 107, groupes `radarr` et `media`. Fichier d'essai `-rw-rw----` `100104 media`, effacé. Archive `101M`, `gzip -t` OK, `tar: stdout: write error` (`head`). Binaire `radarr:radarr`, horodaté 14 sep. 15:54. `is-active` : `active`. `curl` local : `200`. Journal : `Starting Radarr - /opt/Radarr/Radarr - Version 6.4.4.10685`.
+
+## 4. Pare-feu du CT
+
+Les trois ports. Remplacer le fichier.
+
+```bash
+cat > /etc/pve/firewall/105.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 9696
+IN ACCEPT -source <réseau-lan> -p tcp -dport 8989
+IN ACCEPT -source <réseau-lan> -p tcp -dport 7878
+EOF
+```
+
+**Ne pas** activer le pare-feu datacenter.
+
+**28 oct., 18:27.** Fichier réécrit : 9696, 8989 et 7878. Datacenter toujours éteint.
+
+## 5. Interface web
+
+Depuis un poste du LAN : `http://<ip-servarr>:7878`.
+
+Même page que Prowlarr. **Forms**, **Enabled**, mot de passe dans le coffre. **Allowed Hosts** vide.
+
+S'arrêter là. Pas de dossier racine, pas de client, pas de film.
+
+**28 oct., 18:27.** Connecté. Nom du compte non relevé. Mot de passe dans le coffre. Pas de dossier racine, pas de client, pas de film.
+
+## Retour arrière
+
+```bash
+pct exec 105 -- systemctl disable --now radarr
+pct exec 105 -- rm -rf /opt/Radarr /var/lib/radarr /etc/systemd/system/radarr.service
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- bash -lc 'deluser radarr || true'
+```
+
+Remettre `105.fw` avec 9696 et 8989 seulement. Garder `prowlarr`, `sonarr` et le groupe `media`.
+
+---
+
+# Radarr — branchement
+
+**As-built 28 oct., 18:36.** Dossier `/mnt/mediatheques/films`, client qBittorrent catégorie `radarr`, mappage de chemin, application Prowlarr. Les deux **Test** ont réussi. Pas d'indexeur. Pas de film ajouté.
+
+## 1. Dossier et liens
+
+`http://<ip-servarr>:7878` → **Settings** → **Media Management**. **Show Advanced** s'il le faut.
+
+1. **Root Folders** → **Add Root Folder** → `/mnt/mediatheques/films`.
+2. **Use Hardlinks instead of Copy** : coché.
+3. **Set Permissions** : décoché.
+
+## 2. qBittorrent
+
+**Settings** → **Download Clients**. **Completed Download Handling** → **Enable** coché.
+
+**+** → **qBittorrent**. Garder la catégorie déjà écrite dans le champ. Si le champ est vide : `radarr`. Pas `tv-sonarr` : cette catégorie est celle de Sonarr.
+
+| Champ | Valeur |
+|-------|--------|
+| Name | `qBittorrent` |
+| Host | `<ip-qbittorrent>` |
+| Port | `8080` |
+| Username | `admin` |
+| Password | celui du coffre |
+| Category | celle du formulaire, sinon `radarr` |
+
+**Remove Completed** coché. **Post-Import Category** vide. **Use SSL**, **URL Base** et **API Key** vides. **Test**, puis **Save**.
+
+**Remote Path Mappings** → **+**. Les barres finales, comme pour Sonarr.
+
+| Champ | Valeur |
+|-------|--------|
+| Host | `<ip-qbittorrent>` |
+| Remote Path | `/mnt/telechargements/` |
+| Local Path | `/mnt/mediatheques/telechargements/` |
+
+## 3. Prowlarr
+
+Dans Prowlarr, **Settings** → **Apps** → **+** → **Radarr**. La clé d'API est dans Radarr → **Settings** → **General** → **Security**. Ne pas la coller ici.
+
+| Champ | Valeur |
+|-------|--------|
+| Prowlarr Server | `http://<ip-servarr>:9696` |
+| Radarr Server | `http://<ip-servarr>:7878` |
+| API Key | la clé Radarr |
+| Sync Level | Full Sync |
+
+**Test**, puis **Save**. Pas d'indexeur. Pas de film ajouté.
+
+**28 oct., 18:36.** Catégorie `radarr`. Test qBittorrent réussi. Test Prowlarr réussi. Pas d'indexeur.
+
+**28 oct., 18:37.** Film *American History X* ajouté. Chemin `/mnt/mediatheques/films/American History X (1998)`, statut **Downloaded**, 1,9 Gio, profil **Any**. Fichier `American History X (1998).mkv`, x265, AAC 5.1, WEBDL-1080p, anglais. Pas de téléchargement.
+
+---
+
+# Bazarr — décision (28 oct.)
+
+Bazarr s'installe dans le CT **105**. Il écrit les sous-titres à côté des vidéos, donc sur le même montage que Sonarr et Radarr. Pas un nouveau CT. Pas de Docker. Pas dans K3s.
+
+Le compte `bazarr` rejoint `media`. `UMask=0007`, comme Sonarr : un `.srt` créé dans `films/` ou `series/` sort en `0660`, groupe `media`. `Group=bazarr`, `SupplementaryGroups=media`. Jellyfin, déjà dans `media`, pourra lire ces fichiers.
+
+Debian 13 refuse `pip` sur le Python du système (PEP 668). Le wiki propose de renommer le fichier `EXTERNALLY-MANAGED` ou d'ajouter `--break-system-packages`. On ne fait ni l'un ni l'autre. Un environnement à part : `/var/lib/bazarr/venv`. Il est hors de `/opt/bazarr` : une mise à jour de l'application ne l'efface pas. Le service démarre avec le Python de cet environnement, donc une mise à jour ultérieure des dépendances y reste.
+
+`unrar` est dans le dépôt `non-free`. S'il n'a pas de candidat, on continue sans. On n'ajoute pas `non-free` dans ce pas. Les archives les plus courantes sont des zip, que `unzip` ouvre.
+
+Pas de fournisseur de sous-titres dans ce pas. On relie Sonarr et Radarr, on pose un profil Français, on ne lance pas de recherche. Les chemins sont les mêmes des deux côtés (`/mnt/mediatheques/series`, `/mnt/mediatheques/films`) : pas de mappage.
+
+Port **6767**, ajouté à `105.fw` à côté de 9696, 8989 et 7878. Le pare-feu datacenter reste éteint. LAN seulement. Mot de passe dans le coffre.
+
+Pas d'ADR : un service de plus dans le CT déjà tranché. Recyclarr, Lidarr et Navidrome restent ouverts.
+
+---
+
+# Bazarr — procédure
+
+**Pas jouée.** Faire les blocs **dans l'ordre**. En cas d'erreur : coller la sortie. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas recréer le CT 105. Pas d'`apt upgrade`. Pas de `--break-system-packages`.
+
+## 1. Dépôts
+
+```bash
+pct exec 105 -- bash -lc 'python3 --version'
+pct exec 105 -- bash -lc 'apt-cache policy python3-venv 7zip ffmpeg unzip unrar'
+```
+
+`python3` au moins 3.10. Candidats pour `python3-venv`, `7zip`, `ffmpeg`, `unzip`. `unrar` peut ne pas en avoir : ce n'est pas un arrêt. Un autre paquet sans candidat : s'arrêter.
+
+## 2. Paquets
+
+```bash
+pct exec 105 -- bash -lc 'apt-get update && apt-get install -y python3-venv python3-dev python3-pip python3-setuptools unzip ffmpeg 7zip libxml2-dev libxslt1-dev'
+pct exec 105 -- bash -lc 'if apt-cache show unrar >/dev/null 2>&1; then apt-get install -y unrar; else echo UNRAR_ABSENT; fi'
+```
+
+`UNRAR_ABSENT` : on continue. Ne pas modifier `sources.list`.
+
+## 3. Compte et écriture
+
+Le wiki exige un home. Il est `/var/lib/bazarr`. L'avertissement de locale est le même que pour Sonarr : le compte est créé quand même.
+
+```bash
+pct exec 105 -- bash -lc 'getent passwd bazarr || adduser --system --group --home /var/lib/bazarr --shell /usr/sbin/nologin bazarr'
+pct exec 105 -- bash -lc 'install -d -o bazarr -g bazarr -m 0750 /var/lib/bazarr'
+pct exec 105 -- bash -lc 'usermod -aG media bazarr && id bazarr'
+pct exec 105 -- bash -lc 'runuser -u bazarr -- bash -c "umask 0007; touch /mnt/mediatheques/telechargements/complets/.ecriture-bazarr"'
+ls -l /tank/mediatheques/telechargements/complets/.ecriture-bazarr
+rm -f /tank/mediatheques/telechargements/complets/.ecriture-bazarr
+```
+
+`id` contient `media` (1000). Fichier d'essai : `-rw-rw----`, groupe `media`. Puis effacé. `Permission denied` : s'arrêter.
+
+## 4. Application et environnement
+
+L'archive vient de la release GitHub `latest`. Si `/opt/bazarr` existe déjà : s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'test ! -e /opt/bazarr'
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/bazarr.zip https://github.com/morpheus65535/bazarr/releases/latest/download/bazarr.zip'
+pct exec 105 -- bash -lc 'unzip -l /tmp/bazarr.zip | head'
+```
+
+`bazarr.py` apparaît sans dossier devant. Si tous les chemins commencent par `bazarr/` : s'arrêter, ne pas extraire.
+
+```bash
+pct exec 105 -- bash -lc 'unzip -q /tmp/bazarr.zip -d /opt/bazarr && rm -f /tmp/bazarr.zip'
+pct exec 105 -- bash -lc 'test -f /opt/bazarr/bazarr.py && test -f /opt/bazarr/requirements.txt'
+pct exec 105 -- bash -lc 'runuser -u bazarr -- python3 -m venv /var/lib/bazarr/venv'
+pct exec 105 -- bash -lc 'chown -R bazarr:bazarr /opt/bazarr'
+pct exec 105 -- bash -lc 'runuser -u bazarr -- /var/lib/bazarr/venv/bin/pip install -r /opt/bazarr/requirements.txt'
+```
+
+Le `pip` peut être long. Une erreur : coller les vingt dernières lignes. Ne pas relancer avec `--break-system-packages`.
+
+## 5. Service
+
+Pas le `sleep 30` du wiki. Sonarr et Radarr sont sur le même CT ; Bazarr se reconnecte s'ils démarrent après.
+
+```bash
+pct exec 105 -- tee /etc/systemd/system/bazarr.service >/dev/null << 'EOF'
+[Unit]
+Description=Bazarr Daemon
+After=network.target sonarr.service radarr.service
+
+[Service]
+WorkingDirectory=/opt/bazarr
+User=bazarr
+Group=bazarr
+SupplementaryGroups=media
+UMask=0007
+Type=simple
+ExecStart=/var/lib/bazarr/venv/bin/python /opt/bazarr/bazarr.py
+KillSignal=SIGINT
+TimeoutStopSec=20
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- systemctl enable --now bazarr
+pct exec 105 -- systemctl is-active bazarr
+pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 30 http://127.0.0.1:6767 || true'
+```
+
+`active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status bazarr` et `journalctl -u bazarr -b --no-pager | tail -n 30`.
+
+La version :
+
+```bash
+pct exec 105 -- bash -lc "journalctl -u bazarr -b --no-pager -o cat | grep -m 1 -i version"
+```
+
+## 6. Pare-feu du CT
+
+Les quatre ports. Remplacer le fichier.
+
+```bash
+cat > /etc/pve/firewall/105.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 9696
+IN ACCEPT -source <réseau-lan> -p tcp -dport 8989
+IN ACCEPT -source <réseau-lan> -p tcp -dport 7878
+IN ACCEPT -source <réseau-lan> -p tcp -dport 6767
+EOF
+```
+
+**Ne pas** activer le pare-feu datacenter.
+
+## 7. Compte, Sonarr, Radarr
+
+Depuis un poste du LAN : `http://<ip-servarr>:6767`.
+
+**Settings → General → Security**. Authentication : **Form**. Un identifiant, un mot de passe dans le coffre. Ne pas le coller ici. **Save**, puis se reconnecter.
+
+**Settings → Sonarr**.
+
+| Champ | Valeur |
+|-------|--------|
+| Hostname | `127.0.0.1` |
+| Port | `8989` |
+| SSL | décoché |
+| API Key | la clé Sonarr (Settings → General → Security) |
+
+**Test**, puis **Save**.
+
+**Settings → Radarr**. Même chose, port `7878`, clé Radarr.
+
+**Test**, puis **Save**. Pas de mappage de chemin : les dossiers sont déjà `/mnt/mediatheques/series` et `/mnt/mediatheques/films` des deux côtés.
+
+**Settings → Languages**. Ajouter un profil nommé `Français`, langue French. Le poser comme profil par défaut des séries et des films. Pas de fournisseur. Pas de bouton **Search**.
+
+S'arrêter. Coller la version et dire si les deux tests ont réussi.
+
+## Retour arrière
+
+```bash
+pct exec 105 -- systemctl disable --now bazarr || true
+pct exec 105 -- rm -rf /opt/bazarr /var/lib/bazarr /etc/systemd/system/bazarr.service
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- bash -lc 'deluser bazarr || true'
+```
+
+Remettre `105.fw` avec 9696, 8989 et 7878 seulement. Garder `prowlarr`, `sonarr`, `radarr` et le groupe `media`.
+
+---
+
 # Ensuite
 
-1. Prowlarr, puis Sonarr / Radarr. Ils monteront tout `tank/mediatheques` pour les liens physiques. qBittorrent ne retire pas le torrent en fin de téléchargement : Sonarr et Radarr le retirent après un import réussi. Les fichiers restent.
-2. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
+1. Jouer la procédure Bazarr ci-dessus.
+2. Un indexeur, puis un fichier qui passe par qBittorrent. Recyclarr pas tranché.
+3. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.

@@ -1008,3 +1008,21 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-28 | qBittorrent : tunnel Mullvad OK (compte = Marseille, root = box, coupure `000`). `wg-quick@wg0` actif. Service qBittorrent actif, mot de passe au coffre. Pare-feu `104.fw` écrit. UI pas réglée. |
 | 2026-10-28 | qBittorrent : image Debian `792723456` octets, `-rw-rw----`, groupe `media`, propriétaire hôte `100102`. Torrent et fichiers supprimés. `complets/` et `incomplets/` vides. |
 | 2026-10-28 | qBittorrent ne retire pas le torrent en fin de download. Sonarr / Radarr le retireront après import réussi. Fichiers conservés. |
+| 2026-10-28 | Prowlarr : LXC 105 `servarr` / `.80`, constat OK (`.80` libre, 20 Gio). Procédure écrite, pas jouée. Sonarr / Radarr dans ce CT ensuite. [Mediatheques.md](Mediatheques.md). |
+| 2026-10-28 | CT 105 créé, `mp0` en écriture (sans `ro=1`), idmap du CT 103, `running`. Prowlarr pas installé. |
+| 2026-10-28 | CT 105 : montage `nobody media`. Compte `prowlarr` UID 102. Archive `master` 92,2 Mio téléchargée, pas extraite. `tar \| head` : `stdout: write error` (tuyau fermé). |
+| 2026-10-28 | Prowlarr extrait, service `active`, `curl` local `200`. Pare-feu `105.fw` et compte web pas faits. |
+| 2026-10-28 | Prowlarr **2.7.0.5723**. `105.fw` écrit (9696). Compte `utilisateur`, Forms, Enabled, Allowed Hosts vide. Connecté. Pas d'indexeur. |
+| 2026-10-28 | Sonarr : procédure écrite pour le CT 105 (branche `main`, `UMask=0007`, port 8989). Pas jouée. |
+| 2026-10-28 | Sonarr : compte UID 103 dans `media`. Fichier d'essai `-rw-rw----` `100103 media`, effacé. Archive `main` 97,4 Mio, `gzip -t` OK, pas extraite. |
+| 2026-10-28 | Sonarr extrait, service `active`, `curl` local `200`. Port 8989 et compte web pas faits. |
+| 2026-10-28 | Sonarr **4.0.20.3014**. `105.fw` : 9696 et 8989. Connecté. Dossier racine et qBittorrent pas branchés. |
+| 2026-10-28 | Sonarr : dossier `/mnt/mediatheques/series`. Client qBittorrent `.70:8080`, catégorie `tv-sonarr`, Remove Completed coché. Mappage `/mnt/telechargements/` → `/mnt/mediatheques/telechargements/` (barre finale, `Invalid Path` transitoire). Prowlarr pas relié. |
+| 2026-10-28 | Prowlarr → Sonarr : Test réussi. Pas d'indexeur. Pas de série ajoutée. |
+| 2026-10-28 | Sonarr : *Cold Case*, `/mnt/mediatheques/series/Cold Case`, 178,9 Gio. Saisons 4 à 7 complètes (22/22, 23/23, 18/18, 24/24). |
+| 2026-10-28 | Radarr : procédure écrite pour le CT 105 (branche `master`, `UMask=0007`, port 7878). Pas jouée. |
+| 2026-10-28 | Radarr : compte UID 104 dans `media`. Fichier d'essai `-rw-rw----` `100104 media`, effacé. Service `active`, `curl` local `200`. Port 7878 et compte web pas faits. |
+| 2026-10-28 | Radarr **6.4.4.10685**. `105.fw` : 9696, 8989, 7878. Connecté. Dossier racine et qBittorrent pas branchés. |
+| 2026-10-28 | Radarr : catégorie `radarr`. Test qBittorrent réussi. Test Prowlarr réussi. Pas d'indexeur. Pas de film ajouté. |
+| 2026-10-28 | Radarr : *American History X*, `/mnt/mediatheques/films/American History X (1998)`, **Downloaded**, 1,9 Gio, `American History X (1998).mkv`. |
+| 2026-10-28 | Bazarr : procédure écrite pour le CT 105 (venv, port 6767). Pas jouée. Pas de `pip` sur le Python du système. |

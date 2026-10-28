@@ -220,14 +220,16 @@ Travail : [Mediatheques.md](Mediatheques.md).
 
 ## Jalons
 
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Mullvad WireGuard pour le seul compte du client. En service le 28 oct. Le critère général VM / LXC / K3s reste ouvert pour les autres services.
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Mullvad WireGuard pour le seul compte du client. En service le 28 oct. Prowlarr, Sonarr et Radarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr : même CT, procédure écrite, pas jouée. Le critère général VM / LXC / K3s reste ouvert pour Recyclarr, Lidarr, Navidrome.
 
 - ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
 - ✅ Jellyfin LXC 103 (`<ip-jellyfin>`), 12.4+deb13. Scan terminé, un film lu (28 oct.) — [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct)
 - ✅ qBittorrent : LXC 104, `.70`, Mullvad. Fichier de test en `0660` `media` (28 oct.) — [Mediatheques.md](Mediatheques.md#qbittorrent--décision-28-oct)
-- ⬜ Prowlarr, puis Sonarr / Radarr
-- ⬜ Bazarr / Recyclarr
+- ✅ Prowlarr 2.7.0.5723, CT 105, compte `utilisateur`, Forms activé (28 oct.) — [Mediatheques.md](Mediatheques.md#prowlarr--décision-28-oct)
+- ✅ Sonarr 4.0.20.3014 : *Cold Case* reconnue, `/mnt/mediatheques/series/Cold Case`, saisons 4 à 7 complètes (28 oct.) — [Mediatheques.md](Mediatheques.md)
+- ✅ Radarr 6.4.4.10685 : *American History X* **Downloaded**, `/mnt/mediatheques/films/American History X (1998)`, 1,9 Gio (28 oct.) — [Mediatheques.md](Mediatheques.md)
+- ⬜ Bazarr (CT 105, procédure écrite). Recyclarr pas tranché
 - ⬜ Lidarr
 - ⬜ Navidrome seulement si Jellyfin ne suffit pas pour la musique
 - ⬜ Configs sauvegardées, restauration testée
