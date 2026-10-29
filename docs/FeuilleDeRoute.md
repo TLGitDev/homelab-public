@@ -220,7 +220,7 @@ Travail : [Mediatheques.md](Mediatheques.md).
 
 ## Jalons
 
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Mullvad WireGuard pour le seul compte du client. En service le 28 oct. Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Le critère général VM / LXC / K3s reste ouvert pour Recyclarr, Lidarr, Navidrome.
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr : binaire sur le CT 105, procédure écrite, pas jouée. Le critère général VM / LXC / K3s reste ouvert pour Lidarr et Navidrome.
 
 - ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
@@ -231,7 +231,8 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 - ✅ Radarr 6.4.4.10685 : *American History X* **Downloaded**, `/mnt/mediatheques/films/American History X (1998)`, 1,9 Gio (28 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Bazarr v1.6.2, CT 105, port 6767. Sonarr et Radarr testés. Profil `français`. Pas de fournisseur (29 oct.) — [Mediatheques.md](Mediatheques.md#bazarr--décision-28-oct)
 - ✅ Indexeur Knaben : test Prowlarr réussi, visible dans Sonarr et Radarr (29 oct.). EZTV retiré : `eztvx.to` ne se résout pas. — [Mediatheques.md](Mediatheques.md#indexeur--knaben-29-oct)
-- ⬜ Proton VPN sur le CT 104 : tunnel, port renouvelé, kill switch, clé Mullvad gardée. Procédure écrite, pas jouée — [Mediatheques.md](Mediatheques.md#proton--décision-29-oct). Recyclarr pas tranché
+- ✅ Proton VPN sur le CT 104 (29 oct.) : tunnel `FR#506`, `proton-port`, coupure `000`, port `64509` joignable. Clé Mullvad gardée dans `wg0.conf.mullvad`. — [Mediatheques.md](Mediatheques.md#proton--décision-29-oct)
+- ⬜ Recyclarr v8.8.1, CT 105, binaire. Procédure écrite, pas jouée. Profil MULTi.VO créé, non assigné. **Any** inchangé — [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct)
 - ⬜ Lidarr
 - ⬜ Navidrome seulement si Jellyfin ne suffit pas pour la musique
 - ⬜ Configs sauvegardées, restauration testée

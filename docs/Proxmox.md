@@ -49,7 +49,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-samba>` | LXC `samba` (CT 102) | SMB LAN (as-built 24 oct.) |
 | `<ip-pve>` | Proxmox (`pve`) | Adresse réelle du nœud |
 | `<ip-jellyfin>` | LXC `jellyfin` (CT 103) | LAN, port 8096. En service le 28 oct. Access : plus tard. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct) |
-| `<ip-qbittorrent>` | LXC `qbittorrent` (CT 104) | LAN, port 8080. En service le 28 oct. Mullvad pour le compte du client. [Mediatheques.md](Mediatheques.md#qbittorrent--décision-28-oct) |
+| `<ip-qbittorrent>` | LXC `qbittorrent` (CT 104) | LAN, port 8080. Proton VPN pour le compte du client (29 oct.). Mullvad gardé dans `wg0.conf.mullvad`. [Mediatheques.md](Mediatheques.md#proton--décision-29-oct) |
 | `<ip-servarr>` | LXC `servarr` (CT 105) | Prowlarr 2.7.0.5723 (9696), Sonarr 4.0.20.3014 (8989), Radarr 6.4.4.10685 (7878), 28 oct. Bazarr v1.6.2 (6767), 29 oct. [Mediatheques.md](Mediatheques.md#bazarr--décision-28-oct) |
 
 ## Particularités

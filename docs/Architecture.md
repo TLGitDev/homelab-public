@@ -314,7 +314,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 
 - ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données sur `tank` (`vaultwarden-zfs-pvc`)
 - ✅ Jellyfin : LXC 103, `<ip-jellyfin>:8096`, lecture seule sur `tank/mediatheques`. Scan terminé, un film lu (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ qBittorrent : LXC 104, `<ip-qbittorrent>:8080`, écriture sur `telechargements/` seulement. Mullvad pour ce compte. Image Debian de test en `0660` (28 oct.). [Mediatheques.md](Mediatheques.md)
+- ✅ qBittorrent : LXC 104, `<ip-qbittorrent>:8080`, écriture sur `telechargements/` seulement. Proton VPN pour ce compte (29 oct.). Mullvad gardé. Image Debian de test en `0660` (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Prowlarr : LXC 105 `servarr`, `<ip-servarr>:9696`, **2.7.0.5723**, compte `utilisateur` (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Sonarr : même CT, `<ip-servarr>:8989`, **4.0.20.3014**. *Cold Case* reconnue, 178,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Radarr : même CT, `<ip-servarr>:7878`, **6.4.4.10685**. *American History X* **Downloaded**, 1,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)

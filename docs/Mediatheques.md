@@ -1694,7 +1694,7 @@ Pas d'ADR. Pas de second client torrent.
 
 # Proton — procédure
 
-**Pas jouée.** Blocs **dans l'ordre**. En cas d'erreur : coller la sortie. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas ouvrir le port sur la box, ne pas coller la clé privée ni un mot de passe.
+**Jouée le 29 oct.** Blocs **dans l'ordre**. En cas d'erreur : coller la sortie. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas ouvrir le port sur la box, ne pas coller la clé privée ni un mot de passe.
 
 ## 0. Fichier WireGuard
 
@@ -1715,7 +1715,7 @@ Sur le PC, la ligne DNS seulement :
 Select-String -Path "$env:USERPROFILE\Downloads\NOM-DU-FICHIER.conf" -Pattern '^DNS'
 ```
 
-Attendu : `DNS = 10.2.0.1`. Autre adresse : s'arrêter et coller cette ligne, pas la clé.
+Attendu : `10.2.0.1` dans la ligne. Proton y ajoute son résolveur IPv6. Le script retire toute la ligne `DNS`. Sans `10.2.0.1` : s'arrêter et coller cette ligne, pas la clé. Constat du 29 oct. : `DNS = 10.2.0.1, 2a07:b944::2:1`, fichier `qbittorrent-FR-506.conf`.
 
 ## 1. Constat (sur `pve`, root)
 
@@ -1727,7 +1727,9 @@ pct exec 104 -- wg show | sed -n '1,8p'
 pct exec 104 -- bash -lc 'apt-cache policy natpmpc'
 ```
 
-Attendu : les deux services `active`, `10.64.0.1` dans nftables et dans le script, une poignée de main WireGuard. Coller `resolv.conf`, le `grep` et la version de `natpmpc`. Pas de candidat pour `natpmpc` : s'arrêter. Une version `20150609` : s'arrêter, elle lit mal la réponse.
+Attendu : les deux services `active`, `10.64.0.1` dans nftables, une poignée de main WireGuard. Coller `resolv.conf`, le `grep` et la version de `natpmpc`. Pas de candidat pour `natpmpc` : s'arrêter. Une version `20150609` : s'arrêter, elle lit mal la réponse.
+
+**29 oct.** Les deux services `active`. `resolv.conf` : `nameserver 10.64.0.1`. nftables : les deux dnat. `natpmpc` non installé, candidat `20230423-1.2+b3`. Le script ne contient pas `10.64.0.1` : la route et `FwMark = 51820` sont dans `wg0.conf` seulement.
 
 ## 2. Garder Mullvad, poser Proton
 
@@ -1758,14 +1760,44 @@ Effacer le `.conf` dans `Downloads`. Il reste `wg0.conf` (Proton) et `wg0.conf.m
 
 ## 3. DNS
 
+Le script retire chaque `PostUp` et ne réécrit que les règles d'uid. La route `10.64.0.1/32` et `FwMark = 51820` sont dans `wg0.conf`. Sans la marque, nftables jette la poignée de main. Sans la route, `10.2.0.1` ne passe pas par `wg0`. On les ajoute au script, vers `10.2.0.1`, puis on le relance.
+
 ```bash
-pct exec 104 -- sed -i 's/10\.64\.0\.1/10.2.0.1/g' /usr/local/sbin/ajuster-wg0.py /etc/nftables.conf
+pct exec 104 -- python3 - << 'PY'
+from pathlib import Path
+p = Path("/usr/local/sbin/ajuster-wg0.py")
+text = p.read_text()
+old = 'if line.startswith(("DNS = ", "Table = ", "PostUp = ", "PreDown = ")):'
+new = 'if line.startswith(("DNS = ", "Table = ", "FwMark = ", "PostUp = ", "PreDown = ")):'
+if old not in text:
+    raise SystemExit("debut introuvable")
+if "FwMark = 51820" in text or "10.2.0.1" in text:
+    raise SystemExit("deja modifie")
+text = text.replace(old, new, 1)
+needle = '    "Table = 51820",\n'
+insert = '    "Table = 51820",\n    "FwMark = 51820",\n'
+if needle not in text:
+    raise SystemExit("Table introuvable")
+text = text.replace(needle, insert, 1)
+needle = '    "PreDown = ip rule del to <réseau-lan> lookup main priority 100 || true",\n]'
+insert = '''    "PreDown = ip rule del to <réseau-lan> lookup main priority 100 || true",
+    "PostUp = ip route replace 10.2.0.1/32 dev wg0",
+    "PreDown = ip route del 10.2.0.1/32 dev wg0 || true",
+]'''
+if needle not in text:
+    raise SystemExit("fin extra introuvable")
+text = text.replace(needle, insert, 1)
+p.write_text(text)
+print("ok")
+PY
+pct exec 104 -- grep -n 'FwMark\|10.2.0.1' /usr/local/sbin/ajuster-wg0.py
+pct exec 104 -- sed -i 's/10\.64\.0\.1/10.2.0.1/g' /etc/nftables.conf
 pct exec 104 -- python3 /usr/local/sbin/ajuster-wg0.py
 pct exec 104 -- systemctl restart nftables
 pct exec 104 -- nft list table inet torrent
 ```
 
-La sortie du script a `PrivateKey = [présent]` et `10.2.0.1`. Pas de `10.64.0.1`. Le dnat vise `10.2.0.1`.
+Le `grep` montre `FwMark` et les deux lignes de route. La sortie du script a `PrivateKey = [présent]`, `FwMark = 51820` et `10.2.0.1`. Pas de `10.64.0.1`. Le dnat vise `10.2.0.1`.
 
 Si le constat montrait `nameserver 10.64.0.1` :
 
@@ -1775,6 +1807,8 @@ pct exec 104 -- cat /etc/resolv.conf
 ```
 
 Si le constat montrait `<ip-box>` : ne pas toucher `resolv.conf`.
+
+**29 oct.** Script patché (`FwMark`, route `10.2.0.1`). Fichier réécrit : `Address = 10.2.0.2/32`, pair `FR#506`, `Endpoint = <ip-serveur-vpn>:51820`. nftables : dnat vers `10.2.0.1`, marque `0xca6c`. `resolv.conf` : `nameserver 10.2.0.1`. Tunnel pas encore relancé.
 
 ## 4. Tunnel, puis coupure
 
@@ -1791,6 +1825,8 @@ echo
 
 Poignée de main récente. Table `51820` : `default dev wg0`. Route `10.2.0.1` via `wg0`. Les deux IP diffèrent. La première est Proton. La seconde est la box. Même adresse : s'arrêter, ne pas lancer qBittorrent.
 
+**29 oct.** Tunnel levé. Poignée de main, `fwmark: 0xca6c`, `default dev wg0`, `10.2.0.1 dev wg0`. Compte `<ip-sortie-vpn>`, root une autre adresse. Coupure pas encore jouée.
+
 Coupure :
 
 ```bash
@@ -1800,6 +1836,8 @@ pct exec 104 -- curl -4 --max-time 10 -o /dev/null -s -w '%{http_code}\n' http:/
 ```
 
 Attendu pour le compte : `000`. Attendu pour root : `301`. Un `301` ou `200` pour le compte : remettre Mullvad (retour arrière) et s'arrêter.
+
+**29 oct.** Coupure jouée. Compte : `000`. Root : `301`.
 
 ```bash
 pct exec 104 -- systemctl start wg-quick@wg0
@@ -1823,6 +1861,8 @@ exit
 ```
 
 Dans l'interface `http://<ip-qbittorrent>:8080`, **Connection** : noter le port d'écoute actuel (coffre, retour arrière). Décocher le port aléatoire. **Use UPnP / NAT-PMP** reste décoché. **Advanced** → interface : `wg0`, inchangée.
+
+**29 oct.** Tunnel et qBittorrent `active`. Fichier `web.pass` posé. Port d'écoute noté pour le retour arrière : `25337`.
 
 ## 6. Natpmpc, une fois
 
@@ -1849,6 +1889,7 @@ cookie=$(mktemp)
 trap 'rm -f "$cookie"' EXIT
 login() {
   curl -fsS -c "$cookie" --max-time 10 \
+    -H "Referer: ${api}/" \
     --data-urlencode "username=admin" \
     --data-urlencode "password@${passfile}" \
     "$api/api/v2/auth/login" >/dev/null
@@ -1865,6 +1906,7 @@ while true; do
   if [ -n "$port" ] && [ "$port" != "$prev" ]; then
     login
     curl -fsS -b "$cookie" --max-time 10 \
+      -H "Referer: ${api}/" \
       --data-urlencode "json={\"listen_port\":${port}}" \
       "$api/api/v2/app/setPreferences"
     printf '%s\n' "$port" > "$state"
@@ -1898,6 +1940,8 @@ pct exec 104 -- journalctl -u proton-port -n 20 --no-pager
 
 `active`. Le journal affiche `port` et un numéro, le même que le bloc 6. Pas de mot de passe dans ces lignes. L'interface qBittorrent, **Connection**, montre ce numéro.
 
+**29 oct., 17:35.** `proton-port` `active`. Journal : `port 64509`. L'ancien port d'écoute était `25337`.
+
 ## 8. Le port répond
 
 ```bash
@@ -1912,6 +1956,8 @@ Test-NetConnection -ComputerName ADRESSE -Port NUMERO
 ```
 
 `TcpTestSucceeded : True`. `False` : coller, s'arrêter.
+
+**29 oct., 18:37.** Depuis le PC, vers `<ip-sortie-vpn>:64509`. Sortie par l'interface Proton du PC (`10.2.0.2`). `TcpTestSucceeded : True`.
 
 Les grabs déjà dans qBittorrent restent. On n'en ajoute pas. Au bout de quelques minutes, un pair connecté, ou le bloc 8 seul s'il reste à 0 pair : le port est ouvert, le swarm peut être vide.
 
@@ -1936,7 +1982,150 @@ pct exec 104 -- systemctl start qbittorrent-nox@qbittorrent
 
 ---
 
+# Recyclarr — décision (29 oct.)
+
+Recyclarr s'installe dans le CT **105**, en binaire, compte `recyclarr`. Pas de Docker. Pas dans K3s. Pas de port : il n'a pas d'interface. Il appelle Sonarr (`127.0.0.1:8989`) et Radarr (`127.0.0.1:7878`) avec les clés déjà au coffre. Il ne rejoint pas `media` : il n'écrit pas dans la médiathèque.
+
+Le profil ajouté est le guide français **MULTi.VO** en HD (piste d'origine plus une piste française). Ça va avec Jellyfin réglé en VO et sous-titres français, et avec le profil Bazarr `français`. Pas le profil VF (doublage à la place de la VO). Pas le 4K.
+
+On ne pose pas `quality_definition`. Sur Sonarr 4, ces tailles sont globales et changeraient aussi le profil **Any**. On ne met pas `delete_old_custom_formats` : le premier passage ne retire pas des formats qu'il n'a pas créés.
+
+Recyclarr crée le profil. Il ne l'assigne pas. *Cold Case* et *American History X* restent sur **Any**. Pas de recherche. Pas de timer dans ce pas : une synchro manuelle, une fois.
+
+Pas d'ADR : un outil de plus dans le CT déjà tranché. Lidarr et Navidrome restent ouverts.
+
+---
+
+# Recyclarr — procédure
+
+**Pas jouée.** Blocs **dans l'ordre**. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas lancer de recherche Sonarr ou Radarr, ne pas changer le profil d'une série ou d'un film déjà importé, ne pas coller une clé d'API.
+
+## 1. Constat (sur `pve`, root)
+
+```bash
+pct exec 105 -- systemctl is-active sonarr radarr
+pct exec 105 -- bash -lc 'apt-cache policy git wget xz-utils ca-certificates'
+pct exec 105 -- bash -lc 'test ! -e /usr/local/bin/recyclarr && echo ABSENT'
+pct exec 105 -- bash -lc 'getent passwd recyclarr || echo PAS_DE_COMPTE'
+```
+
+Attendu : les deux services `active`, un candidat pour chaque paquet, `ABSENT`, `PAS_DE_COMPTE`. Autre chose : s'arrêter.
+
+## 2. Compte et paquets
+
+```bash
+pct exec 105 -- bash -lc 'apt-get update && apt-get install -y git wget xz-utils ca-certificates'
+pct exec 105 -- bash -lc 'getent passwd recyclarr || adduser --system --group --home /var/lib/recyclarr --shell /usr/sbin/nologin recyclarr'
+pct exec 105 -- bash -lc 'install -d -o recyclarr -g recyclarr -m 0750 /var/lib/recyclarr /var/lib/recyclarr/.config /var/lib/recyclarr/.config/recyclarr'
+pct exec 105 -- bash -lc 'id recyclarr'
+```
+
+`adduser` peut prévenir que `LANG=en_US.UTF-8` manque : le compte est créé quand même. Home `/var/lib/recyclarr`. Le groupe `media` n'y est pas. Pas d'`apt upgrade`.
+
+## 3. Binaire v8.8.1
+
+```bash
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/recyclarr.tar.xz https://github.com/recyclarr/recyclarr/releases/download/v8.8.1/recyclarr-linux-x64.tar.xz'
+pct exec 105 -- bash -lc 'tar -tJf /tmp/recyclarr.tar.xz'
+```
+
+La liste est un fichier `recyclarr`, sans dossier. Autre contenu, ou `curl` en erreur : s'arrêter, ne pas extraire.
+
+```bash
+pct exec 105 -- bash -lc 'tar -xJf /tmp/recyclarr.tar.xz -C /usr/local/bin && chmod 755 /usr/local/bin/recyclarr && rm -f /tmp/recyclarr.tar.xz'
+pct exec 105 -- runuser -u recyclarr -- recyclarr --version
+```
+
+La version affichée est `8.8.1`.
+
+## 4. Clés, hors du dépôt
+
+Les clés sont celles du coffre (Sonarr et Radarr → **Settings** → **General** → **Security**). Une ligne chacune. Ne pas les recoller.
+
+```bash
+pct enter 105
+install -o recyclarr -g recyclarr -m 0600 /dev/null /var/lib/recyclarr/.config/recyclarr/secrets.yml
+cat > /var/lib/recyclarr/.config/recyclarr/secrets.yml << 'EOF'
+sonarr_url: http://127.0.0.1:8989
+sonarr_apikey: "CLE_SONARR"
+radarr_url: http://127.0.0.1:7878
+radarr_apikey: "CLE_RADARR"
+EOF
+chown recyclarr:recyclarr /var/lib/recyclarr/.config/recyclarr/secrets.yml
+chmod 600 /var/lib/recyclarr/.config/recyclarr/secrets.yml
+exit
+```
+
+## 5. Choisir le profil, sans synchro
+
+La première commande télécharge le guide. Elle peut prendre une minute.
+
+```bash
+pct exec 105 -- runuser -u recyclarr -- recyclarr list quality-profiles sonarr --filter 'MULTi.VO'
+pct exec 105 -- runuser -u recyclarr -- recyclarr list quality-profiles radarr --filter 'MULTi.VO'
+```
+
+Pour chaque appli, une seule ligne dont le nom contient `MULTi.VO` et `HD Bluray + WEB`, et pas `UHD`. Zéro ligne, ou plusieurs : s'arrêter et coller la liste. Noter les deux `trash_id`. Ne pas lancer `sync`.
+
+## 6. Fichier
+
+Remplacer les deux identifiants par ceux du bloc 5. Rien d'autre.
+
+```bash
+pct exec 105 -- tee /var/lib/recyclarr/.config/recyclarr/recyclarr.yml >/dev/null << 'EOF'
+sonarr:
+  multi-vo:
+    base_url: !secret sonarr_url
+    api_key: !secret sonarr_apikey
+    delete_old_custom_formats: false
+    quality_profiles:
+      - trash_id: REPRENDRE_SONARR
+        reset_unmatched_scores:
+          enabled: true
+
+radarr:
+  multi-vo:
+    base_url: !secret radarr_url
+    api_key: !secret radarr_apikey
+    delete_old_custom_formats: false
+    quality_profiles:
+      - trash_id: REPRENDRE_RADARR
+        reset_unmatched_scores:
+          enabled: true
+EOF
+pct exec 105 -- chown recyclarr:recyclarr /var/lib/recyclarr/.config/recyclarr/recyclarr.yml
+pct exec 105 -- chmod 600 /var/lib/recyclarr/.config/recyclarr/recyclarr.yml
+```
+
+Pas de clé dans ce fichier. Pas de bloc `quality_definition`.
+
+## 7. Synchro, une fois
+
+Dans Sonarr et Radarr, avant la commande : *Cold Case* et *American History X* sont sur **Any**. La file d'attente n'a pas de mise à niveau lancée pour eux.
+
+```bash
+pct exec 105 -- runuser -u recyclarr -- recyclarr sync
+```
+
+Le journal crée un profil dont le nom contient `MULTi.VO`. Il ne parle pas du profil **Any**. S'il le modifie : s'arrêter, coller, ne pas sauvegarder ailleurs.
+
+Ensuite, dans les deux interfaces : le nouveau profil est là. *Cold Case* et *American History X* sont encore sur **Any**. La file n'a pas de recherche nouvelle. On n'assigne pas le profil. On ne clique pas **Search**.
+
+## Retour arrière
+
+Si une série ou un film a été passé sur le profil MULTi.VO, le remettre sur **Any** avant de supprimer le profil. Puis supprimer ce profil dans Sonarr et dans Radarr. Il n'est utilisé par aucun titre.
+
+```bash
+pct exec 105 -- rm -f /usr/local/bin/recyclarr
+pct exec 105 -- deluser --remove-home recyclarr
+```
+
+`deluser` retire `/var/lib/recyclarr`, donc `secrets.yml` avec. Les clés restent au coffre. Sonarr, Radarr et le profil **Any** restent.
+
+---
+
 # Ensuite
 
-1. Jouer la procédure Proton au bloc 0. Le CT 104 ne perd la clé Mullvad qu'au retour arrière. Le PC, la tablette et Android restent sur l'application Proton, hors de ces blocs. Recyclarr pas tranché.
-2. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
+1. Jouer la procédure Recyclarr au bloc 1. Les titres déjà importés restent sur **Any**. [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct).
+2. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
+3. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.

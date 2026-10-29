@@ -1035,3 +1035,5 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-29 | Cinq grabs *Preacher* S03E01 en **Downloading metadata**, 0 o, pairs `0 (2)` ou `0 (3)`. Le décompte du site n'arrive pas dans qBittorrent. |
 | 2026-10-29 | Transfert de port Mullvad sur le CT 104 : pas de modification. Mullvad l'a retiré le 29 mai 2023. Un port dans qBittorrent n'ouvre pas l'entrée. |
 | 2026-10-29 | Essai AirVPN retiré avant d'être joué. Proton VPN sur le CT 104 : procédure écrite, pas jouée. DNS `10.2.0.1`, bail de port 60 s renouvelé par `proton-port`, clé Mullvad gardée. [Mediatheques.md](Mediatheques.md#proton--décision-29-oct). |
+| 2026-10-29 | Proton VPN en service sur le CT 104. Serveur `FR#506`. Coupure : compte `000`, root `301`. `proton-port` actif, port `64509`. Depuis le PC, `TcpTestSucceeded : True` vers `<ip-sortie-vpn>:64509`. `wg0.conf.mullvad` gardé. |
+| 2026-10-29 | Recyclarr : procédure écrite, pas jouée. Binaire v8.8.1 sur le CT 105. Profil français MULTi.VO, sans `quality_definition`, sans l'assigner. **Any** inchangé. [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct). |
