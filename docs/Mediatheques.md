@@ -406,7 +406,7 @@ Deux couches, les deux nécessaires :
 
 Le test de coupure se fait **avant** le premier torrent. Si `curl` vers une IP publique répond encore sous l'uid `qbittorrent` tunnel coupé, on s'arrête.
 
-Ce que les pairs voient : l'IP de sortie Mullvad. La box ne sert qu'à la poignée de main WireGuard (UDP vers le serveur Mullvad) et à l'interface web sur le LAN. Pas de redirection de port sur la box. Pas de hostname dans le tunnel. Le transfert de port Mullvad n'est pas dans ce pas : un téléchargement peut finir sans.
+Ce que les pairs voient : l'IP de sortie Mullvad. La box ne sert qu'à la poignée de main WireGuard (UDP vers le serveur Mullvad) et à l'interface web sur le LAN. Pas de redirection de port sur la box. Pas de hostname dans le tunnel. Mullvad a retiré le transfert de port le 29 mai 2023 (ports existants effacés le 1er juillet 2023). La FAQ le dit encore : on ne peut plus en associer un à une clé WireGuard. Un port d'écoute écrit dans qBittorrent n'ouvre rien chez Mullvad. Un torrent peut quand même finir si d'autres pairs acceptent la connexion sortante. Si les deux côtés sont fermés, personne ne se joint.
 
 Clé privée WireGuard et mot de passe web : sur le disque du CT (`rpool`) et dans le coffre. Pas dans Git, pas dans ce fichier, pas collés dans le chat. Pas dans `backup-usb` : la sauvegarde des configs est un jalon plus tard.
 
@@ -1488,7 +1488,9 @@ Pas d'ADR : un service de plus dans le CT déjà tranché. Recyclarr, Lidarr et 
 
 # Bazarr — procédure
 
-**Pas jouée.** Faire les blocs **dans l'ordre**. En cas d'erreur : coller la sortie. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas recréer le CT 105. Pas d'`apt upgrade`. Pas de `--break-system-packages`.
+**As-built 29 oct., 10:20.** Bazarr **v1.6.2**, service `active`, `curl` local `200`. Compte `bazarr` UID 105 dans `media`. Sonarr et Radarr : **Test** réussi (`127.0.0.1`, SSL décoché). Profil `français` (langue FR) par défaut des séries et des films ajoutés ensuite. Pas de fournisseur. Pas de recherche. `/etc/pve/firewall/105.fw` : TCP 9696, 8989, 7878 et 6767 depuis le LAN. Datacenter éteint. Mot de passe et clés d'API dans le coffre, pas ici.
+
+Les blocs ci-dessous ont été joués dans l'ordre. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas recréer le CT 105. Pas d'`apt upgrade`. Pas de `--break-system-packages`.
 
 ## 1. Dépôts
 
@@ -1508,6 +1510,8 @@ pct exec 105 -- bash -lc 'if apt-cache show unrar >/dev/null 2>&1; then apt-get 
 
 `UNRAR_ABSENT` : on continue. Ne pas modifier `sources.list`.
 
+**29 oct.** Paquets installés, `ffmpeg` 7:7.1.5-0+deb13u1 en dernier. `apt-cache show unrar` a renvoyé vrai (le paquet est cité, sans candidat) : `apt-get install unrar` s'est arrêté sur `no installation candidate`. Pas de `sources.list`. On continue sans `unrar`.
+
 ## 3. Compte et écriture
 
 Le wiki exige un home. Il est `/var/lib/bazarr`. L'avertissement de locale est le même que pour Sonarr : le compte est créé quand même.
@@ -1523,6 +1527,8 @@ rm -f /tank/mediatheques/telechargements/complets/.ecriture-bazarr
 
 `id` contient `media` (1000). Fichier d'essai : `-rw-rw----`, groupe `media`. Puis effacé. `Permission denied` : s'arrêter.
 
+**29 oct., 10:07.** Avertissement de locale, compte créé. UID 105, GID 108, groupes `bazarr` et `media` (1000). Fichier d'essai `-rw-rw----` `100105 media`, effacé.
+
 ## 4. Application et environnement
 
 L'archive vient de la release GitHub `latest`. Si `/opt/bazarr` existe déjà : s'arrêter.
@@ -1533,7 +1539,7 @@ pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/bazarr.zip https://github.c
 pct exec 105 -- bash -lc 'unzip -l /tmp/bazarr.zip | head'
 ```
 
-`bazarr.py` apparaît sans dossier devant. Si tous les chemins commencent par `bazarr/` : s'arrêter, ne pas extraire.
+`bazarr.py` apparaît sans dossier devant. Si tous les chemins commencent par `bazarr/` : s'arrêter, ne pas extraire. `head` ne suffit pas : l'archive liste d'abord le dossier `bazarr/`. Vérifier avec `unzip -l | grep -E "bazarr\.py|requirements\.txt"`.
 
 ```bash
 pct exec 105 -- bash -lc 'unzip -q /tmp/bazarr.zip -d /opt/bazarr && rm -f /tmp/bazarr.zip'
@@ -1544,6 +1550,8 @@ pct exec 105 -- bash -lc 'runuser -u bazarr -- /var/lib/bazarr/venv/bin/pip inst
 ```
 
 Le `pip` peut être long. Une erreur : coller les vingt dernières lignes. Ne pas relancer avec `--break-system-packages`.
+
+**29 oct., 10:08.** Archive 29,5 Mio, fichiers datés du 26 sep. 01:37. `bazarr.py` et `requirements.txt` à la racine, à côté du dossier `bazarr/`. `pywin32` ignoré (marqueur Windows). Installés : Pillow 13.0.0, lxml 6.1.3, numpy 2.3.5, setuptools 84.2.1, webrtcvad-wheels 2.0.14.post1.
 
 ## 5. Service
 
@@ -1579,11 +1587,13 @@ pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 3
 
 `active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status bazarr` et `journalctl -u bazarr -b --no-pager | tail -n 30`.
 
-La version :
+La version. Le journal ne contient pas le mot « version » : elle est dans le fichier.
 
 ```bash
-pct exec 105 -- bash -lc "journalctl -u bazarr -b --no-pager -o cat | grep -m 1 -i version"
+pct exec 105 -- bash -lc 'cat /opt/bazarr/VERSION'
 ```
+
+**29 oct., 10:11.** `active`. `curl` local : `200`. Fichier `VERSION` : `v1.6.2`. Journal (UTC) : `BAZARR is started and waiting for requests` sur le port 6767.
 
 ## 6. Pare-feu du CT
 
@@ -1605,6 +1615,8 @@ EOF
 ```
 
 **Ne pas** activer le pare-feu datacenter.
+
+**29 oct., 10:12.** Fichier réécrit : 9696, 8989, 7878 et 6767. Datacenter toujours éteint.
 
 ## 7. Compte, Sonarr, Radarr
 
@@ -1631,6 +1643,10 @@ Depuis un poste du LAN : `http://<ip-servarr>:6767`.
 
 S'arrêter. Coller la version et dire si les deux tests ont réussi.
 
+**29 oct., 10:20.** Connecté. Nom du compte non relevé. Mot de passe dans le coffre. Sonarr activé, `127.0.0.1:8989`, SSL décoché, base `/` : le test affiche **4.0.20.3014**. Radarr activé, `127.0.0.1:7878`, SSL décoché : le test affiche **6.4.4.10685**. Pas de mappage. Séries et Films : **LIVE**. Profil `français`, langue FR, profil par défaut des séries et des films ajoutés après coup. La sélection par tag est activée pour les séries seulement (tag `FR`). Pas de fournisseur. Pas de recherche. Les clés d'API ne sont pas recopiées ici.
+
+**29 oct., 10:25.** Clés Sonarr et Radarr régénérées, puis recollées dans Bazarr et dans Prowlarr. Tests déclarés bons. Les anciennes clés ne sont plus celles en service. Valeurs absentes de ce fichier.
+
 ## Retour arrière
 
 ```bash
@@ -1644,8 +1660,283 @@ Remettre `105.fw` avec 9696, 8989 et 7878 seulement. Garder `prowlarr`, `sonarr`
 
 ---
 
+# Indexeur — Knaben (29 oct.)
+
+Un seul indexeur. **Knaben**, méta-moteur torrent public, sans compte. Pas de FlareSolverr. Prowlarr l'interroge depuis la box. Le téléchargement, s'il a lieu, part du compte qBittorrent, donc par Mullvad.
+
+**29 oct., 10:30.** **Test** Knaben réussi dans Prowlarr. L'indexeur apparaît dans Sonarr et dans Radarr (**Settings → Indexers**), poussé par le Full Sync.
+
+**29 oct., 10:35.** Sonarr envoie l'épisode 1 de la saison 3 de *Preacher*. Catégorie qBittorrent `tv-sonarr`. La release n'a pas de seed : rien n'arrive dans `complets/`.
+
+**29 oct., 10:38.** Essai EZTV. **Test** en échec : `Name or service not known (eztvx.to:443)`. Le nom ne se résout pas. Le texte DNS/SSL de Prowlarr est le message générique. Indexeur non gardé. Pas de FlareSolverr.
+
+**29 oct., 10:45.** D'autres indexeurs ont été ajoutés (noms non relevés). Un grab *Preacher* S03E01 part en catégorie `tv-sonarr`. qBittorrent : taille 0 o, statut **Downloading metadata**, seeds `0 (0)`, pairs `0 (2)`. La plupart des trackers : **Not working** (`Host not found`, `certificate verify failed`, `timed out`, `Connection refused`, `No route to host`). Trois trackers **Working**, chacun avec 1 seed. Le tunnel joint ces trackers. Le swarm vivant n'a qu'un seed, et aucune connexion de pair n'aboutit : les métadonnées n'arrivent pas. L'image Debian du 28 oct. avait fini sans redirection de port, sur un swarm beaucoup plus gros. Mullvad n'a pas de transfert de port dans ce montage.
+
+**29 oct., 10:48.** Deuxième grab, autre indexeur. Nom de fichier présent, 852,7 Mio, catégorie `tv-sonarr`, statut **Stalled**, seeds `0 (0)`, pairs `0 (2)`. Plusieurs trackers **Working** avec 1 ou 2 seeds. Les métadonnées sont là. Aucun pair ne se connecte.
+
+**29 oct., 10:57.** Cinq grabs en parallèle, catégorie `tv-sonarr`. Tous en **Downloading metadata**, taille 0 o, seeds `0 (0)`, pairs `0 (2)` ou `0 (3)`. Le client ne reçoit que deux ou trois adresses et n'en connecte aucune. Le décompte du site (jusqu'à 1031 seeds) n'apparaît pas dans qBittorrent. Pas d'indexeur de plus.
+
+---
+
+# Proton — décision (29 oct.)
+
+Le VPN du CT **104** passe sur le compte **Proton VPN** déjà ouvert. qBittorrent, Sonarr et Radarr restent sur `<ip-qbittorrent>`. Le PC, la tablette et Android utilisent l'application Proton : ils ne sont pas dans ces blocs. Bridge non plus.
+
+Proton n'ouvre pas un port fixe. Le tunnel demande un bail de 60 secondes à `10.2.0.1`, et le même numéro tant que le tunnel tient. Un service sous le compte `qbittorrent` le redemande toutes les 45 secondes et, si le numéro change, le pose dans qBittorrent. S'il s'arrête, les pairs entrants perdent le port au bout d'une minute.
+
+Le kill switch ne change pas de principe : uid `qbittorrent`, table `51820`, nftables. Le résolveur change. Mullvad utilise `10.64.0.1`. Le fichier WireGuard de Proton annonce `10.2.0.1`, qui est aussi la passerelle du port. Le port n'est pas ouvert sur la box. qBittorrent continue d'écouter sur `wg0` seulement.
+
+La clé Mullvad en service est copiée (`wg0.conf.mullvad`) avant l'échange. On ne la révoque pas dans ces blocs.
+
+Pas d'ADR. Pas de second client torrent.
+
+---
+
+# Proton — procédure
+
+**Pas jouée.** Blocs **dans l'ordre**. En cas d'erreur : coller la sortie. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas ouvrir le port sur la box, ne pas coller la clé privée ni un mot de passe.
+
+## 0. Fichier WireGuard
+
+Compte Proton VPN → téléchargements → configuration **WireGuard**.
+
+| Champ | Valeur |
+|-------|--------|
+| Nom | `qbittorrent` |
+| Plateforme | celle qui produit un `.conf` (`Linux` ou `Router`, selon la page) |
+| Options | **NAT-PMP** coché. Pas de NAT modéré en même temps |
+| Serveur | **un** serveur marqué P2P (double flèche) |
+
+Un seul `.conf`. Il contient `[Interface]` et `PrivateKey`. Ne pas l'ouvrir dans le dépôt, ne pas le commiter, ne pas coller la clé.
+
+Sur le PC, la ligne DNS seulement :
+
+```powershell
+Select-String -Path "$env:USERPROFILE\Downloads\NOM-DU-FICHIER.conf" -Pattern '^DNS'
+```
+
+Attendu : `DNS = 10.2.0.1`. Autre adresse : s'arrêter et coller cette ligne, pas la clé.
+
+## 1. Constat (sur `pve`, root)
+
+```bash
+pct exec 104 -- systemctl is-active wg-quick@wg0 qbittorrent-nox@qbittorrent
+pct exec 104 -- cat /etc/resolv.conf
+pct exec 104 -- grep -n '10.64.0.1' /etc/nftables.conf /usr/local/sbin/ajuster-wg0.py
+pct exec 104 -- wg show | sed -n '1,8p'
+pct exec 104 -- bash -lc 'apt-cache policy natpmpc'
+```
+
+Attendu : les deux services `active`, `10.64.0.1` dans nftables et dans le script, une poignée de main WireGuard. Coller `resolv.conf`, le `grep` et la version de `natpmpc`. Pas de candidat pour `natpmpc` : s'arrêter. Une version `20150609` : s'arrêter, elle lit mal la réponse.
+
+## 2. Garder Mullvad, poser Proton
+
+```bash
+pct exec 104 -- systemctl stop qbittorrent-nox@qbittorrent
+pct exec 104 -- systemctl stop wg-quick@wg0
+pct exec 104 -- cp -a /etc/wireguard/wg0.conf /etc/wireguard/wg0.conf.mullvad
+pct exec 104 -- chmod 600 /etc/wireguard/wg0.conf.mullvad
+pct exec 104 -- wc -c /etc/wireguard/wg0.conf.mullvad
+```
+
+Taille non nulle. Puis le fichier Proton :
+
+```powershell
+scp "$env:USERPROFILE\Downloads\NOM-DU-FICHIER.conf" root@<ip-pve>:/root/wg0.conf
+```
+
+Sur `pve` :
+
+```bash
+pct push 104 /root/wg0.conf /etc/wireguard/wg0.conf
+rm -f /root/wg0.conf
+pct exec 104 -- chown root:root /etc/wireguard/wg0.conf
+pct exec 104 -- chmod 600 /etc/wireguard/wg0.conf
+```
+
+Effacer le `.conf` dans `Downloads`. Il reste `wg0.conf` (Proton) et `wg0.conf.mullvad`.
+
+## 3. DNS
+
+```bash
+pct exec 104 -- sed -i 's/10\.64\.0\.1/10.2.0.1/g' /usr/local/sbin/ajuster-wg0.py /etc/nftables.conf
+pct exec 104 -- python3 /usr/local/sbin/ajuster-wg0.py
+pct exec 104 -- systemctl restart nftables
+pct exec 104 -- nft list table inet torrent
+```
+
+La sortie du script a `PrivateKey = [présent]` et `10.2.0.1`. Pas de `10.64.0.1`. Le dnat vise `10.2.0.1`.
+
+Si le constat montrait `nameserver 10.64.0.1` :
+
+```bash
+pct exec 104 -- sed -i 's/10\.64\.0\.1/10.2.0.1/' /etc/resolv.conf
+pct exec 104 -- cat /etc/resolv.conf
+```
+
+Si le constat montrait `<ip-box>` : ne pas toucher `resolv.conf`.
+
+## 4. Tunnel, puis coupure
+
+```bash
+pct exec 104 -- systemctl start wg-quick@wg0
+pct exec 104 -- wg show
+pct exec 104 -- ip route show table 51820
+pct exec 104 -- ip route show 10.2.0.1
+pct exec 104 -- runuser -u qbittorrent -- curl -4 -fsS --max-time 20 https://api.ipify.org
+echo
+pct exec 104 -- curl -4 -fsS --max-time 20 https://api.ipify.org
+echo
+```
+
+Poignée de main récente. Table `51820` : `default dev wg0`. Route `10.2.0.1` via `wg0`. Les deux IP diffèrent. La première est Proton. La seconde est la box. Même adresse : s'arrêter, ne pas lancer qBittorrent.
+
+Coupure :
+
+```bash
+pct exec 104 -- systemctl stop wg-quick@wg0
+pct exec 104 -- runuser -u qbittorrent -- curl -4 --max-time 10 -o /dev/null -w '%{http_code}\n' http://1.1.1.1 || true
+pct exec 104 -- curl -4 --max-time 10 -o /dev/null -s -w '%{http_code}\n' http://1.1.1.1
+```
+
+Attendu pour le compte : `000`. Attendu pour root : `301`. Un `301` ou `200` pour le compte : remettre Mullvad (retour arrière) et s'arrêter.
+
+```bash
+pct exec 104 -- systemctl start wg-quick@wg0
+pct exec 104 -- systemctl start qbittorrent-nox@qbittorrent
+pct exec 104 -- systemctl is-active wg-quick@wg0 qbittorrent-nox@qbittorrent
+```
+
+Les deux `active`.
+
+## 5. Le mot de passe web, hors du script
+
+Le service lit le mot de passe de l'interface qBittorrent (`admin`, celui du coffre). Une ligne, sans retour chariot. Ne pas la recoller.
+
+```bash
+pct enter 104
+install -o qbittorrent -g qbittorrent -m 0600 /dev/null /var/lib/qbittorrent/web.pass
+printf '%s' 'MOT_DU_COFFRE' > /var/lib/qbittorrent/web.pass
+chown qbittorrent:qbittorrent /var/lib/qbittorrent/web.pass
+chmod 600 /var/lib/qbittorrent/web.pass
+exit
+```
+
+Dans l'interface `http://<ip-qbittorrent>:8080`, **Connection** : noter le port d'écoute actuel (coffre, retour arrière). Décocher le port aléatoire. **Use UPnP / NAT-PMP** reste décoché. **Advanced** → interface : `wg0`, inchangée.
+
+## 6. Natpmpc, une fois
+
+```bash
+pct exec 104 -- bash -lc 'apt install -y natpmpc'
+pct exec 104 -- runuser -u qbittorrent -- natpmpc -g 10.2.0.1
+pct exec 104 -- runuser -u qbittorrent -- natpmpc -a 1 0 udp 60 -g 10.2.0.1
+pct exec 104 -- runuser -u qbittorrent -- natpmpc -a 1 0 tcp 60 -g 10.2.0.1
+```
+
+La première commande affiche une adresse publique. Les deux suivantes annoncent le **même** port public. Deux ports différents : s'arrêter. Ce bail meurt en 60 secondes : enchaîner le bloc 7 tout de suite.
+
+## 7. Le service qui renouvelle
+
+```bash
+pct exec 104 -- tee /usr/local/sbin/proton-port >/dev/null << 'EOF'
+#!/bin/sh
+set -eu
+gw=10.2.0.1
+api=http://<ip-qbittorrent>:8080
+passfile=/var/lib/qbittorrent/web.pass
+state=/var/lib/qbittorrent/proton-port.last
+cookie=$(mktemp)
+trap 'rm -f "$cookie"' EXIT
+login() {
+  curl -fsS -c "$cookie" --max-time 10 \
+    --data-urlencode "username=admin" \
+    --data-urlencode "password@${passfile}" \
+    "$api/api/v2/auth/login" >/dev/null
+}
+while true; do
+  out=$(natpmpc -a 1 0 udp 60 -g "$gw" && natpmpc -a 1 0 tcp 60 -g "$gw") || {
+    echo "natpmpc en erreur" >&2
+    sleep 10
+    continue
+  }
+  port=$(printf '%s\n' "$out" | sed -n 's/.*public port \([0-9][0-9]*\).*/\1/p' | head -n 1)
+  prev=
+  [ -f "$state" ] && prev=$(cat "$state")
+  if [ -n "$port" ] && [ "$port" != "$prev" ]; then
+    login
+    curl -fsS -b "$cookie" --max-time 10 \
+      --data-urlencode "json={\"listen_port\":${port}}" \
+      "$api/api/v2/app/setPreferences"
+    printf '%s\n' "$port" > "$state"
+    echo "port $port"
+  fi
+  sleep 45
+done
+EOF
+pct exec 104 -- chmod 755 /usr/local/sbin/proton-port
+pct exec 104 -- tee /etc/systemd/system/proton-port.service >/dev/null << 'EOF'
+[Unit]
+After=wg-quick@wg0.service qbittorrent-nox@qbittorrent.service
+BindsTo=wg-quick@wg0.service
+
+[Service]
+User=qbittorrent
+Group=qbittorrent
+ExecStart=/usr/local/sbin/proton-port
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 104 -- systemctl daemon-reload
+pct exec 104 -- systemctl enable --now proton-port
+pct exec 104 -- systemctl is-active proton-port
+pct exec 104 -- journalctl -u proton-port -n 20 --no-pager
+```
+
+`active`. Le journal affiche `port` et un numéro, le même que le bloc 6. Pas de mot de passe dans ces lignes. L'interface qBittorrent, **Connection**, montre ce numéro.
+
+## 8. Le port répond
+
+```bash
+pct exec 104 -- runuser -u qbittorrent -- curl -4 -fsS --max-time 20 https://api.ipify.org
+echo
+```
+
+Depuis le PC, avec cette adresse et le numéro du journal :
+
+```powershell
+Test-NetConnection -ComputerName ADRESSE -Port NUMERO
+```
+
+`TcpTestSucceeded : True`. `False` : coller, s'arrêter.
+
+Les grabs déjà dans qBittorrent restent. On n'en ajoute pas. Au bout de quelques minutes, un pair connecté, ou le bloc 8 seul s'il reste à 0 pair : le port est ouvert, le swarm peut être vide.
+
+Critère : IP différente de la box, coupure à `000`, `TcpTestSucceeded : True`, le service encore `active` après une minute.
+
+## Retour arrière
+
+```bash
+pct exec 104 -- systemctl disable --now proton-port
+pct exec 104 -- systemctl stop qbittorrent-nox@qbittorrent
+pct exec 104 -- systemctl stop wg-quick@wg0
+pct exec 104 -- cp -a /etc/wireguard/wg0.conf.mullvad /etc/wireguard/wg0.conf
+pct exec 104 -- chmod 600 /etc/wireguard/wg0.conf
+pct exec 104 -- sed -i 's/10\.2\.0\.1/10.64.0.1/g' /usr/local/sbin/ajuster-wg0.py /etc/nftables.conf /etc/resolv.conf
+pct exec 104 -- systemctl restart nftables
+pct exec 104 -- systemctl start wg-quick@wg0
+pct exec 104 -- runuser -u qbittorrent -- curl -4 -fsS --max-time 20 https://am.i.mullvad.net/json
+pct exec 104 -- systemctl start qbittorrent-nox@qbittorrent
+```
+
+`"mullvad_exit_ip": true` pour le compte. Dans qBittorrent, remettre le port noté au bloc 5. Effacer `/var/lib/qbittorrent/web.pass` et `proton-port.last`. `wg0.conf.mullvad` reste tant que Proton n'est pas tenu pour bon. La clé Mullvad du CT ne se révoque pas ici.
+
+---
+
 # Ensuite
 
-1. Jouer la procédure Bazarr ci-dessus.
-2. Un indexeur, puis un fichier qui passe par qBittorrent. Recyclarr pas tranché.
-3. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
+1. Jouer la procédure Proton au bloc 0. Le CT 104 ne perd la clé Mullvad qu'au retour arrière. Le PC, la tablette et Android restent sur l'application Proton, hors de ces blocs. Recyclarr pas tranché.
+2. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.

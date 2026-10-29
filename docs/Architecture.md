@@ -318,7 +318,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Prowlarr : LXC 105 `servarr`, `<ip-servarr>:9696`, **2.7.0.5723**, compte `utilisateur` (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Sonarr : même CT, `<ip-servarr>:8989`, **4.0.20.3014**. *Cold Case* reconnue, 178,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Radarr : même CT, `<ip-servarr>:7878`, **6.4.4.10685**. *American History X* **Downloaded**, 1,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ⬜ Bazarr : même CT, port 6767. Procédure écrite, pas jouée. [Mediatheques.md](Mediatheques.md)
+- ✅ Bazarr : même CT, `<ip-servarr>:6767`, **v1.6.2**. Sonarr et Radarr reliés, profil `français`, pas de fournisseur (29 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)

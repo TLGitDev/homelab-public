@@ -1026,3 +1026,12 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-28 | Radarr : catégorie `radarr`. Test qBittorrent réussi. Test Prowlarr réussi. Pas d'indexeur. Pas de film ajouté. |
 | 2026-10-28 | Radarr : *American History X*, `/mnt/mediatheques/films/American History X (1998)`, **Downloaded**, 1,9 Gio, `American History X (1998).mkv`. |
 | 2026-10-28 | Bazarr : procédure écrite pour le CT 105 (venv, port 6767). Pas jouée. Pas de `pip` sur le Python du système. |
+| 2026-10-29 | Bazarr **v1.6.2** sur le CT 105, port 6767. `active`, `curl` local `200`. Sonarr et Radarr testés. Profil `français`. Pas de fournisseur. `unrar` absent. |
+| 2026-10-29 | Clés API Sonarr et Radarr régénérées, mises à jour dans Bazarr et Prowlarr. Tests déclarés bons. Valeurs hors de ce dépôt. |
+| 2026-10-29 | Indexeur Knaben dans Prowlarr. Test réussi. Visible dans Sonarr et Radarr. |
+| 2026-10-29 | Grab *Preacher* S03E01, catégorie `tv-sonarr`, aucun seed. EZTV : `eztvx.to` ne se résout pas. Indexeur non gardé. |
+| 2026-10-29 | Même grab bloqué en **Downloading metadata** (0 o). Trois trackers Working, 1 seed chacun. Pairs `0 (2)`. Pas de connexion. |
+| 2026-10-29 | Deuxième grab *Preacher* S03E01 : 852,7 Mio, **Stalled**, pairs `0 (2)`. Trackers Working à 1–2 seeds. |
+| 2026-10-29 | Cinq grabs *Preacher* S03E01 en **Downloading metadata**, 0 o, pairs `0 (2)` ou `0 (3)`. Le décompte du site n'arrive pas dans qBittorrent. |
+| 2026-10-29 | Transfert de port Mullvad sur le CT 104 : pas de modification. Mullvad l'a retiré le 29 mai 2023. Un port dans qBittorrent n'ouvre pas l'entrée. |
+| 2026-10-29 | Essai AirVPN retiré avant d'être joué. Proton VPN sur le CT 104 : procédure écrite, pas jouée. DNS `10.2.0.1`, bail de port 60 s renouvelé par `proton-port`, clé Mullvad gardée. [Mediatheques.md](Mediatheques.md#proton--décision-29-oct). |
