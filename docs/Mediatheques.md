@@ -1998,7 +1998,7 @@ Pas d'ADR : un outil de plus dans le CT déjà tranché. Lidarr et Navidrome res
 
 # Recyclarr — procédure
 
-**Pas jouée.** Blocs **dans l'ordre**. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas lancer de recherche Sonarr ou Radarr, ne pas changer le profil d'une série ou d'un film déjà importé, ne pas coller une clé d'API.
+**Jouée le 1er nov.** Recyclarr **v8.8.1**, compte `recyclarr` uid 106. Profils `[French MULTi.VO] HD Bluray + WEB` créés dans Sonarr (57 formats) et Radarr (58 formats). *Cold Case* et *American History X* restent sur **Any**. Pas de recherche. Pas de timer. Les blocs ci-dessous ont été joués dans l'ordre. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas coller une clé d'API.
 
 ## 1. Constat (sur `pve`, root)
 
@@ -2011,6 +2011,8 @@ pct exec 105 -- bash -lc 'getent passwd recyclarr || echo PAS_DE_COMPTE'
 
 Attendu : les deux services `active`, un candidat pour chaque paquet, `ABSENT`, `PAS_DE_COMPTE`. Autre chose : s'arrêter.
 
+**1er nov.** Sonarr et Radarr `active`. `git` non installé, candidat `1:2.47.3-0+deb13u1`. `wget` et `ca-certificates` déjà au candidat. `xz-utils` installé en `5.8.1-1`, candidat `5.8.1-1+deb13u2`. Binaire absent. Pas de compte `recyclarr`.
+
 ## 2. Compte et paquets
 
 ```bash
@@ -2022,6 +2024,8 @@ pct exec 105 -- bash -lc 'id recyclarr'
 
 `adduser` peut prévenir que `LANG=en_US.UTF-8` manque : le compte est créé quand même. Home `/var/lib/recyclarr`. Le groupe `media` n'y est pas. Pas d'`apt upgrade`.
 
+**1er nov.** `id` : `uid=106(recyclarr) gid=109(recyclarr) groups=109(recyclarr)`. Pas de groupe `media`.
+
 ## 3. Binaire v8.8.1
 
 ```bash
@@ -2029,14 +2033,18 @@ pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/recyclarr.tar.xz https://gi
 pct exec 105 -- bash -lc 'tar -tJf /tmp/recyclarr.tar.xz'
 ```
 
-La liste est un fichier `recyclarr`, sans dossier. Autre contenu, ou `curl` en erreur : s'arrêter, ne pas extraire.
+`curl` en erreur, ou un dossier dans la liste : s'arrêter, ne pas extraire. Des fichiers à côté du binaire : n'extraire que `recyclarr`.
+
+**1er nov.** Liste : `recyclarr`, `Recyclarr.Api.Radarr.xml`, `Recyclarr.Api.Sonarr.xml`, `Recyclarr.Core.xml`, `recyclarr.xml`. Pas de dossier.
 
 ```bash
-pct exec 105 -- bash -lc 'tar -xJf /tmp/recyclarr.tar.xz -C /usr/local/bin && chmod 755 /usr/local/bin/recyclarr && rm -f /tmp/recyclarr.tar.xz'
-pct exec 105 -- runuser -u recyclarr -- recyclarr --version
+pct exec 105 -- bash -lc 'tar -xJf /tmp/recyclarr.tar.xz -C /usr/local/bin recyclarr && chmod 755 /usr/local/bin/recyclarr && rm -f /tmp/recyclarr.tar.xz'
+pct exec 105 -- runuser -u recyclarr -- /usr/local/bin/recyclarr --version
 ```
 
-La version affichée est `8.8.1`.
+La version affichée est `8.8.1`. Les commandes suivantes gardent ce chemin : sans lui, `runuser` ne trouve pas le binaire.
+
+**1er nov.** Binaire `43318628` octets, `root:root`, `755`. `/usr/local/bin/recyclarr --version` : `v8.8.1`. Le même chemin sous `runuser` aussi.
 
 ## 4. Clés, hors du dépôt
 
@@ -2056,16 +2064,20 @@ chmod 600 /var/lib/recyclarr/.config/recyclarr/secrets.yml
 exit
 ```
 
+**1er nov.** `secrets.yml` : `600 recyclarr:recyclarr`. Les textes `CLE_` ne sont plus dans le fichier. Clés non recopiées ici.
+
 ## 5. Choisir le profil, sans synchro
 
 La première commande télécharge le guide. Elle peut prendre une minute.
 
 ```bash
-pct exec 105 -- runuser -u recyclarr -- recyclarr list quality-profiles sonarr --filter 'MULTi.VO'
-pct exec 105 -- runuser -u recyclarr -- recyclarr list quality-profiles radarr --filter 'MULTi.VO'
+pct exec 105 -- runuser -u recyclarr -- /usr/local/bin/recyclarr list quality-profiles sonarr --filter 'MULTi.VO'
+pct exec 105 -- runuser -u recyclarr -- /usr/local/bin/recyclarr list quality-profiles radarr --filter 'MULTi.VO'
 ```
 
 Pour chaque appli, une seule ligne dont le nom contient `MULTi.VO` et `HD Bluray + WEB`, et pas `UHD`. Zéro ligne, ou plusieurs : s'arrêter et coller la liste. Noter les deux `trash_id`. Ne pas lancer `sync`.
+
+**1er nov.** Sonarr : `[French MULTi.VO] HD Bluray + WEB (1080p)`, `4c48f506c1116a3a57ae33f12346bd15`. Radarr : `[French MULTi.VO] HD Bluray + WEB`, `2572ce3ea4eef1c19d59e0e20ed1cea7`. Les lignes UHD et Remux ne sont pas prises.
 
 ## 6. Fichier
 
@@ -2074,22 +2086,22 @@ Remplacer les deux identifiants par ceux du bloc 5. Rien d'autre.
 ```bash
 pct exec 105 -- tee /var/lib/recyclarr/.config/recyclarr/recyclarr.yml >/dev/null << 'EOF'
 sonarr:
-  multi-vo:
+  sonarr-multi-vo:
     base_url: !secret sonarr_url
     api_key: !secret sonarr_apikey
     delete_old_custom_formats: false
     quality_profiles:
-      - trash_id: REPRENDRE_SONARR
+      - trash_id: 4c48f506c1116a3a57ae33f12346bd15
         reset_unmatched_scores:
           enabled: true
 
 radarr:
-  multi-vo:
+  radarr-multi-vo:
     base_url: !secret radarr_url
     api_key: !secret radarr_apikey
     delete_old_custom_formats: false
     quality_profiles:
-      - trash_id: REPRENDRE_RADARR
+      - trash_id: 2572ce3ea4eef1c19d59e0e20ed1cea7
         reset_unmatched_scores:
           enabled: true
 EOF
@@ -2099,15 +2111,23 @@ pct exec 105 -- chmod 600 /var/lib/recyclarr/.config/recyclarr/recyclarr.yml
 
 Pas de clé dans ce fichier. Pas de bloc `quality_definition`.
 
+**1er nov.** `recyclarr.yml` : `600 recyclarr:recyclarr`. Sonarr `4c48f506c1116a3a57ae33f12346bd15`, Radarr `2572ce3ea4eef1c19d59e0e20ed1cea7`. Clés en `!secret`. Pas de `quality_definition`. Synchro pas encore lancée.
+
 ## 7. Synchro, une fois
 
 Dans Sonarr et Radarr, avant la commande : *Cold Case* et *American History X* sont sur **Any**. La file d'attente n'a pas de mise à niveau lancée pour eux.
 
+Les noms d'instance sont uniques dans tout le fichier. `multi-vo` des deux côtés est refusé.
+
+**1er nov.** Premier `sync` : `Duplicate Instances` / `multi-vo`. Rien n'a été écrit dans Sonarr ni Radarr. Noms séparés ensuite.
+
 ```bash
-pct exec 105 -- runuser -u recyclarr -- recyclarr sync
+pct exec 105 -- runuser -u recyclarr -- /usr/local/bin/recyclarr sync
 ```
 
 Le journal crée un profil dont le nom contient `MULTi.VO`. Il ne parle pas du profil **Any**. S'il le modifie : s'arrêter, coller, ne pas sauvegarder ailleurs.
+
+**1er nov.** Deuxième `sync` : `sonarr-multi-vo` 57 formats et 1 profil, `radarr-multi-vo` 58 formats et 1 profil. Tailles, nommage et gestion des médias : `--`. Interface confirmée : profil MULTi.VO présent des deux côtés, *Cold Case* et *American History X* sur **Any**, file sans recherche nouvelle. Profil non assigné.
 
 Ensuite, dans les deux interfaces : le nouveau profil est là. *Cold Case* et *American History X* sont encore sur **Any**. La file n'a pas de recherche nouvelle. On n'assigne pas le profil. On ne clique pas **Search**.
 
@@ -2126,6 +2146,6 @@ pct exec 105 -- deluser --remove-home recyclarr
 
 # Ensuite
 
-1. Jouer la procédure Recyclarr au bloc 1. Les titres déjà importés restent sur **Any**. [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct).
+1. Recyclarr v8.8.1 est en service sur le CT 105 (1er nov.). Profils MULTi.VO créés, non assignés. Les titres déjà importés restent sur **Any**.
 2. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
 3. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
