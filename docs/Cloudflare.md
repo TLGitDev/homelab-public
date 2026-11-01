@@ -109,6 +109,24 @@ MFA : application TOTP (KeePassXC).
 
 **Jellyfin** : pas de route. Visé après la mise en service LAN : Access, puis le tunnel vers le LXC `http://<ip-jellyfin>:8096`, pas vers Traefik. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct).
 
+## Visé (1er nov., pas joué)
+
+Choix : [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). Aucune de ces routes n'existe encore.
+
+**Interfaces *arr** : un nom par interface, tunnel `homelab`, origine le CT 105, Access devant (même courriel, OTP, TOTP que Proxmox). Le portail est une page de liens vers ces noms, elle aussi derrière Access. Il ne remplace pas Access sur chaque interface.
+
+| Nom visé | Origine |
+|----------|---------|
+| `sonarr.labo.example` | `http://<ip-servarr>:8989` |
+| `radarr.labo.example` | `http://<ip-servarr>:7878` |
+| `prowlarr.labo.example` | `http://<ip-servarr>:9696` |
+| `lidarr.labo.example` | `http://<ip-servarr>:8686` |
+| `bazarr.labo.example` | `http://<ip-servarr>:6767` |
+
+qBittorrent n'est pas dans ce pas.
+
+**Navidrome** : comme Vaultwarden. Nom visé `navidrome.labo.example`, **sans** Access. Les applications téléphone (Tempus, Symfonium) ne passent pas une page Access. Le compte Navidrome est la serrure. L'origine dépend de l'hébergement, pas encore tranché.
+
 ## Deux authentifications indépendantes (Proxmox)
 
 Cloudflare Access répond à : « Qui peut accéder au service ? »

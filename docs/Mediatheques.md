@@ -2144,8 +2144,285 @@ pct exec 105 -- deluser --remove-home recyclarr
 
 ---
 
+# Lidarr — décision (1er nov.)
+
+Lidarr s'installe dans le CT **105**, comme Sonarr et Radarr. Pas un nouveau CT. Pas de Docker. Pas dans K3s. Navidrome ne se pose pas : Jellyfin lit déjà `/mnt/mediatheques/sons`.
+
+Version stable **3.1.6.5079**, branche `master`. La **3.2.0.5144** est une préversion : on ne la prend pas. Recyclarr ne parle pas à Lidarr. Pas de profil MULTi.VO ici.
+
+Le compte `lidarr` rejoint `media`. `UMask=0007`, `Group=lidarr`, `SupplementaryGroups=media`. Les fichiers créés sortent en `0660`, groupe `media`. L'empreinte audio a besoin de `fpcalc` (`libchromaprint-tools`) et de `mediainfo`.
+
+Port **8686**, ajouté à `105.fw` à côté de 9696, 8989, 7878 et 6767. Le pare-feu datacenter reste éteint. LAN seulement.
+
+Ce pas reconnaît les albums déjà dans `sons/`. Il ne les recherche pas, il n'ajoute pas d'artiste, il ne lance pas de téléchargement. Le client qBittorrent, catégorie `lidarr`, se branche après l'import. Même mappage de chemins que Sonarr.
+
+Pas d'ADR : un service de plus dans le CT déjà tranché. Navidrome reste ouvert.
+
+---
+
+# Lidarr — procédure
+
+**Jouée le 1er nov.** Lidarr **3.1.6.5079**, compte `lidarr` uid 107 dans `media`. Service `active`, `curl` local `200`, port 8686. Dossier racine `/mnt/mediatheques/sons`, scan fait, client qBittorrent catégorie `lidarr` testé, application Prowlarr testée. Pas de recherche lancée. Les blocs ci-dessous ont été joués dans l'ordre. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas coller un mot de passe ni une clé d'API.
+
+## 1. Constat (sur `pve`, root)
+
+```bash
+pct exec 105 -- systemctl is-active prowlarr sonarr radarr
+pct exec 105 -- bash -lc 'apt-cache policy curl sqlite3 mediainfo libchromaprint-tools'
+pct exec 105 -- bash -lc 'test ! -e /opt/Lidarr && echo ABSENT'
+pct exec 105 -- bash -lc 'getent passwd lidarr || echo PAS_DE_COMPTE'
+pct exec 105 -- runuser -u sonarr -- test -d /mnt/mediatheques/sons && echo SONS_OK
+```
+
+Attendu : les trois services `active`, un candidat pour chaque paquet, `ABSENT`, `PAS_DE_COMPTE`, `SONS_OK`. Le `SONS_OK` se fait sous `sonarr` : le root du CT n'est pas dans `media` et le mode `2770` lui refuse `sons/`. Autre chose : s'arrêter.
+
+**1er nov.** Prowlarr, Sonarr et Radarr `active`. `curl` et `sqlite3` déjà au candidat. `mediainfo` candidat `25.04-1`, `libchromaprint-tools` candidat `1.5.1-7`, aucun des deux installé. `/opt/Lidarr` absent. Pas de compte `lidarr`. Sur l'hôte, `sons/` est `drwxrws--- root:media`, 171 entrées. Le root du CT : `Permission denied`. Sous `sonarr` : `SONS_OK`.
+
+## 2. Paquets
+
+```bash
+pct exec 105 -- bash -lc 'apt-get update && apt-get install -y mediainfo libchromaprint-tools'
+pct exec 105 -- bash -lc 'command -v fpcalc && command -v mediainfo'
+```
+
+Les deux commandes répondent par un chemin. Pas d'`apt upgrade`.
+
+**1er nov.** `/usr/bin/fpcalc` et `/usr/bin/mediainfo`.
+
+## 3. Compte et écriture
+
+```bash
+pct exec 105 -- bash -lc 'getent passwd lidarr || adduser --system --group --home /var/lib/lidarr --shell /usr/sbin/nologin lidarr'
+pct exec 105 -- bash -lc 'install -d -o lidarr -g lidarr -m 0750 /var/lib/lidarr'
+pct exec 105 -- bash -lc 'usermod -aG media lidarr && id lidarr'
+pct exec 105 -- bash -lc 'runuser -u lidarr -- bash -c "umask 0007; touch /mnt/mediatheques/sons/.ecriture-lidarr"'
+ls -l /tank/mediatheques/sons/.ecriture-lidarr
+rm -f /tank/mediatheques/sons/.ecriture-lidarr
+```
+
+`id` contient `media` (1000). Home `/var/lib/lidarr`. `adduser` peut prévenir que `LANG=en_US.UTF-8` manque : le compte est créé quand même. Le `ls` attendu : `-rw-rw----`, groupe `media`. `Permission denied` : s'arrêter, ne pas télécharger Lidarr. Le `rm` ne retire que `.ecriture-lidarr`.
+
+**1er nov.** Avertissement de locale, compte créé. `uid=107(lidarr) gid=110(lidarr) groups=110(lidarr),1000(media)`. Fichier d'essai `-rw-rw---- 1 100107 media`, effacé.
+
+## 4. Binaire 3.1.6.5079
+
+Si `/opt/Lidarr` existe : s'arrêter.
+
+```bash
+pct exec 105 -- bash -lc 'curl -fL --retry 3 -o /tmp/Lidarr.tar.gz https://github.com/Lidarr/Lidarr/releases/download/v3.1.6.5079/Lidarr.master.3.1.6.5079.linux-core-x64.tar.gz'
+pct exec 105 -- bash -lc 'echo "fed16c58f5de797be955e830a3a93994f020c1d8d60f5a6cb061d7647d45b8bc  /tmp/Lidarr.tar.gz" | sha256sum -c'
+pct exec 105 -- bash -lc 'tar -tzf /tmp/Lidarr.tar.gz | head'
+```
+
+`sha256sum` affiche `OK`. Les chemins commencent par `Lidarr/`. Un `tar: stdout: write error` après ces lignes vient de `head`. Sinon : s'arrêter, ne pas extraire.
+
+**1er nov.** Archive `98.6M`. `sha256sum` : `OK`. Liste en tête `Lidarr/`, puis `tar: stdout: write error` (`head`). Pas encore extraite.
+
+```bash
+pct exec 105 -- bash -lc 'tar -xzf /tmp/Lidarr.tar.gz -C /opt && chown -R lidarr:lidarr /opt/Lidarr && rm -f /tmp/Lidarr.tar.gz'
+pct exec 105 -- bash -lc 'ls -ld /opt/Lidarr /opt/Lidarr/Lidarr'
+```
+
+Le répertoire et le binaire appartiennent à `lidarr`.
+
+## 5. Service
+
+```bash
+pct exec 105 -- tee /etc/systemd/system/lidarr.service >/dev/null << 'EOF'
+[Unit]
+Description=Lidarr Daemon
+After=syslog.target network.target
+
+[Service]
+User=lidarr
+Group=lidarr
+SupplementaryGroups=media
+UMask=0007
+Type=simple
+ExecStart=/opt/Lidarr/Lidarr -nobrowser -data=/var/lib/lidarr/
+TimeoutStopSec=20
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- systemctl enable --now lidarr
+pct exec 105 -- systemctl is-active lidarr
+pct exec 105 -- bash -lc 'curl -sS -o /dev/null -w "%{http_code}\n" --max-time 30 http://127.0.0.1:8686 || true'
+```
+
+`active`. Code HTTP `200` ou `302`. Un `000` : attendre dix secondes et relancer le `curl`. Encore `000` : coller `systemctl status lidarr` et les vingt dernières lignes du journal. Ne pas retélécharger l'archive.
+
+**1er nov.** `enable --now` sans erreur. `is-active` : `active`. `curl` local : `200`.
+
+## 6. Pare-feu du CT
+
+Sur `pve`, pas dans le CT. Les quatre ports déjà ouverts restent. On ajoute **8686**.
+
+```bash
+cat > /etc/pve/firewall/105.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 9696
+IN ACCEPT -source <réseau-lan> -p tcp -dport 8989
+IN ACCEPT -source <réseau-lan> -p tcp -dport 7878
+IN ACCEPT -source <réseau-lan> -p tcp -dport 6767
+IN ACCEPT -source <réseau-lan> -p tcp -dport 8686
+EOF
+```
+
+**Ne pas** activer le pare-feu datacenter.
+
+## 7. Compte web
+
+Depuis un poste du LAN : `http://<ip-servarr>:8686`.
+
+**Forms**, **Enabled**, un mot de passe dans le coffre. **Allowed Hosts** vide. Ne pas coller le mot de passe ici. Pas de dossier racine, pas de client, pas d'artiste dans ce bloc.
+
+**1er nov.** Compte créé. Nom non relevé. Mot de passe dans le coffre. Pas de dossier racine, pas de client, pas d'artiste.
+
+## 8. Dossier racine, sans recherche
+
+**Settings** → **Media Management**. Le renommage reste décoché. L'écriture des tags dans les fichiers reste décochée. **Use Hardlinks instead of Copy** coché. Enregistrer ces cases avant d'ajouter le dossier.
+
+**Root Folders** → **+**. Il n'y a pas d'autre menu d'import : enregistrer ce dossier lance le scan tout de suite, sans bouton pour l'annuler.
+
+| Champ | Valeur |
+|-------|--------|
+| Name | `sons` |
+| Path | `/mnt/mediatheques/sons` |
+| Monitor | `Existing` |
+| Monitor New Items | `None` |
+| Quality Profile | `Any`, s'il est proposé |
+
+Pas de case **Search**. **Save**.
+
+Le scan reconnaît les fichiers déjà là. Il ne les télécharge pas. **Activity** → **Queue** reste vide de téléchargements. L'avancement est dans **System** → **Tasks**. Une recherche qui part : coller ce qui s'affiche. Ne pas ajouter d'artiste à la main.
+
+**1er nov.** Dossier racine enregistré. Scan annoncé fini. La file n'a pas été recollée.
+
+## 9. qBittorrent
+
+**Settings** → **Download Clients** → **+** → **qBittorrent**.
+
+| Champ | Valeur |
+|-------|--------|
+| Name | `qBittorrent` |
+| Host | `<ip-qbittorrent>` |
+| Port | `8080` |
+| Username | `admin` |
+| Password | celui du coffre |
+| Category | `lidarr` |
+
+SSL, URL base et clé d'API vides. **Remove Completed** coché. **Test**, puis **Save**.
+
+**Remote Path Mappings** → **+**.
+
+| Champ | Valeur |
+|-------|--------|
+| Host | `<ip-qbittorrent>` |
+| Remote Path | `/mnt/telechargements/` |
+| Local Path | `/mnt/mediatheques/telechargements/` |
+
+**Save**. Pas de téléchargement pour vérifier le client.
+
+**1er nov.** Client `qBittorrent` testé, catégorie `lidarr`, mappage enregistré. Pas de téléchargement lancé.
+
+## 10. Prowlarr
+
+Dans Prowlarr, `http://<ip-servarr>:9696` → **Settings** → **Apps** → **+** → **Lidarr**.
+
+La clé d'API est dans Lidarr → **Settings** → **General** → **Security**. La copier dans le coffre et dans ce formulaire. Ne pas la coller ici.
+
+| Champ | Valeur |
+|-------|--------|
+| Prowlarr Server | `http://<ip-servarr>:9696` |
+| Lidarr Server | `http://<ip-servarr>:8686` |
+| API Key | la clé Lidarr |
+| Sync Level | Full Sync |
+
+**Test**, puis **Save**. Pas d'artiste ajouté. Pas de **Search**.
+
+**1er nov.** Application Lidarr dans Prowlarr : **Test** réussi. Pas de recherche.
+
+## Retour arrière
+
+Les artistes importés se retirent dans l'interface avant de retirer le service. Ça ne supprime pas les fichiers de `sons/`.
+
+```bash
+pct exec 105 -- systemctl disable --now lidarr
+pct exec 105 -- rm -rf /opt/Lidarr /var/lib/lidarr /etc/systemd/system/lidarr.service
+pct exec 105 -- systemctl daemon-reload
+pct exec 105 -- bash -lc 'deluser lidarr || true'
+```
+
+Sur `pve`, réécrire `105.fw` sans la ligne 8686. Garder 9696, 8989, 7878 et 6767. Garder `prowlarr`, `sonarr`, `radarr`, `bazarr`, `recyclarr` et le groupe `media`.
+
+---
+
+# Navidrome et portail — choix (1er nov.)
+
+**Pas joué.** Aucune route ajoutée au tunnel. Navidrome n'est pas installé. Aucun port ouvert sur la box.
+
+Navidrome est retenu. Jellyfin reste le lecteur vidéo. Le téléphone aura un client musique, Tempus ou Symfonium : le choix se fait après, en testant les deux sur la même adresse. FIP et les favoris Radio France ne sont pas dans ce pas.
+
+## Navidrome
+
+Même schéma que Vaultwarden. Un nom public dans le tunnel `homelab`, HTTPS terminé par Cloudflare, **pas** d'Access devant. Le compte Navidrome est la serrure, pour l'interface web et pour l'application. Tempus et Symfonium ne passent pas une page Access.
+
+Nom visé, pas créé : `navidrome.labo.example`. L'origine sera l'adresse du service une fois l'hébergement tranché. La même adresse sert à la maison et en déplacement. Le flux audio passe par Cloudflare.
+
+Navidrome lit `sons/`. Il ne télécharge pas : Lidarr s'en charge. Il ne remplace pas Jellyfin pour les films et les séries.
+
+Hébergement pas tranché. À trancher avant la procédure : où il tourne, quel port, quel montage. Piste : un LXC en lecture seule sur `tank/mediatheques`, comme Jellyfin, pas le CT 105 (celui-là écrit). Pas de Docker si on reste dans la lignée des CT média. Pas dans K3s tant que ce choix n'est pas repris. Pas d'ADR tant que l'hébergement n'est pas tranché.
+
+Ordre prévu :
+
+1. Trancher l'hébergement.
+2. Installer, vérifier la lecture sur le LAN.
+3. Ajouter la route du tunnel, sans Access.
+4. Tester Tempus et Symfonium sur `navidrome.labo.example`.
+
+## Interfaces *arr
+
+Le portail est une page de liens. Il ne publie pas les interfaces. Chaque bouton vise un nom déjà dans le tunnel, avec Access devant, même règle que Proxmox : `personne@labo.example`, OTP, TOTP. Refus par défaut. Puis le login du logiciel.
+
+À la maison comme en déplacement, ces noms passent par Cloudflare et le tunnel revient sur le CT 105. Les adresses `<ip-servarr>` restent le LAN. Aucune redirection de port.
+
+Noms visés, pas créés. Origine HTTP, le HTTPS public est celui de Cloudflare. Pas Traefik : ces services sont sur le CT 105, pas sur K3s.
+
+| Nom visé | Origine |
+|----------|---------|
+| `sonarr.labo.example` | `http://<ip-servarr>:8989` |
+| `radarr.labo.example` | `http://<ip-servarr>:7878` |
+| `prowlarr.labo.example` | `http://<ip-servarr>:9696` |
+| `lidarr.labo.example` | `http://<ip-servarr>:8686` |
+| `bazarr.labo.example` | `http://<ip-servarr>:6767` |
+
+Le portail a son propre nom, pas choisi, lui aussi derrière Access. Ses boutons pointent vers les cinq noms ci-dessus. Le logiciel de cette page n'est pas choisi. Elle ne s'installe pas dans le CT 100 : ce CT ne fait tourner que `cloudflared`.
+
+Hors de ce pas : qBittorrent, Jellyfin, Recyclarr (pas d'interface), Proxmox et Argo CD (déjà publiés).
+
+Ordre prévu :
+
+1. Créer les cinq noms et les cinq routes, Access devant chacune.
+2. Vérifier chaque interface depuis l'extérieur : Access, puis le login du logiciel.
+3. Choisir la page de liens et son hébergement, la publier derrière Access, boutons vers les cinq noms.
+
+Pas d'ADR : on applique le tunnel déjà tranché ([ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md)). Deux cas déjà connus : Access comme Proxmox, ou pas d'Access comme Vaultwarden.
+
+---
+
 # Ensuite
 
-1. Recyclarr v8.8.1 est en service sur le CT 105 (1er nov.). Profils MULTi.VO créés, non assignés. Les titres déjà importés restent sur **Any**.
-2. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
-3. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
+1. Navidrome est retenu (1er nov.), pas installé. Hébergement à trancher, puis LAN, puis tunnel sans Access. [Choix](#navidrome-et-portail--choix-1er-nov).
+2. Interfaces *arr : cinq noms visés, Access, puis une page de liens. Pas joué. qBittorrent hors de ce pas.
+3. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
+4. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
+5. Sauvegardes des configs, restauration testée.

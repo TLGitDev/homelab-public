@@ -36,7 +36,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 |---------|------|
 | Matériel | Validé (Node 804, Ryzen 7 5700G, 32 Go, NVMe 2 To, 2× IronWolf 8 To) |
 | Hyperviseur | Proxmox VE sur ZFS (`rpool`), IP `<ip-pve>` |
-| Accès distant | Tunnel ; Access sur Proxmox et Argo CD ; Vaultwarden sans Access |
+| Accès distant | Tunnel ; Access sur Proxmox et Argo CD ; Vaultwarden sans Access. *arr et Navidrome : choix écrit le 1er nov., pas joué |
 | Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
 | Cluster | K3s (`<ip-k3s-01>`), Traefik |
 | Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |

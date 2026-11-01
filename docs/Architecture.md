@@ -177,7 +177,7 @@ Aucune couche ne protège seule l'infrastructure. Le détail des couches d'accè
 
 ## Refus par défaut
 
-Pour les services derrière Access (Proxmox, Argo CD), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden n'est pas derrière Access. Politique : [Cloudflare.md](Cloudflare.md).
+Pour les services derrière Access (Proxmox, Argo CD), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden n'est pas derrière Access. Visé le 1er nov., pas joué : les interfaces *arr derrière Access, Navidrome sans Access. Politique : [Cloudflare.md](Cloudflare.md).
 
 ---
 
@@ -320,6 +320,9 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Radarr : même CT, `<ip-servarr>:7878`, **6.4.4.10685**. *American History X* **Downloaded**, 1,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Bazarr : même CT, `<ip-servarr>:6767`, **v1.6.2**. Sonarr et Radarr reliés, profil `français`, pas de fournisseur (29 oct.). [Mediatheques.md](Mediatheques.md)
 - ✅ Recyclarr : même CT, binaire **v8.8.1**, pas d'interface. Profils MULTi.VO créés, non assignés (1er nov.). [Mediatheques.md](Mediatheques.md)
+- ✅ Lidarr : même CT, `<ip-servarr>:8686`, **3.1.6.5079**. `sons/` importé, pas de recherche (1er nov.). [Mediatheques.md](Mediatheques.md)
+- ⬜ Navidrome retenu (1er nov.), pas installé. Tunnel sans Access. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
+- ⬜ Page de liens des interfaces *arr, chaque nom derrière Access. Pas joué. [Cloudflare.md](Cloudflare.md#visé-1er-nov-pas-joué)
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
 - ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
