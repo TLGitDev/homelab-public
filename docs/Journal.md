@@ -1045,3 +1045,5 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-11-02 | Navidrome **0.64.2** en service sur le LAN, CT 106, `<ip-navidrome>:4533`. Compte web créé, nom non relevé. Bibliothèque déclarée visible. Tunnel pas créé. |
 | 2026-11-02 | Route `navidrome.labo.example` → `http://<ip-navidrome>:4533`, sans Access. `https://navidrome.labo.example` : `302` vers `/app/`, titre Navidrome 0.64.2. |
 | 2026-11-02 | Symfonium **15.1.0** lit Navidrome sur `https://navidrome.labo.example`. Tempus pas testé. Jalon Navidrome coché. |
+| 2026-11-02 | Cinq noms *arr dans le tunnel `homelab`, Access devant, origine HTTP sur le CT 105. Login vérifié : Sonarr, Radarr, Prowlarr, Lidarr, Bazarr. Sonarr a d'abord répondu 502, origine corrigée. qBittorrent hors de ce pas. |
+| 2026-11-02 | Page de liens des interfaces *arr abandonnée. Les cinq noms suffisent. Jalon coché. |

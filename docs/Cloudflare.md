@@ -57,6 +57,13 @@ http://<ip-k3s-01>:80   (Traefik, **avec** Access)
 navidrome.labo.example
         ↓
 http://<ip-navidrome>:4533   (CT 106, **sans** Access)
+
+sonarr.labo.example      → http://<ip-servarr>:8989
+radarr.labo.example      → http://<ip-servarr>:7878
+prowlarr.labo.example    → http://<ip-servarr>:9696
+lidarr.labo.example      → http://<ip-servarr>:8686
+bazarr.labo.example      → http://<ip-servarr>:6767
+        (CT 105, **avec** Access)
 ```
 
 Proxmox : origin **HTTPS**. Vaultwarden et Argo CD : origin **HTTP** ; le HTTPS public est celui de Cloudflare. Traefik distingue les services par hostname. Détail : [Vaultwarden.md](Vaultwarden.md), [ArgoCD.md](ArgoCD.md).
@@ -115,21 +122,19 @@ MFA : application TOTP (KeePassXC).
 
 **Navidrome** (`navidrome.labo.example`) : pas d'Access. L'application authentifie déjà ses clients, comme Vaultwarden. Origine `http://<ip-navidrome>:4533`. En service le 2 nov. : `https://navidrome.labo.example` répond `302` vers `/app/`, interface Navidrome **0.64.2**. [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov).
 
-## Visé (1er nov., pas joué)
+**Interfaces *arr** (2 nov.) : Access actif, même courriel, OTP et TOTP que Proxmox. Puis le login du logiciel. Origine HTTP sur le CT 105. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
 
-Choix : [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). La route Navidrome existe. Les cinq noms *arr, non.
-
-**Interfaces *arr** : un nom par interface, tunnel `homelab`, origine le CT 105, Access devant (même courriel, OTP, TOTP que Proxmox). Le portail est une page de liens vers ces noms, elle aussi derrière Access. Il ne remplace pas Access sur chaque interface.
-
-| Nom visé | Origine |
-|----------|---------|
+| Nom | Origine |
+|-----|---------|
 | `sonarr.labo.example` | `http://<ip-servarr>:8989` |
 | `radarr.labo.example` | `http://<ip-servarr>:7878` |
 | `prowlarr.labo.example` | `http://<ip-servarr>:9696` |
 | `lidarr.labo.example` | `http://<ip-servarr>:8686` |
 | `bazarr.labo.example` | `http://<ip-servarr>:6767` |
 
-qBittorrent n'est pas dans ce pas.
+## Page de liens abandonnée (2 nov.)
+
+Les cinq noms suffisent. Pas de page, pas de nom, pas de logiciel. qBittorrent n'est pas publié. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
 
 ## Deux authentifications indépendantes (Proxmox)
 

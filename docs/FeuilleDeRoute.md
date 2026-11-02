@@ -210,7 +210,7 @@ Services **visés**, pas déployés :
 | Recyclarr | Config Radarr / Sonarr |
 | Navidrome | Lecteur musique, en service (2 nov.) |
 
-Ordre utile : datasets et droits → Jellyfin (fichiers déjà là) → qBittorrent isolé → Prowlarr puis Sonarr / Radarr → Bazarr / Recyclarr → Lidarr → Navidrome → page de liens des interfaces *arr → backups des **configs**.
+Ordre utile : datasets et droits → Jellyfin (fichiers déjà là) → qBittorrent isolé → Prowlarr puis Sonarr / Radarr → Bazarr / Recyclarr → Lidarr → Navidrome → backups des **configs**.
 
 Les médias récupérables n'ont pas le même besoin de backup que les photos ou documents irremplaçables. Les configurations et métadonnées, si.
 
@@ -220,7 +220,7 @@ Travail : [Mediatheques.md](Mediatheques.md).
 
 ## Jalons
 
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr **v8.8.1** sur le CT 105 (1er nov.) : profils MULTi.VO créés, non assignés. Lidarr **3.1.6.5079** sur le même CT (1er nov.), port 8686, `sons/` importé sans recherche. Navidrome retenu le 1er nov. (lecteur téléphone). Hébergement tranché le 2 nov. : LXC 106, `<ip-navidrome>`, lecture seule, paquet **0.64.2**, port 4533. Public : `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée le 2 nov. Tempus pas testé. Interfaces *arr visées hors LAN : un nom chacune, Access devant, puis une page de liens. Pas joué. qBittorrent hors de ce pas.
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr **v8.8.1** sur le CT 105 (1er nov.) : profils MULTi.VO créés, non assignés. Lidarr **3.1.6.5079** sur le même CT (1er nov.), port 8686, `sons/` importé sans recherche. Navidrome retenu le 1er nov. (lecteur téléphone). Hébergement tranché le 2 nov. : LXC 106, `<ip-navidrome>`, lecture seule, paquet **0.64.2**, port 4533. Public : `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée le 2 nov. Tempus pas testé. Interfaces *arr hors LAN (2 nov.) : un nom chacune, Access devant, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas.
 
 - ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
@@ -235,7 +235,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 - ✅ Recyclarr v8.8.1, CT 105, binaire (1er nov.). Profil MULTi.VO créé dans Sonarr et Radarr, non assigné. **Any** inchangé — [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct)
 - ✅ Lidarr 3.1.6.5079, CT 105, port 8686 (1er nov.). `sons/` importé, client qBittorrent et Prowlarr testés. Pas de recherche — [Mediatheques.md](Mediatheques.md#lidarr--décision-1er-nov)
 - ✅ Navidrome en service (2 nov.), CT 106 `.90:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé — [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
-- ⬜ Interfaces *arr hors LAN : cinq noms, Access, page de liens. Pas joué. qBittorrent hors de ce pas — [Cloudflare.md](Cloudflare.md#visé-1er-nov-pas-joué)
+- ✅ Interfaces *arr hors LAN (2 nov.) : cinq noms, Access, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas — [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
 - ⬜ Configs sauvegardées, restauration testée
 
 ---
@@ -263,7 +263,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 **Dépendances** : dès que plusieurs services sont en prod ; à approfondir après les phases 3–5.
 
 - Rôles de Traefik, du tunnel Cloudflare, des accès LAN. [Cloudflare.md](Cloudflare.md), [ArgoCD.md](ArgoCD.md).
-- Interfaces *arr et Navidrome : choix écrit le 1er nov., pas joué. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
+- Interfaces *arr : cinq noms en service, Access (2 nov.). Page de liens abandonnée. Navidrome en service, sans Access. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
 - Étudier WireGuard pour l'accès privé distant (**pas décidé**).
 - Séparer services publics et interfaces d'admin.
 - Contrôles utiles : dispo, disque, ZFS, sauvegardes — pas dix tableaux vides.
@@ -283,7 +283,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
 | Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
-| Accès distant | Tunnel en place. *arr : Access. Navidrome : sans Access. Page de liens visée, pas jouée. WireGuard pas décidé | Phase 6 |
+| Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 6 |
 | Supervision | Indicateurs et alertes utiles | Phases 0 et 6 |
 
 Pas d'ADR tant que le choix n'est pas tranché.

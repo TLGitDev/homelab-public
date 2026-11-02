@@ -2368,7 +2368,7 @@ Sur `pve`, réécrire `105.fw` sans la ligne 8686. Garder 9696, 8989, 7878 et 67
 
 # Navidrome et portail — choix (1er nov.)
 
-**Pas joué.** Aucune route ajoutée au tunnel. Navidrome n'est pas installé. Aucun port ouvert sur la box.
+Navidrome et les cinq noms *arr sont en service (2 nov.). Aucun port ouvert sur la box. La page de liens est abandonnée le 2 nov.
 
 Navidrome est retenu. Jellyfin reste le lecteur vidéo. Symfonium **15.1.0** lit `navidrome.labo.example` (2 nov.). Tempus pas testé. FIP et les favoris Radio France ne sont pas dans ce pas.
 
@@ -2391,11 +2391,11 @@ Ordre prévu :
 
 ## Interfaces *arr
 
-Le portail est une page de liens. Il ne publie pas les interfaces. Chaque bouton vise un nom déjà dans le tunnel, avec Access devant, même règle que Proxmox : `personne@labo.example`, OTP, TOTP. Refus par défaut. Puis le login du logiciel.
+Chaque interface a son nom, avec Access devant, même règle que Proxmox : `personne@labo.example`, OTP, TOTP. Refus par défaut. Puis le login du logiciel. Une page de liens ne publie pas ces interfaces. Elle était prévue, elle est abandonnée le 2 nov. On ouvre chaque nom directement.
 
 À la maison comme en déplacement, ces noms passent par Cloudflare et le tunnel revient sur le CT 105. Les adresses `<ip-servarr>` restent le LAN. Aucune redirection de port.
 
-Noms visés, pas créés. Origine HTTP, le HTTPS public est celui de Cloudflare. Pas Traefik : ces services sont sur le CT 105, pas sur K3s.
+En service le 2 nov. Origine HTTP, le HTTPS public est celui de Cloudflare. Pas Traefik : ces services sont sur le CT 105, pas sur K3s. Access devant chacun, même règle que Proxmox. Login du logiciel vérifié dans le navigateur. Le premier essai Sonarr a répondu 502 : l'origine du tunnel était mauvaise. Corrigée en HTTP `<ip-servarr>:8989`, sans schéma dans le champ URL. Les quatre suivants ont repris ce réglage.
 
 | Nom visé | Origine |
 |----------|---------|
@@ -2405,15 +2405,15 @@ Noms visés, pas créés. Origine HTTP, le HTTPS public est celui de Cloudflare.
 | `lidarr.labo.example` | `http://<ip-servarr>:8686` |
 | `bazarr.labo.example` | `http://<ip-servarr>:6767` |
 
-Le portail a son propre nom, pas choisi, lui aussi derrière Access. Ses boutons pointent vers les cinq noms ci-dessus. Le logiciel de cette page n'est pas choisi. Elle ne s'installe pas dans le CT 100 : ce CT ne fait tourner que `cloudflared`.
+Page de liens abandonnée le 2 nov. Pas de nom, pas de logiciel, pas d'hébergement. Le CT 100 ne fait tourner que `cloudflared`.
 
 Hors de ce pas : qBittorrent, Jellyfin, Recyclarr (pas d'interface), Proxmox et Argo CD (déjà publiés).
 
 Ordre prévu :
 
-1. Créer les cinq noms et les cinq routes, Access devant chacune.
-2. Vérifier chaque interface depuis l'extérieur : Access, puis le login du logiciel.
-3. Choisir la page de liens et son hébergement, la publier derrière Access, boutons vers les cinq noms.
+1. Créer les cinq noms et les cinq routes, Access devant chacune. Fait le 2 nov.
+2. Vérifier chaque interface depuis l'extérieur : Access, puis le login du logiciel. Fait le 2 nov.
+3. Page de liens. Abandonnée le 2 nov.
 
 Pas d'ADR : on applique le tunnel déjà tranché ([ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md)). Deux cas déjà connus : Access comme Proxmox, ou pas d'Access comme Vaultwarden.
 
@@ -2436,7 +2436,7 @@ Ressources : 2 Gio de RAM, 2 cœurs, disque 8 Gio. Le binaire, SQLite et le cach
 
 Ce pas : LAN seulement. Pas de route dans le tunnel. Le nom `navidrome.labo.example` attend que la lecture LAN soit vérifiée. Pare-feu du CT : TCP 4533 depuis `<réseau-lan>`. Le pare-feu datacenter reste éteint. On ne l'allume pas ici.
 
-Pas d'ADR : un hébergement est tranché pour Navidrome. Le critère général VM / LXC / K3s reste ouvert pour la page de liens.
+Pas d'ADR : un hébergement est tranché pour Navidrome. Le critère général VM / LXC / K3s reste ouvert.
 
 ---
 
@@ -2637,7 +2637,7 @@ Garder `root:987:1` dans `/etc/subgid` : les CT 103, 104 et 105 s'en servent. Ga
 # Ensuite
 
 1. Navidrome est en service (2 nov.), CT 106. LAN `http://<ip-navidrome>:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé. [Décision](#navidrome--décision-2-nov).
-2. Interfaces *arr : cinq noms visés, Access, puis une page de liens. Pas joué. qBittorrent hors de ce pas.
+2. Cinq noms *arr en service (2 nov.), Access devant, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas.
 3. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
 4. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
 5. Sauvegardes des configs, restauration testée.
