@@ -142,6 +142,6 @@ Ne jamais versionner clé SSH privée, mot de passe Restic, ni archive.
 
 Pull : SSH/SCP, clé `/root/.ssh/id_ed25519_backup_k3s`, SHA-256, `tar -tf`, pas d'écrasement si hash différent, 7 archives. Premier tar auto confirmé : `vaultwarden-2026-10-20_030012.tar`. Détail : [Vaultwarden.md](Vaultwarden.md#pve--0315).
 
-USB : Restic de `/tank/backups` + dossiers perso live (script Git 24 oct.). [Sauvegardes.md](Sauvegardes.md#usb--restic).
+USB : Restic de `/tank/backups` + dossiers perso live (script Git 24 oct.). Configs médiathèques dans le snapshot `<snapshot>` (2 nov.). [Sauvegardes.md](Sauvegardes.md#configs-médiathèques-2-nov).
 
 SMB : LXC `samba` (`<ip-samba>`), cinq partages, user `utilisateur`, pas Internet. (document privé).

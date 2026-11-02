@@ -2640,4 +2640,4 @@ Garder `root:987:1` dans `/etc/subgid` : les CT 103, 104 et 105 s'en servent. Ga
 2. Cinq noms *arr en service (2 nov.), Access devant, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas.
 3. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
 4. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.
-5. Sauvegardes des configs, restauration testée.
+5. Configs des CT 103, 104, 105 et 106 archivées le 2 nov. dans `/tank/backups/mediatheques`. Restauration lue. USB : snapshot `<snapshot>`. [Sauvegardes.md](Sauvegardes.md#configs-médiathèques-2-nov).

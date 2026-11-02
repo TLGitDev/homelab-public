@@ -236,7 +236,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 - ✅ Lidarr 3.1.6.5079, CT 105, port 8686 (1er nov.). `sons/` importé, client qBittorrent et Prowlarr testés. Pas de recherche — [Mediatheques.md](Mediatheques.md#lidarr--décision-1er-nov)
 - ✅ Navidrome en service (2 nov.), CT 106 `.90:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé — [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
 - ✅ Interfaces *arr hors LAN (2 nov.) : cinq noms, Access, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas — [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
-- ⬜ Configs sauvegardées, restauration testée
+- ✅ Configs médiathèques (2 nov.) : `/tank/backups/mediatheques`, restauration lue (`ok`), USB `<snapshot>` — [Sauvegardes.md](Sauvegardes.md#configs-médiathèques-2-nov)
 
 ---
 

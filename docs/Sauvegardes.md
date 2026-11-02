@@ -123,10 +123,35 @@ Détail coffre : [Vaultwarden.md](Vaultwarden.md#sauvegarde). Scripts `pve` : [P
 | SealedSecret (`sealed-secret.yaml`) | Git | le ciphertext, pas la clé du controller |
 | Clé TLS du controller Sealed Secrets | k3s-01 `~/backups/sealed-secrets/` **et** copie manuelle `/tank/backups/k3s-01/sealed-secrets/` | oui (dans le périmètre `/tank/backups`) |
 | Dossiers perso (live) | `/tank/documents`, `images`, `musique`, `projets`, `videos` | oui (run 24 oct., snapshot `<snapshot>`) |
+| Configs médiathèques | `/tank/backups/mediatheques/` | oui, snapshot `<snapshot>` (2 nov. 13:58). Pas dans le run du 25 oct. |
 
 Sans cette clé, un cluster neuf ne déchiffre pas les SealedSecrets existants (`ADMIN_TOKEN` hash). Le coffre utilisateur est dans le tar, pas dans cette clé.
 
 Copie vers `pve` : **manuelle** (pas le script de pull des tars). Hors k3s-01 : oui. Encore sur `tank` jusqu'à l'USB. `backup-usb` du 20 oct. inclut ce répertoire s'il y était déjà.
+
+## Configs médiathèques (2 nov.)
+
+Les médias restent hors sauvegarde. Les configs des CT 103, 104, 105 et 106 sont copiées, service arrêté le temps de l'archive, puis relancé. Recyclarr n'a pas de service. Le tunnel WireGuard du CT 104 n'a pas été coupé : ses fichiers ont seulement été lus.
+
+Répertoire `/tank/backups/mediatheques`, mode `700`. Chaque archive mode `600`. Rien dans Git.
+
+| Archive | Taille | Contenu |
+|---------|--------|---------|
+| `jellyfin-2026-11-02.tar` | 3,3 Gio | `/var/lib/jellyfin` |
+| `lidarr-2026-11-02.tar` | 254 Mio | `/var/lib/lidarr` |
+| `sonarr-2026-11-02.tar` | 193 Mio | `/var/lib/sonarr` |
+| `bazarr-2026-11-02.tar` | 156 Mio | `/opt/bazarr/data` et `/var/lib/bazarr` |
+| `radarr-2026-11-02.tar` | 153 Mio | `/var/lib/radarr` |
+| `navidrome-2026-11-02.tar` | 125 Mio | `/var/lib/navidrome`, `/etc/navidrome/navidrome.toml` |
+| `recyclarr-2026-11-02.tar` | 73 Mio | `/var/lib/recyclarr`, y compris `secrets.yml` |
+| `prowlarr-2026-11-02.tar` | 10 Mio | `/var/lib/prowlarr` |
+| `qbittorrent-2026-11-02.tar` | 8,1 Mio | `/var/lib/qbittorrent`, `/etc/wireguard` (`wg0.conf` et `wg0.conf.mullvad`) |
+
+La première archive Bazarr n'avait que `/var/lib/bazarr`. La base et `config.yaml` sont dans `/opt/bazarr/data`. L'archive a été refaite avec les deux chemins.
+
+Restauration vers `/tmp`, services en place non remplacés, dossier de test effacé. `PRAGMA integrity_check` : `ok` pour Jellyfin, Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, et Navidrome (50 tables). Les fichiers qBittorrent, WireGuard et Recyclarr se relisent, taille non nulle. Leur contenu n'est pas dans ce fichier.
+
+Ces archives sont sur `tank` et dans le snapshot USB `<snapshot>` (2 nov. 13:58). Parent `<snapshot>`. 10 fichiers nouveaux, 4,229 Gio ajoutés (3,790 Gio stockés). Manifeste OK (363422 fichiers). `check` OK (12 snapshots). Clé démontée.
 
 ---
 
@@ -245,6 +270,7 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 - Installé sur `pve`. Premier run élargi **24 oct.** : snapshot `<snapshot>`, manifeste OK, `check` OK, clé démontée.
 - Second run **24 oct. 16:08** : snapshot `<snapshot>`, parent `<snapshot>`. 363180 fichiers (197 nouveaux), 469,8 Mio ajoutés (358,6 Mio stockés), manifeste OK, `check` OK (9 snapshots). Avant ce run : verrou orphelin du PID 1382228 (créé 11:57, processus absent), retiré par `restic unlock`. La clé était déjà montée : elle est **restée** montée.
 - Troisième run **25 oct. 13:26** : snapshot `<snapshot>`, parent `<snapshot>`. 363413 fichiers (234 nouveaux, 0 modifiés), 154 dossiers nouveaux, 200,3 Mio ajoutés (199,0 Mio stockés), 106,009 Gio lus en 1:21. Manifeste OK (363413 fichiers). `check` OK (10 snapshots, 13 index). Clé démontée. Avant le run : `find` voit le `.vcf`, le JSON SMS et le JSON Obtainium ; `ls` voit `files` et `signal-backup-2026-10-24-18-46-57`.
+- Quatrième run **2 nov. 13:53–13:58** : snapshot `<snapshot>`, parent `<snapshot>`. 363422 fichiers (10 nouveaux, 0 modifiés), 1 dossier nouveau, 4,229 Gio ajoutés (3,790 Gio stockés), 110,247 Gio lus en 2:56. Manifeste OK (363422 fichiers). `check` avant : 11 snapshots, aucune erreur. `check` après : 12 snapshots, 15 index, aucune erreur. Clé démontée. Le dernier snapshot écrit ici était `<snapshot>` (25 oct.) : le parent `<snapshot>` n'y figure pas.
 
 ## Comportement
 

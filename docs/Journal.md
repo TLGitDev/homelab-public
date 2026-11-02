@@ -1047,3 +1047,5 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-11-02 | Symfonium **15.1.0** lit Navidrome sur `https://navidrome.labo.example`. Tempus pas testé. Jalon Navidrome coché. |
 | 2026-11-02 | Cinq noms *arr dans le tunnel `homelab`, Access devant, origine HTTP sur le CT 105. Login vérifié : Sonarr, Radarr, Prowlarr, Lidarr, Bazarr. Sonarr a d'abord répondu 502, origine corrigée. qBittorrent hors de ce pas. |
 | 2026-11-02 | Page de liens des interfaces *arr abandonnée. Les cinq noms suffisent. Jalon coché. |
+| 2026-11-02 | Configs des CT 103, 104, 105 et 106 dans `/tank/backups/mediatheques` (mode 600). Services relancés. Bazarr refait : la base est dans `/opt/bazarr/data`. Restauration lue, `integrity_check` `ok`. |
+| 2026-11-02 | `backup-usb` : snapshot `<snapshot>`, parent `<snapshot>`. 10 fichiers nouveaux, 4,229 Gio ajoutés. Manifeste OK, `check` OK (12 snapshots). Clé démontée. `/tank/backups/mediatheques` est dans ce snapshot. |
