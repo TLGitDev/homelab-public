@@ -1041,3 +1041,7 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-11-01 | Lidarr : procédure écrite, pas jouée. CT 105, binaire **3.1.6.5079** (pas la préversion 3.2), port 8686. Import de `sons/` sans recherche. Navidrome non pris. [Mediatheques.md](Mediatheques.md#lidarr--décision-1er-nov). |
 | 2026-11-01 | Lidarr **3.1.6.5079** en service sur le CT 105, compte uid 107, port 8686. `sons/` importé. Client qBittorrent catégorie `lidarr` testé. Prowlarr : **Test** réussi. Pas de recherche. |
 | 2026-11-01 | Navidrome retenu, pas installé. Tunnel sans Access, comme Vaultwarden (`navidrome.labo.example` visé). Interfaces *arr : un nom chacune, Access, puis une page de liens. Pas joué. qBittorrent hors de ce pas. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). |
+| 2026-11-02 | Navidrome : hébergement tranché, LXC 106 `<ip-navidrome>`, lecture seule, paquet 0.64.2, port 4533. Procédure écrite, pas jouée. Tunnel après la lecture LAN. [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov). |
+| 2026-11-02 | Navidrome **0.64.2** en service sur le LAN, CT 106, `<ip-navidrome>:4533`. Compte web créé, nom non relevé. Bibliothèque déclarée visible. Tunnel pas créé. |
+| 2026-11-02 | Route `navidrome.labo.example` → `http://<ip-navidrome>:4533`, sans Access. `https://navidrome.labo.example` : `302` vers `/app/`, titre Navidrome 0.64.2. |
+| 2026-11-02 | Symfonium **15.1.0** lit Navidrome sur `https://navidrome.labo.example`. Tempus pas testé. Jalon Navidrome coché. |

@@ -53,6 +53,10 @@ http://<ip-k3s-01>:80   (Traefik, **sans** Access)
 argocd.labo.example
         ↓
 http://<ip-k3s-01>:80   (Traefik, **avec** Access)
+
+navidrome.labo.example
+        ↓
+http://<ip-navidrome>:4533   (CT 106, **sans** Access)
 ```
 
 Proxmox : origin **HTTPS**. Vaultwarden et Argo CD : origin **HTTP** ; le HTTPS public est celui de Cloudflare. Traefik distingue les services par hostname. Détail : [Vaultwarden.md](Vaultwarden.md), [ArgoCD.md](ArgoCD.md).
@@ -109,9 +113,11 @@ MFA : application TOTP (KeePassXC).
 
 **Jellyfin** : pas de route. Visé après la mise en service LAN : Access, puis le tunnel vers le LXC `http://<ip-jellyfin>:8096`, pas vers Traefik. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct).
 
+**Navidrome** (`navidrome.labo.example`) : pas d'Access. L'application authentifie déjà ses clients, comme Vaultwarden. Origine `http://<ip-navidrome>:4533`. En service le 2 nov. : `https://navidrome.labo.example` répond `302` vers `/app/`, interface Navidrome **0.64.2**. [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov).
+
 ## Visé (1er nov., pas joué)
 
-Choix : [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). Aucune de ces routes n'existe encore.
+Choix : [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). La route Navidrome existe. Les cinq noms *arr, non.
 
 **Interfaces *arr** : un nom par interface, tunnel `homelab`, origine le CT 105, Access devant (même courriel, OTP, TOTP que Proxmox). Le portail est une page de liens vers ces noms, elle aussi derrière Access. Il ne remplace pas Access sur chaque interface.
 
@@ -124,8 +130,6 @@ Choix : [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov). 
 | `bazarr.labo.example` | `http://<ip-servarr>:6767` |
 
 qBittorrent n'est pas dans ce pas.
-
-**Navidrome** : comme Vaultwarden. Nom visé `navidrome.labo.example`, **sans** Access. Les applications téléphone (Tempus, Symfonium) ne passent pas une page Access. Le compte Navidrome est la serrure. L'origine dépend de l'hébergement, pas encore tranché.
 
 ## Deux authentifications indépendantes (Proxmox)
 

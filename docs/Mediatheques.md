@@ -2370,24 +2370,24 @@ Sur `pve`, réécrire `105.fw` sans la ligne 8686. Garder 9696, 8989, 7878 et 67
 
 **Pas joué.** Aucune route ajoutée au tunnel. Navidrome n'est pas installé. Aucun port ouvert sur la box.
 
-Navidrome est retenu. Jellyfin reste le lecteur vidéo. Le téléphone aura un client musique, Tempus ou Symfonium : le choix se fait après, en testant les deux sur la même adresse. FIP et les favoris Radio France ne sont pas dans ce pas.
+Navidrome est retenu. Jellyfin reste le lecteur vidéo. Symfonium **15.1.0** lit `navidrome.labo.example` (2 nov.). Tempus pas testé. FIP et les favoris Radio France ne sont pas dans ce pas.
 
 ## Navidrome
 
 Même schéma que Vaultwarden. Un nom public dans le tunnel `homelab`, HTTPS terminé par Cloudflare, **pas** d'Access devant. Le compte Navidrome est la serrure, pour l'interface web et pour l'application. Tempus et Symfonium ne passent pas une page Access.
 
-Nom visé, pas créé : `navidrome.labo.example`. L'origine sera l'adresse du service une fois l'hébergement tranché. La même adresse sert à la maison et en déplacement. Le flux audio passe par Cloudflare.
+Nom visé, pas créé : `navidrome.labo.example`. Origine visée : `http://<ip-navidrome>:4533`. La même adresse publique servira à la maison et en déplacement. Le flux audio passe par Cloudflare. La route n'est pas dans ce pas.
 
 Navidrome lit `sons/`. Il ne télécharge pas : Lidarr s'en charge. Il ne remplace pas Jellyfin pour les films et les séries.
 
-Hébergement pas tranché. À trancher avant la procédure : où il tourne, quel port, quel montage. Piste : un LXC en lecture seule sur `tank/mediatheques`, comme Jellyfin, pas le CT 105 (celui-là écrit). Pas de Docker si on reste dans la lignée des CT média. Pas dans K3s tant que ce choix n'est pas repris. Pas d'ADR tant que l'hébergement n'est pas tranché.
+Hébergement tranché : LXC **106** `navidrome`, `<ip-navidrome>`, lecture seule. Détail et procédure : [plus bas](#navidrome--décision-2-nov). Pas joué.
 
 Ordre prévu :
 
-1. Trancher l'hébergement.
-2. Installer, vérifier la lecture sur le LAN.
-3. Ajouter la route du tunnel, sans Access.
-4. Tester Tempus et Symfonium sur `navidrome.labo.example`.
+1. Hébergement tranché (2 nov.) : CT 106.
+2. Installer, vérifier la lecture sur le LAN. Fait le 2 nov.
+3. Ajouter la route du tunnel, sans Access. Fait le 2 nov. `https://navidrome.labo.example` répond, interface **0.64.2**, pas de page Access.
+4. Symfonium **15.1.0** sur `navidrome.labo.example` : lecture validée le 2 nov. Tempus pas testé.
 
 ## Interfaces *arr
 
@@ -2419,9 +2419,224 @@ Pas d'ADR : on applique le tunnel déjà tranché ([ADR-003](ADR/ADR-003-Cloudfl
 
 ---
 
+# Navidrome — décision (2 nov.)
+
+Navidrome tourne dans un **LXC Debian** à part, CT **106** `navidrome`, `<ip-navidrome>`. Pas de Docker. Pas dans K3s. Pas dans le CT 105 : celui-là écrit dans `tank/mediatheques`, et il héberge déjà Lidarr. Pas dans le CT 103 : Jellyfin y lit déjà toute la médiathèque, vidéo comprise.
+
+Pourquoi un LXC, comme Jellyfin :
+
+- `tank/mediatheques` est un dataset de l'hôte. Le CT le reçoit en bind mount. `k3s-01` ne le voit pas. Un partage ou une copie n'a pas de sens pour des fichiers déjà sur la même machine.
+- Cette VM héberge Vaultwarden. Un scan de `sons/` n'y passe pas.
+- Le montage est **lecture seule** (`ro=1`), sur tout `/tank/mediatheques`, comme le CT 103. Navidrome ne peut pas modifier les fichiers. Il ne lit que `sons/` : c'est le dossier indiqué dans sa config.
+- Le compte `navidrome` rejoint `media`. Le root du CT n'entre pas dans `sons/` (mode `2770`).
+
+Paquet Debian officiel **0.64.2** (`linux_amd64`), pas une image Docker. `ffmpeg` vient avec le paquet. Port **4533**, celui du logiciel. Config `/etc/navidrome/navidrome.toml`, données `/var/lib/navidrome`, sur le disque du CT (`rpool`). C'est elle qu'il faudra sauvegarder plus tard, pas les médias. Pas dans ce pas.
+
+Ressources : 2 Gio de RAM, 2 cœurs, disque 8 Gio. Le binaire, SQLite et le cache d'images tiennent là. Les fichiers restent sur le bind mount.
+
+Ce pas : LAN seulement. Pas de route dans le tunnel. Le nom `navidrome.labo.example` attend que la lecture LAN soit vérifiée. Pare-feu du CT : TCP 4533 depuis `<réseau-lan>`. Le pare-feu datacenter reste éteint. On ne l'allume pas ici.
+
+Pas d'ADR : un hébergement est tranché pour Navidrome. Le critère général VM / LXC / K3s reste ouvert pour la page de liens.
+
+---
+
+# Navidrome — procédure
+
+**Jouée le 2 nov., LAN.** CT **106** `navidrome`, `<ip-navidrome>`, **running**. Paquet **0.64.2**, service `active`, `curl` local `302`. Montage `ro=1`. Compte `navidrome` uid 999 dans `media`. Compte web créé, mot de passe dans le coffre, nom non relevé. Bibliothèque déclarée visible. `/etc/pve/firewall/106.fw` écrit (TCP 4533 depuis le LAN). Datacenter éteint. Pas de route dans le tunnel. Les blocs ci-dessous ont été joués dans l'ordre. Ne pas `zfs destroy`, ne pas `rm` sur `/tank/mediatheques`, ne pas coller un mot de passe.
+
+## 0. Constat (sur `pve`, root)
+
+```bash
+pct list
+qm list
+ping -c 1 -W 1 <ip-navidrome> || true
+free -h
+ls /var/lib/vz/template/cache/
+getent group media
+grep -E '^root:' /etc/subgid
+pve-firewall status || true
+ls -ld /tank/mediatheques/sons
+```
+
+Attendu : pas de CT 106, pas de VM 106, `.90` sans réponse, `media` = 987, `root:987:1` déjà présent, au moins 2 Gio disponibles, template `debian-13-standard_13.1-2_amd64.tar.zst`, pare-feu `disabled/running`, `sons/` en `drwxrws---` `root:media`. Si 106 ou `.90` est pris : s'arrêter.
+
+**2 nov.** CT 100, 102, 103, 104, 105 en service. VM 101 seule. Pas de 106. `.90` : 100 % de perte. RAM disponible 18 Gio. Swap hôte à 0 : sans effet, le CT a son propre swap. Template Debian 13 présent. `media` = 987. `subgid` : `root:100000:65536`, `root:988:1`, `root:987:1`. Pare-feu : `disabled/running`. `sons/` : `drwxrws---` `root media`, 171 entrées.
+
+## 1. Créer le LXC (arrêté)
+
+Même socle que Jellyfin : `vmbr0`, `local-zfs`, non privilégié, Debian 13, `nesting=1`. 2 Gio, 2 cœurs, 8 Gio. `root:987:1` est déjà dans `/etc/subgid`. Ne pas l'ajouter une seconde fois.
+
+```bash
+pct create 106 local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst \
+  --hostname navidrome \
+  --memory 2048 \
+  --swap 512 \
+  --cores 2 \
+  --rootfs local-zfs:8 \
+  --net0 name=eth0,bridge=vmbr0,firewall=1,ip=<ip-navidrome>/24,gw=<ip-box> \
+  --nameserver <ip-box> \
+  --unprivileged 1 \
+  --features nesting=1 \
+  --ostype debian \
+  --onboot 1 \
+  --start 0
+pct set 106 -mp0 /tank/mediatheques,mp=/mnt/mediatheques,ro=1
+grep mp0 /etc/pve/lxc/106.conf
+```
+
+Attendu : une ligne `mp0` **avec** `ro=1`. Sans `ro=1` : s'arrêter, ne pas démarrer.
+
+**2 nov.** CT 106 créé, architecture `amd64`. `mp0: /tank/mediatheques,mp=/mnt/mediatheques,ro=1`. Pas démarré.
+
+## 2. Idmap
+
+Même map que le CT 103. Le GID 1000 **dans** le CT est le GID 987 **sur l'hôte**.
+
+`unprivileged: 1` ne écrit pas toujours les lignes `lxc.idmap`. Dès qu'on en pose, elles remplacent la map implicite : les quatre lignes, entières. Le script retire les `lxc.idmap` déjà présentes, puis écrit celles du CT 103. On peut le relancer.
+
+```bash
+python3 - << 'PY'
+from pathlib import Path
+p = Path("/etc/pve/lxc/106.conf")
+idmap = [
+    "lxc.idmap: u 0 100000 65536",
+    "lxc.idmap: g 0 100000 1000",
+    "lxc.idmap: g 1000 987 1",
+    "lxc.idmap: g 1001 101001 64535",
+]
+kept = [line for line in p.read_text().splitlines() if not line.startswith("lxc.idmap:")]
+kept.extend(idmap)
+p.write_text("\n".join(kept) + "\n")
+PY
+grep idmap /etc/pve/lxc/106.conf
+pct start 106
+pct status 106
+```
+
+Attendu au `grep` : les quatre lignes, dans cet ordre. `pct status` : `running`. Si `newgidmap` / `not allowed` : coller, ne pas continuer.
+
+`python3` tourne sur **`pve`**. S'il manque : s'arrêter, ne pas installer un paquet sur l'hôte pour ça.
+
+**2 nov.** Quatre lignes `lxc.idmap`, dans l'ordre. `pct start` sans erreur. `status: running`.
+
+## 3. Groupe
+
+```bash
+pct exec 106 -- bash -lc 'getent group media >/dev/null || groupadd --gid 1000 media'
+pct exec 106 -- ls -ld /mnt/mediatheques
+```
+
+Attendu : `drwxrws---` `nobody media`. Le propriétaire `nobody` est le même cas que Jellyfin. Root du CT n'entre pas dans `sons/`. C'est attendu.
+
+**2 nov.** `groupadd` sans erreur. `/mnt/mediatheques` : `drwxrws---` `nobody media`.
+
+## 4. Paquet 0.64.2
+
+```bash
+pct exec 106 -- bash -lc 'cat /etc/os-release; dpkg --print-architecture'
+```
+
+Attendu : `VERSION_CODENAME=trixie` et `amd64`. Sinon, s'arrêter.
+
+**2 nov.** `VERSION_CODENAME=trixie`, `amd64`.
+
+```bash
+pct exec 106 -- bash -lc 'apt-get update && apt-get install -y curl ca-certificates'
+pct exec 106 -- bash -lc 'curl -fL --retry 3 -o /tmp/navidrome_0.64.2_linux_amd64.deb https://github.com/navidrome/navidrome/releases/download/v0.64.2/navidrome_0.64.2_linux_amd64.deb'
+pct exec 106 -- bash -lc 'echo "b9ecb35eb6e042d6b019d504c0df40fa676f9a5a18db6513f551e124af7085e3  /tmp/navidrome_0.64.2_linux_amd64.deb" | sha256sum -c'
+```
+
+`sha256sum` affiche `OK`. Sinon : s'arrêter, ne pas installer.
+
+**2 nov.** Archive 23,5 Mio. `sha256sum` : `OK`. Pas encore installée.
+
+`apt` installe le `.deb` et tire `ffmpeg`. Pas d'`apt upgrade`. Le script du paquet crée le compte `navidrome`, pose `/etc/navidrome/navidrome.toml` avec le dossier vide `/opt/navidrome/music`, et démarre le service. On l'arrête tout de suite : le dossier de musique se corrige au bloc suivant, avant toute utilisation.
+
+```bash
+pct exec 106 -- bash -lc 'apt-get install -y /tmp/navidrome_0.64.2_linux_amd64.deb'
+pct exec 106 -- bash -lc 'systemctl stop navidrome; rm -f /tmp/navidrome_0.64.2_linux_amd64.deb'
+pct exec 106 -- bash -lc 'command -v navidrome; command -v ffmpeg; getent passwd navidrome'
+```
+
+Les deux commandes répondent par un chemin. Le compte `navidrome` existe, home `/var/lib/navidrome`.
+
+**2 nov.** Version **0.64.2** (`10114574`). `/usr/bin/navidrome`, `/usr/bin/ffmpeg`. Compte `navidrome` uid 999, gid 991, home `/var/lib/navidrome`. Le paquet a posé le dossier de musique `/opt/navidrome/music`. Service arrêté avant usage. Archive effacée.
+
+## 5. Lecture de `sons/`
+
+```bash
+pct exec 106 -- bash -lc 'usermod -aG media navidrome && id navidrome'
+pct exec 106 -- bash -lc 'runuser -u navidrome -- test -d /mnt/mediatheques/sons && echo SONS_OK'
+```
+
+`id` contient `media` (1000). Attendu : `SONS_OK`. `Permission denied` ou pas de `SONS_OK` : s'arrêter, ne pas relancer le service.
+
+**2 nov.** `uid=999(navidrome) gid=991(navidrome) groups=991(navidrome),1000(media)`. `SONS_OK`.
+
+## 6. Config
+
+Le fichier livré par le paquet pointe vers `/opt/navidrome/music`. On le remplace. Pas de mot de passe dedans. Pas de clé Last.fm.
+
+```bash
+pct exec 106 -- tee /etc/navidrome/navidrome.toml >/dev/null << 'EOF'
+DataFolder = "/var/lib/navidrome"
+MusicFolder = "/mnt/mediatheques/sons"
+Address = "0.0.0.0"
+Port = 4533
+EOF
+pct exec 106 -- bash -lc 'systemctl start navidrome && systemctl is-active navidrome'
+pct exec 106 -- bash -lc 'curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:4533/'
+```
+
+Attendu : `active`, et un code `200` ou `302`. Autre chose : coller `systemctl status navidrome --no-pager` et les dernières lignes de `journalctl -u navidrome -n 40 --no-pager`. Ne pas créer le compte web.
+
+**2 nov.** `active`. `curl` local : `302`. Compte web pas créé.
+
+## 7. Pare-feu du CT
+
+Le pare-feu du datacenter reste éteint : ce fichier ne filtre pas tant qu'il le reste. On l'écrit quand même, comme pour les autres CT.
+
+```bash
+cat > /etc/pve/firewall/106.fw << 'EOF'
+[OPTIONS]
+enable: 1
+policy_in: DROP
+policy_out: ACCEPT
+
+[RULES]
+IN ACCEPT -source <réseau-lan> -p tcp -dport 4533
+EOF
+```
+
+**Ne pas** activer le pare-feu datacenter.
+
+**2 nov.** `/etc/pve/firewall/106.fw` écrit (TCP 4533 depuis le LAN). Datacenter toujours éteint.
+
+## 8. Compte web
+
+Depuis un poste du LAN : `http://<ip-navidrome>:4533`.
+
+Le premier compte créé est l'admin. Mot de passe dans le coffre. Ne pas le coller ici. Un seul compte. Pas de second utilisateur. Pas de Last.fm. Pas de bibliothèque supplémentaire : `sons/` est déjà le dossier. Le scan part avec le service. **Activity** ou l'indicateur de scan de l'interface montre l'avancement. On ne télécharge rien.
+
+**2 nov.** Compte créé. Nom non relevé. Mot de passe dans le coffre. Bibliothèque déclarée visible.
+
+## Retour arrière
+
+Le compte web se retire en arrêtant le CT. Les fichiers de `sons/` ne bougent pas : le montage est en lecture seule.
+
+```bash
+pct stop 106
+pct destroy 106
+rm -f /etc/pve/firewall/106.fw
+```
+
+Garder `root:987:1` dans `/etc/subgid` : les CT 103, 104 et 105 s'en servent. Garder le groupe hôte `media`.
+
+---
+
 # Ensuite
 
-1. Navidrome est retenu (1er nov.), pas installé. Hébergement à trancher, puis LAN, puis tunnel sans Access. [Choix](#navidrome-et-portail--choix-1er-nov).
+1. Navidrome est en service (2 nov.), CT 106. LAN `http://<ip-navidrome>:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé. [Décision](#navidrome--décision-2-nov).
 2. Interfaces *arr : cinq noms visés, Access, puis une page de liens. Pas joué. qBittorrent hors de ce pas.
 3. Proton VPN est en service sur le CT 104. `wg0.conf.mullvad` reste. La clé Mullvad du CT ne se révoque pas ici.
 4. SMB `Mediatheques` seulement si l'Explorateur doit écrire ici : idmap du CT 102 à étendre, sans casser `perso`.

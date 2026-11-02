@@ -208,7 +208,7 @@ Services **visés**, pas déployés :
 | Lidarr | Musique |
 | Bazarr | Sous-titres |
 | Recyclarr | Config Radarr / Sonarr |
-| Navidrome | Lecteur musique retenu (1er nov.), pas installé |
+| Navidrome | Lecteur musique, en service (2 nov.) |
 
 Ordre utile : datasets et droits → Jellyfin (fichiers déjà là) → qBittorrent isolé → Prowlarr puis Sonarr / Radarr → Bazarr / Recyclarr → Lidarr → Navidrome → page de liens des interfaces *arr → backups des **configs**.
 
@@ -220,7 +220,7 @@ Travail : [Mediatheques.md](Mediatheques.md).
 
 ## Jalons
 
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr **v8.8.1** sur le CT 105 (1er nov.) : profils MULTi.VO créés, non assignés. Lidarr **3.1.6.5079** sur le même CT (1er nov.), port 8686, `sons/` importé sans recherche. Navidrome retenu le 1er nov. (lecteur téléphone), pas installé : tunnel sans Access, comme Vaultwarden. Interfaces *arr visées hors LAN : un nom chacune, Access devant, puis une page de liens. Pas joué. qBittorrent hors de ce pas. Hébergement de Navidrome pas tranché.
+Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr **v8.8.1** sur le CT 105 (1er nov.) : profils MULTi.VO créés, non assignés. Lidarr **3.1.6.5079** sur le même CT (1er nov.), port 8686, `sons/` importé sans recherche. Navidrome retenu le 1er nov. (lecteur téléphone). Hébergement tranché le 2 nov. : LXC 106, `<ip-navidrome>`, lecture seule, paquet **0.64.2**, port 4533. Public : `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée le 2 nov. Tempus pas testé. Interfaces *arr visées hors LAN : un nom chacune, Access devant, puis une page de liens. Pas joué. qBittorrent hors de ce pas.
 
 - ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
 - ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
@@ -234,7 +234,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 - ✅ Proton VPN sur le CT 104 (29 oct.) : tunnel `FR#506`, `proton-port`, coupure `000`, port `64509` joignable. Clé Mullvad gardée dans `wg0.conf.mullvad`. — [Mediatheques.md](Mediatheques.md#proton--décision-29-oct)
 - ✅ Recyclarr v8.8.1, CT 105, binaire (1er nov.). Profil MULTi.VO créé dans Sonarr et Radarr, non assigné. **Any** inchangé — [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct)
 - ✅ Lidarr 3.1.6.5079, CT 105, port 8686 (1er nov.). `sons/` importé, client qBittorrent et Prowlarr testés. Pas de recherche — [Mediatheques.md](Mediatheques.md#lidarr--décision-1er-nov)
-- ⬜ Navidrome retenu (1er nov.), pas installé. Tunnel sans Access, comme Vaultwarden. Lecteur (Tempus ou Symfonium) après — [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
+- ✅ Navidrome en service (2 nov.), CT 106 `.90:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé — [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
 - ⬜ Interfaces *arr hors LAN : cinq noms, Access, page de liens. Pas joué. qBittorrent hors de ce pas — [Cloudflare.md](Cloudflare.md#visé-1er-nov-pas-joué)
 - ⬜ Configs sauvegardées, restauration testée
 
@@ -282,7 +282,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
-| Musique | Navidrome retenu (1er nov.), pas installé. Hébergement pas tranché | Phase 4 |
+| Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
 | Accès distant | Tunnel en place. *arr : Access. Navidrome : sans Access. Page de liens visée, pas jouée. WireGuard pas décidé | Phase 6 |
 | Supervision | Indicateurs et alertes utiles | Phases 0 et 6 |
 
