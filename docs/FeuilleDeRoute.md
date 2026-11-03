@@ -165,7 +165,7 @@ On **garde** K3s et Argo CD pour ce qui y tourne déjà. On ne bascule pas autom
 
 ## 3.1 Comparer Gitea et Forgejo
 
-Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow professionnel, sur le modèle des gestes GitHub. Volume monté. Pod pas lancé. [Forge.md](Forge.md#décision).
+Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow professionnel, sur le modèle des gestes GitHub. Pod en service sur le LAN. [Forge.md](Forge.md#décision).
 
 - [x] Maintenance et gouvernance (3 nov.) — [Forge.md](Forge.md#maintenance-et-gouvernance)
 - [x] Fonctions Git (issues, PR, releases, registre, intégrations) (3 nov.) — [Forge.md](Forge.md#fonctions-git)
@@ -174,18 +174,18 @@ Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow pr
 - [x] Écosystème (doc, plugins, communauté) (3 nov.) — [Forge.md](Forge.md#écosystème)
 - [x] Coût opérationnel dans ce homelab (3 nov.) — [Forge.md](Forge.md#coût-opérationnel)
 
-6 / 6 examinés. Gitea retenu. Volume monté. Pod pas lancé.
+6 / 6 examinés. Gitea retenu. Pod en service sur le LAN.
 
 ## Jalons Gitea
 
-Le choix est joué. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
+Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
 
 **Critère** : un changement versionné passe les tests et se déploie, avec un retour arrière.
 
 - ✅ Gitea, édition libre (3 nov.). Enterprise non retenu. Gestes visés : dépôt, demande de fusion, branche protégée, Actions, runner à part, Argo CD.
 - ✅ RAM libre de `k3s-01` (3 nov.) : 7,5 Gio au total, 5,5 Gio disponibles, 4 cœurs, échange 3,3 Gio inutilisé. Disque système 51 Go libres. Vaultwarden 14 Mio, Argo CD jusqu'à 206 Mio.
-- ⬜ Pod sur `k3s-01`, une réplique, SQLite. Zvol à part sous `tank/vmdata`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Premier compte. Pas de code essentiel.
-- ⬜ Sauvegarde du dossier de données, Gitea arrêté. Restauration lue ailleurs. Avant le code essentiel.
+- ✅ Pod sur `k3s-01` (3 nov.), une réplique, SQLite. Zvol `tank/vmdata/vm-101-gitea-data`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Compte `admin`. Aucun dépôt.
+- ✅ Sauvegarde du dossier de données (3 nov.), Gitea arrêté. Archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, SHA-256 `<empreinte-vérifiée>`. Relue ailleurs : base `ok`, `SECRET_KEY` de 64 caractères, compte `admin`, zéro dépôt. Pas encore copiée sur `pve`.
 - ⬜ Dépôt d'essai poussé depuis le PC. Demande de fusion. Branche protégée.
 - ⬜ Miroir vers un dépôt GitHub déjà créé. Il ne copie que les dépôts, et il ne remplace pas la sauvegarde.
 - ⬜ Runner hors de `k3s-01`.
@@ -292,7 +292,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Workflow professionnel, gestes GitHub. Volume monté, pod pas lancé | Phase 3 |
+| Forge Git | Gitea, édition libre (3 nov.). Pod en service sur le LAN, sauvegarde lue, aucun dépôt. Workflow pas joué | Phase 3 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |

@@ -54,7 +54,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [Journal.md](Journal.md) | Chronologie des séances |
 | [Architecture.md](Architecture.md) | Principes, schéma actuel, as-built |
 | [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–6, décisions ouvertes |
-| [Forge.md](Forge.md) | Phase 3 : Gitea retenu (3 nov.), édition libre |
+| [Forge.md](Forge.md) | Phase 3 : Gitea en service sur le LAN (3 nov.), édition libre |
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, [exploitation](Proxmox.md#exploitation) |
 | [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
