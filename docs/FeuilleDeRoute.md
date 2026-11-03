@@ -178,7 +178,7 @@ Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow pr
 
 ## Jalons Gitea
 
-Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
+Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La demande de fusion d'essai est fusionnée. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
 
 **Critère** : un changement versionné passe les tests et se déploie, avec un retour arrière.
 
@@ -186,7 +186,7 @@ Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue.
 - ✅ RAM libre de `k3s-01` (3 nov.) : 7,5 Gio au total, 5,5 Gio disponibles, 4 cœurs, échange 3,3 Gio inutilisé. Disque système 51 Go libres. Vaultwarden 14 Mio, Argo CD jusqu'à 206 Mio.
 - ✅ Pod sur `k3s-01` (3 nov.), une réplique, SQLite. Zvol `tank/vmdata/vm-101-gitea-data`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Compte `admin`. Aucun dépôt.
 - ✅ Sauvegarde du dossier de données (3 nov.), Gitea arrêté. Archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, SHA-256 `<empreinte-vérifiée>`. Relue ailleurs : base `ok`, `SECRET_KEY` de 64 caractères, compte `admin`, zéro dépôt. Pas encore copiée sur `pve`.
-- ⬜ Dépôt d'essai poussé depuis le PC. Demande de fusion. Branche protégée.
+- ✅ Dépôt d'essai `admin/homelab` poussé depuis le PC (3 nov.). `master` protégée : le push direct est refusé. Demande de fusion n° 1 fusionnée, commit `ad9faf2`. Argo lit toujours GitHub.
 - ⬜ Miroir vers un dépôt GitHub déjà créé. Il ne copie que les dépôts, et il ne remplace pas la sauvegarde.
 - ⬜ Runner hors de `k3s-01`.
 - ⬜ Workflow : push, build, tests. Le job tourne sur le runner.
@@ -292,7 +292,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Pod en service sur le LAN, sauvegarde lue, aucun dépôt. Workflow pas joué | Phase 3 |
+| Forge Git | Gitea, édition libre (3 nov.). Dépôt d'essai fusionné, `master` protégée. Miroir, runner et déploiement pas joués | Phase 3 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
