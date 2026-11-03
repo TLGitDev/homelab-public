@@ -52,7 +52,8 @@ Exemple **actuel** (`tank`) :
 ```
 tank
 ├── vmdata          ← zfspool Proxmox `tank-vmdata` (volumes bloc seulement)
-│   └── vm-101-vaultwarden-data
+│   ├── vm-101-vaultwarden-data
+│   └── vm-101-gitea-data     ← 8 Go, vide, pod pas lancé
 ├── backups         ← tars / Sealed Secrets ; une des sources `backup-usb` ; pas de staging perso
 ├── documents       ← archive de travail 2026-10-23
 ├── images
@@ -146,7 +147,7 @@ Critères :
 
 En l'absence de besoin particulier, un simple répertoire est privilégié.
 
-`tank/vmdata` existe. Volume Vaultwarden : `tank/vmdata/vm-101-vaultwarden-data` (depuis le 2026-10-14). L'ancien PVC `local-path` est conservé figé. Décision : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`tank/vmdata` existe. Volume Vaultwarden : `tank/vmdata/vm-101-vaultwarden-data` (depuis le 2026-10-14). Volume Gitea : `tank/vmdata/vm-101-gitea-data` (3 nov. 2026, 8 Go, monté, vide, pod pas lancé). L'ancien PVC `local-path` est conservé figé. Décision coffre : [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -208,13 +209,14 @@ Proxmox
 │
 └── tank    ← données (miroir IronWolf, ONLINE)
     └── vmdata     ← zfspool Proxmox `tank-vmdata`
-        └── vm-101-vaultwarden-data   ← coffre en service
+        ├── vm-101-vaultwarden-data   ← coffre en service
+        └── vm-101-gitea-data         ← 8 Go, vide, pod pas lancé
 ```
 
 | Pool | Support | VDEV | Rôle aujourd'hui |
 |------|---------|------|------------------|
 | `rpool` | NVMe 2 To | single | Système, VM, LXC. Ancien PVC Vaultwarden encore présent, plus en service |
-| `tank` | 2× IronWolf 8 To | mirror | Données. Volume Vaultwarden : `vm-101-vaultwarden-data` |
+| `tank` | 2× IronWolf 8 To | mirror | Données. Volumes : `vm-101-vaultwarden-data`, `vm-101-gitea-data` (vide) |
 
 Le miroir de `tank` protège contre la panne d'un HDD. Ce n'est **pas** une sauvegarde.
 

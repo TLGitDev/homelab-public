@@ -157,7 +157,7 @@ Périmètre de ce téléphone (24 oct.) : photos, contacts, SMS si possible. Cal
 
 # Phase 3 — Forge Git et CI/CD
 
-**Objectif** : centraliser projets, config non secrète du homelab et déploiements, puis automatiser progressivement.
+**Objectif** : Gitea, édition libre, et un workflow professionnel. Un push lance le build, les tests, puis un déploiement repris par Argo CD.
 
 **Dépendance** : phase 0. La comparaison peut commencer plus tôt. La forge retenue doit être sauvegardée **avant** d'y mettre des éléments essentiels.
 
@@ -165,28 +165,42 @@ On **garde** K3s et Argo CD pour ce qui y tourne déjà. On ne bascule pas autom
 
 ## 3.1 Comparer Gitea et Forgejo
 
-Décision **pas encore prise**. Critères à remplir au moment du choix (versions et CI réelles, pas de souvenir).
+Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow professionnel, sur le modèle des gestes GitHub. Volume monté. Pod pas lancé. [Forge.md](Forge.md#décision).
 
-- [ ] Maintenance et gouvernance
-- [ ] Fonctions Git (issues, PR, releases, registre, intégrations)
-- [ ] CI/CD (workflows, runners, secrets, déclencheurs)
-- [ ] Déploiement (hébergement, MAJ, migration, sauvegarde)
-- [ ] Écosystème (doc, plugins, communauté)
-- [ ] Coût opérationnel dans ce homelab
+- [x] Maintenance et gouvernance (3 nov.) — [Forge.md](Forge.md#maintenance-et-gouvernance)
+- [x] Fonctions Git (issues, PR, releases, registre, intégrations) (3 nov.) — [Forge.md](Forge.md#fonctions-git)
+- [x] CI/CD (workflows, runners, secrets, déclencheurs) (3 nov.) — [Forge.md](Forge.md#ci)
+- [x] Déploiement (hébergement, MAJ, migration, sauvegarde) (3 nov.) — [Forge.md](Forge.md#déploiement)
+- [x] Écosystème (doc, plugins, communauté) (3 nov.) — [Forge.md](Forge.md#écosystème)
+- [x] Coût opérationnel dans ce homelab (3 nov.) — [Forge.md](Forge.md#coût-opérationnel)
 
-0 / 6 examinés. Liste de préparation, pas un résultat.
+6 / 6 examinés. Gitea retenu. Volume monté. Pod pas lancé.
 
-## 3.2 Chaîne de déploiement
+## Jalons Gitea
 
-1. Héberger la forge et protéger ses données.
-2. Versionner manifests, configs non secrètes, procédures.
-3. Runners isolés, moindre privilège.
-4. Tests et contrôles automatiques.
-5. Première appli de test.
-6. Relier la CI à Argo CD quand GitOps est le bon outil.
-7. Documenter la restauration de la forge et des runners.
+Le choix est joué. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
 
-**Critère** : un changement versionné passe les contrôles et se déploie de façon reproductible, avec un retour arrière.
+**Critère** : un changement versionné passe les tests et se déploie, avec un retour arrière.
+
+- ✅ Gitea, édition libre (3 nov.). Enterprise non retenu. Gestes visés : dépôt, demande de fusion, branche protégée, Actions, runner à part, Argo CD.
+- ✅ RAM libre de `k3s-01` (3 nov.) : 7,5 Gio au total, 5,5 Gio disponibles, 4 cœurs, échange 3,3 Gio inutilisé. Disque système 51 Go libres. Vaultwarden 14 Mio, Argo CD jusqu'à 206 Mio.
+- ⬜ Pod sur `k3s-01`, une réplique, SQLite. Zvol à part sous `tank/vmdata`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Premier compte. Pas de code essentiel.
+- ⬜ Sauvegarde du dossier de données, Gitea arrêté. Restauration lue ailleurs. Avant le code essentiel.
+- ⬜ Dépôt d'essai poussé depuis le PC. Demande de fusion. Branche protégée.
+- ⬜ Miroir vers un dépôt GitHub déjà créé. Il ne copie que les dépôts, et il ne remplace pas la sauvegarde.
+- ⬜ Runner hors de `k3s-01`.
+- ⬜ Workflow : push, build, tests. Le job tourne sur le runner.
+- ⬜ Déploiement repris par Argo CD, avec un retour arrière.
+- ⬜ Depuis l'extérieur : Access devant la forge. Le nom n'est pas choisi.
+- ⬜ Restauration de la forge et du runner, jouée une fois.
+
+## Page agent (plus tard)
+
+Idée du 3 nov., à mettre en place une fois la forge prête. Pas un jalon de la phase 3.
+
+Un pod sur `k3s-01` avec le programme `agent`. Une page maison : conversation, et les diffs plus lisibles qu'en terminal. Le téléphone ouvre cette page. Dehors, Access devant. Le nom n'est pas choisi.
+
+Le pod ne voit que son volume. Pas le disque de la machine, pas de droit sur le cluster. La clé du compte Cursor reste dans le pod. Le modèle tourne chez Cursor.
 
 ---
 
@@ -278,7 +292,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea vs Forgejo | Phase 1–3 |
+| Forge Git | Gitea, édition libre (3 nov.). Workflow professionnel, gestes GitHub. Volume monté, pod pas lancé | Phase 3 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
@@ -297,6 +311,7 @@ Idées **gardées**, pas planifiées :
 - Home Assistant
 - Paperless
 - Immich
+- Page agent sur le téléphone, une fois la forge prête — [plus tard](#page-agent-plus-tard)
 
 L'onduleur n'est plus un chantier : il est en place et protège le serveur. [Materiel.md](Materiel.md).
 
