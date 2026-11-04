@@ -10,6 +10,8 @@
 
 > Une compétence n'est pas validée parce qu'une manipulation a été réalisée une fois. Elle est validée lorsque je suis capable de reproduire la démarche, d'expliquer le fonctionnement et de diagnostiquer un problème courant sans suivre un tutoriel.
 
+Relevé au **4 nov. 2026**, après les phases 0 à 4. Le détail des jalons est dans [FeuilleDeRoute.md](FeuilleDeRoute.md). L'état installé est dans [Architecture.md](Architecture.md).
+
 ---
 
 # Niveau de maîtrise
@@ -51,13 +53,15 @@
 | Compétence | Niveau |
 |------------|--------|
 | Installation de Proxmox | 🟢 |
-| Gestion des utilisateurs | 🔲 |
-| Gestion des services | 🟢 |
+| Réinstallation du système sur ZFS | 🟢 |
 | Architecture Proxmox | 🟢 |
 | Gestion des dépôts APT | 🟢 |
 | Mise à jour d'un hyperviseur | 🟡 |
 | Gestion des mises à jour | 🟢 |
-| Création d'un conteneur LXC | 🟢 |
+| Gestion des services systemd | 🟢 |
+| Timers systemd | 🟢 |
+| Comptes et groupes Linux | 🟢 |
+| Scripts d'exploitation (Git ≠ fichiers installés) | 🟢 |
 
 ---
 
@@ -66,11 +70,16 @@
 | Compétence | Niveau |
 |------------|--------|
 | Hyperviseur | 🟢 |
-| Machine virtuelle | 🟡 |
+| Machine virtuelle (disques, réseau, `fstab`) | 🟢 |
 | Conteneur LXC | 🟢 |
-| Snapshots | 🔲 |
-| Sauvegardes Proxmox | 🔲 |
-| Architecture de la virtualisation | 🟡 |
+| LXC non privilégié | 🟢 |
+| idmap (UID / GID hôte dans le CT) | 🟢 |
+| Montage hôte → CT (lecture seule ou écriture) | 🟢 |
+| Pare-feu d'un conteneur | 🟢 |
+| Choisir VM, LXC ou K3s selon le besoin | 🟢 |
+| Snapshots de VM Proxmox | 🔲 |
+| Sauvegardes de l'hyperviseur (vzdump) | 🔲 |
+| Architecture de la virtualisation | 🟢 |
 
 ---
 
@@ -78,26 +87,65 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| Architecture ZFS | 🟢 |
-| RAID1 / Mirror | 🟡 |
-| SMART | 🔲 |
-| Scrub  | 🔲 |
-| Remplacement d'un disque | 🔲 |
-| S.M.A.R.T | 🟡 |
-| Pools ZFS | 🟢 |
-| VDEV | 🟡 |
-| Datasets | 🟡 |
+| Architecture ZFS (`rpool` / `tank`) | 🟢 |
+| Pool | 🟢 |
+| VDEV (choix figé à la création) | 🟢 |
+| Miroir ZFS | 🟢 |
+| Dataset (un usage, un dataset) | 🟢 |
+| zvol (volume bloc, ext4, UUID) | 🟢 |
 | Checksums | 🟡 |
-| Scrub ZFS | 🟡 |
-| Self-Healing | 🟡 |
+| Self-healing | 🟡 |
+| Scrub | 🟡 |
+| S.M.A.R.T | 🟡 |
+| Remplacement d'un disque | 🔲 |
+| Quota | 🔲 |
+
+---
+
+# Sauvegardes
+
+| Compétence | Niveau |
+|------------|--------|
+| RAID ≠ snapshot ≠ sauvegarde | 🟢 |
+| RPO / RTO | 🟢 |
+| Snapshot ZFS (timer, rétention horaire) | 🟢 |
+| Rollback d'un snapshot sur la prod | 🔲 |
+| Archive tar cohérente (service arrêté, SHA-256) | 🟢 |
+| Copie USB chiffrée (Restic) | 🟢 |
+| Restauration isolée (coffre, fichier, forge, runner) | 🟢 |
+| Reprise sur le volume de production | 🔲 |
+| Rétention longue (Restic, snapshots quotidiens) | 🟡 |
+| Configs sauvegardées à part des médias | 🟢 |
+
+---
+
+# Données
+
+| Compétence | Niveau |
+|------------|--------|
+| Sync ≠ archive ≠ sauvegarde | 🟢 |
+| Inventaire par catégorie | 🟢 |
+| Partage SMB (LXC, LAN seulement) | 🟢 |
+| Droits de fichiers (groupe, mode) | 🟢 |
+| Vérification d'une copie (SHA-256) | 🟢 |
+
+Phase 2 (téléphone) close le 25 oct. (document privé).
+
+| Compétence | Niveau |
+|------------|--------|
+| Export par type de donnée | 🟢 |
+| Restauration sur un autre téléphone | 🟡 |
 
 ---
 
 # Docker
 
+Les applications du cluster consomment des images. Le moteur Docker n'est pas le mode d'exploitation (le runner CI est hors de `k3s-01`, sans socket Docker).
+
 | Compétence | Niveau |
 |------------|--------|
 | Docker | 🟡 |
+| Image de conteneur | 🟡 |
 | Docker Compose | 🔲 |
 | Volumes | 🔲 |
 | Réseaux Docker | 🔲 |
@@ -107,34 +155,72 @@
 
 # Kubernetes
 
+Cours : [Kubernetes.md](Kubernetes.md). En service : K3s, Traefik, Argo CD, Vaultwarden, Gitea.
+
 | Compétence | Niveau |
 |------------|--------|
-| Pourquoi Kubernetes (vs Linux / Docker) | 🟡 |
-| Modèle déclaratif | 🟡 |
-| Réconciliation | 🟡 |
+| Pourquoi Kubernetes (vs Linux / Docker) | 🟢 |
+| Modèle déclaratif | 🟢 |
+| Réconciliation | 🟢 |
 | API Server | 🟡 |
-| Pod | 🟡 |
-| Deployment / ReplicaSet | 🟡 |
+| Pod | 🟢 |
+| Deployment / ReplicaSet | 🟢 |
 | OwnerReferences | 🟡 |
-| Service | 🟡 |
-| Selector / EndpointSlice | 🟡 |
-| Labels | 🟡 |
+| Service | 🟢 |
+| Service LoadBalancer | 🟢 |
+| Selector | 🟢 |
+| EndpointSlice | 🟡 |
+| Labels | 🟢 |
 | Taints / Tolerations | 🟡 |
-| Ingress | 🟡 |
-| PVC / PV / StorageClass | 🟡 |
-| ConfigMap / Secret | 🟡 |
-| Sealed Secrets | 🟡 |
+| Ingress (Traefik, par nom d'hôte) | 🟢 |
+| PVC / PV / StorageClass | 🟢 |
+| Local PV statique (`Retain`) | 🟢 |
+| ConfigMap / Secret | 🟢 |
+| data / stringData | 🟢 |
+| Sealed Secrets | 🟢 |
 | SOPS / age | 🟡 |
-| Namespace | 🟡 |
-| Argo CD / GitOps | 🟡 |
-| data / stringData | 🟡 |
-| Volumes persistants | 🟡 |
-| Cycle de vie des données (PVC) | 🟡 |
-| Conception (besoin → ressource) | 🟡 |
-| Docker → ressources K8s | 🟡 |
-| Cluster (K3s) | 🟡 |
-| Manifestes YAML | 🟡 |
-| Rolling update / rollback | 🟡 |
+| Namespace | 🟢 |
+| Argo CD / GitOps | 🟢 |
+| Sync manuelle et écart Git / cluster | 🟢 |
+| Manifestes YAML | 🟢 |
+| Rolling update / rollback GitOps | 🟢 |
+| Cycle de vie des données (PVC) | 🟢 |
+| Conception (besoin → ressource) | 🟢 |
+| Docker → ressources K8s | 🟢 |
+| Cluster (K3s, un nœud) | 🟢 |
+
+---
+
+# Git et forge
+
+Décision et as-built : [Forge.md](Forge.md). Argo CD lit GitHub. `homelab` n'a pas de copie de travail sur Gitea.
+
+| Compétence | Niveau |
+|------------|--------|
+| Git (commit, branche, remote) | 🟢 |
+| Branche protégée | 🟡 |
+| Demande de fusion | 🟡 |
+| Comparer deux forges et trancher | 🟢 |
+| Gitea (pod, SQLite, zvol dédié) | 🟡 |
+| Runner isolé du coffre et du cluster | 🟢 |
+| Workflow Actions | 🟡 |
+| Miroir de dépôt | 🟡 |
+| Secret de CI hors du dépôt | 🟢 |
+
+---
+
+# Médiathèques
+
+As-built : [Mediatheques.md](Mediatheques.md). Jellyfin, qBittorrent, la pile *arr et Navidrome sont en service.
+
+| Compétence | Niveau |
+|------------|--------|
+| Dataset partagé et groupe commun | 🟢 |
+| Lecture seule ou écriture selon le service | 🟢 |
+| Client BitTorrent isolé (montage, pare-feu) | 🟢 |
+| VPN de sortie (WireGuard) | 🟡 |
+| Chaîne indexeur → téléchargement → bibliothèque | 🟡 |
+| Publication sélective (Access, ou public sans Access) | 🟢 |
 
 ---
 
@@ -142,18 +228,20 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| DNS | 🟡 |
-| Configuration DNS | 🟢 |
-| Bridge Linux | 🟢 |
-| VLAN | 🔲 |
-| NAT | 🔲 |
-| Reverse Proxy | 🟡 |
+| Adresse IP | 🟢 |
+| Plan d'adressage | 🟢 |
 | Configuration réseau Linux | 🟢 |
-| Diagnostic réseau | 🟢 |
+| Bridge Linux | 🟢 |
+| Configuration DNS | 🟢 |
 | Diagnostic DNS | 🟢 |
+| Diagnostic réseau | 🟢 |
 | Synchronisation NTP | 🟢 |
 | Diagnostic NTP | 🟢 |
-| Adresse IP | 🟢 |
+| Reverse proxy (Traefik) | 🟢 |
+| Origine HTTP du tunnel, HTTPS chez Cloudflare | 🟢 |
+| VLAN | 🔲 |
+| NAT | 🔲 |
+| WireGuard pour l'accès privé distant | 🔲 |
 
 ---
 
@@ -161,17 +249,22 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| Pare-feu | 🟡 |
-| Clés SSH | 🔲 |
+| Pare-feu (CT et nftables) | 🟢 |
+| Clés SSH | 🟡 |
 | Cloudflare Tunnel | 🟢 |
 | Cloudflare Access | 🟢 |
 | MFA | 🟢 |
 | Authentification | 🟢 |
 | Gestion des accès | 🟢 |
+| Secret hors Git (Sealed Secret, fichier en 600) | 🟢 |
+| Hash Argon2id | 🟢 |
+| API Kubernetes non publiée | 🟢 |
 
 ---
 
 # Home Assistant
+
+Hors phases. Pas commencé.
 
 | Compétence | Niveau |
 |------------|--------|
@@ -189,12 +282,12 @@
 | Documentation d'infrastructure | 🟢 |
 | Diagnostic | 🟢 |
 | Dépannage | 🟢 |
-| Sauvegardes | 🔲 |
-| Monitoring | 🔲 |
 | Diagnostic par hypothèses | 🟢 |
-| Analyse de cause racine (Root Cause Analysis) | 🟡 |
-| Lecture des logs et messages système | 🟡 |
-| Gestion des services systemd | 🟢 |
+| Analyse de cause racine | 🟢 |
+| Lecture des logs et messages système | 🟢 |
+| Supervision | 🔲 |
+| Alertes | 🔲 |
+| Mises à jour et fenêtres de redémarrage | 🔲 |
 
 ---
 
@@ -202,16 +295,16 @@
 
 | Compétence | Niveau |
 |------------|--------|
-| Compréhension des couches | 🟡 |
-| Décisions d'architecture | 🟡 |
-| Documentation d'architecture | 🟡 |
+| Compréhension des couches | 🟢 |
+| Décisions d'architecture (ADR) | 🟢 |
+| Documentation d'architecture | 🟢 |
 | Séparation des responsabilités | 🟢 |
 | Principe du moindre privilège | 🟢 |
 | Organisation des services | 🟢 |
-| Plan d'adressage IP | 🟢 |
 | Défense en profondeur | 🟢 |
 | Refus par défaut | 🟢 |
-| Validation d'une architecture | 🟡 |
+| Exposition minimale | 🟢 |
+| Validation d'une architecture | 🟢 |
 
 # Objectif du projet
 
@@ -225,6 +318,8 @@
 - Diagnostiquer les incidents courants.
 - Documenter l'ensemble de l'infrastructure.
 - Expliquer chaque décision technique prise.
+
+Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai. Encore ouverts : site public (phase 5), supervision et accès privé (phase 6), scrub en routine, remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
 
 Les définitions (hyperviseur, LXC, ZFS, CIDR, etc.) sont dans [Glossaire.md](Glossaire.md).
 
