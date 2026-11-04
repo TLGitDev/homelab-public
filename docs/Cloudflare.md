@@ -54,6 +54,10 @@ argocd.labo.example
         ↓
 http://<ip-k3s-01>:80   (Traefik, **avec** Access)
 
+gitea.labo.example
+        ↓
+http://<ip-k3s-01>:3000   (en direct, **avec** Access, 4 nov.)
+
 navidrome.labo.example
         ↓
 http://<ip-navidrome>:4533   (CT 106, **sans** Access)
@@ -117,6 +121,8 @@ MFA : application TOTP (KeePassXC).
 **Vaultwarden** : pas d'Access. L'application authentifie déjà ses clients. Détail : [Vaultwarden.md](Vaultwarden.md#cloudflare-access).
 
 **Argo CD** (`argocd.labo.example`) : Access actif (même logique que Proxmox : outil d'admin). Puis login Argo CD. [ArgoCD.md](ArgoCD.md), [ADR-007](ADR/ADR-007-Argo-CD-exposition.md).
+
+**Gitea** (`gitea.labo.example`) : Access actif (4 nov.), même logique. Origine `http://<ip-k3s-01>:3000`, sans Traefik. Puis login Gitea. `ROOT_URL` reste l'adresse du LAN. [Forge.md](Forge.md#décision).
 
 **Jellyfin** : pas de route. Visé après la mise en service LAN : Access, puis le tunnel vers le LXC `http://<ip-jellyfin>:8096`, pas vers Traefik. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct).
 
