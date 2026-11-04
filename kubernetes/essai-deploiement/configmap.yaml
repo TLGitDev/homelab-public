@@ -4,4 +4,4 @@ metadata:
   name: essai-deploiement
   namespace: essai
 data:
-  version: "1"
+  version: "2"
