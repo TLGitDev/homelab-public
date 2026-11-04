@@ -21,20 +21,26 @@ Ce sont des **idées d'ordre**, pas un règlement.
 # Vue d'ensemble
 
 ```
-Phase 0  Fiabiliser l'existant
-    │
-    ├── Phase 1  Organiser les données personnelles
-    │       └── Phase 2  Sauvegarde Android
-    │
-    ├── Phase 3  Forge Git et CI/CD
-    │       └── Phase 5  Site CV public
-    │
-    └── Phase 4  Mediatheques
-            │
-            └── Phase 6  Accès distant et exploitation
+Phase 0   Fiabiliser l'existant
+Phase 1   Organiser les données personnelles
+Phase 2   Sauvegarde Android
+Phase 3   Forge Git et CI/CD
+Phase 4   Mediatheques
+
+Phase 5   Une panne de sauvegarde se voit
+Phase 6   Forge et GitOps tenables
+Phase 7   Un LXC se reconstruit
+    ├── Phase 8   Le même moule, un LXC à la fois
+    ├── Phase 9   Accès distant et exploitation
+    └── Phase 10  Dépôt public allégé
+            └── Phase 11  Site CV public
 ```
 
-La comparaison des forges peut commencer tôt. L'inventaire Android aussi. Les sauvegardes automatiques du téléphone ne sont pas « fiables » tant que le stockage cible et sa protection (phase 0–1) ne sont pas validés.
+Les phases 0 à 4 sont jouées. La suite se lit dans l'ordre des numéros.
+
+On ne modifie pas la forge ni un conteneur tant que la phase 5 n'est pas jouée. La phase 6 commence par sortir l'archive Gitea de `k3s-01`. Puis : contrôle des manifestes, `ROOT_URL`, retrait de l'essai. La phase 7 s'enregistre une fois ce `ROOT_URL` posé.
+
+Les phases 8, 9 et 10 partent de la phase 7. La 8 et la 9 avancent ensemble. La 10 publie dès la phase 7, puis se remet à jour à chaque LXC de la phase 8. La phase 11 s'y branche. La page agent reste hors de cette suite tant qu'elle n'existe pas.
 
 ---
 
@@ -254,51 +260,209 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 ---
 
-# Phase 5 — Site CV public
+# Phase 5 — Une panne de sauvegarde se voit
 
-**Objectif** : profil, projets, homelab — **sans** données privées.
+**Objectif** : savoir, sans ouvrir de session, qu'une sauvegarde n'a pas tourné, qu'un pool n'est plus sain, ou qu'un disque se remplit.
 
-**Dépendance** : phase 3 pour le pipeline. Une première version statique peut se préparer avant.
+**Dépendance** : les jobs déjà en place (phase 0). Pas une stack de tableaux : un canal.
 
-- Dépôt versionné.
-- Contenus publics seulement (CV, homelab, projets, extraits de doc).
-- Génération + validation automatiques, puis déploiement.
-- Exposition minimale, HTTPS.
-- Relire dépôts publics, journaux, captures, doc : pas de secrets, pas d'IP internes inutiles, pas de tokens.
+Le canal se choisit au début. Contrainte : le message arrive sans SSH. Pistes : ntfy, courriel, healthchecks. Une seule.
 
-**Critère** : site public ; un commit valide déclenche un déploiement reproductible ; rien de sensible n'est publié.
+Ce que le canal couvre :
+
+- échec du timer d'archive Vaultwarden ;
+- échec du timer de snapshots zvol ;
+- dernière copie USB plus vieille que le seuil écrit ;
+- `tank` autre que `ONLINE`, ou scrub en erreur ;
+- espace sous un seuil écrit.
+
+La rétention Restic, encore ouverte en phase 0, se ferme ici : durée choisie, appliquée, notée dans [Sauvegardes.md](Sauvegardes.md). Le seuil d'ancienneté USB s'aligne sur cette durée.
+
+## Jalons
+
+- ⬜ Canal choisi et noté
+- ⬜ Rétention Restic appliquée — [Sauvegardes.md](Sauvegardes.md)
+- ⬜ Les cinq contrôles ci-dessus branchés sur ce canal
+- ⬜ Scrub de `tank` planifié ; un état mauvais passe par le même canal
+- ⬜ Essai : un job fait échouer exprès, le message arrive, le job d'essai est retiré
+
+**Critère** : un échec volontaire a prévenu, sans qu'il ait fallu aller voir le timer.
 
 ---
 
-# Phase 6 — Accès distant et exploitation
+# Phase 6 — Forge et GitOps tenables
+
+**Objectif** : la forge se restaure depuis une copie qui n'est pas sur son nœud, et un manifeste cassé se voit avant Argo CD.
+
+**Dépendance** : phase 5 jouée. La forge elle-même est en place depuis la phase 3.
+
+Décisions du 4 nov., pour cette phase :
+
+- Argo CD continue de lire GitHub. `homelab` ne gagne pas de copie de travail sur Gitea.
+- Le contrôle des manifestes tourne sur ce dépôt GitHub. Il ne déploie rien.
+- `essai-deploiement` sort du cluster et du dépôt une fois ce contrôle vert. Le rollback du 4 nov. reste écrit en phase 3.
+
+## Jalons
+
+Dans cet ordre.
+
+- ⬜ Archive utile de Gitea recopiée hors de `k3s-01` (sur `pve`, puis dans le périmètre USB). Empreinte vérifiée sur la copie. L'archive qui reste seulement sur le disque de `k3s-01` n'est plus celle qu'on citerait. Cette copie entre dans ce que la phase 5 surveille.
+- ⬜ Contrôle GitHub : YAML lu, manifestes confrontés au schéma Kubernetes du K3s en place. L'arbre courant est vert.
+- ⬜ Un manifeste volontairement invalide rend le contrôle rouge, puis il est retiré.
+- ⬜ `ROOT_URL` = `https://gitea.labo.example`. Connexion via Access vérifiée. L'adresse de clone affichée est le nom public. L'accès LAN répond encore.
+- ⬜ `essai-deploiement` retiré du cluster et du dépôt. Argo ne le suit plus. Phase 3 garde le récit du rollback.
+
+**Critère** : la forge se restaure depuis une copie qui n'est pas sur `k3s-01` ; le dépôt que lit Argo CD refuse un manifeste cassé ; il ne reste pas d'application d'essai `OutOfSync`.
+
+---
+
+# Phase 7 — Un LXC se reconstruit
+
+**Objectif** : à partir du modèle Debian déjà sur `pve`, une commande refait le runner. Une deuxième passe ne change rien.
+
+**Dépendance** : phase 6 jouée (`ROOT_URL` posé, archive hors du nœud). Le runner actuel, CT 107, sert de référence.
+
+Décision du 4 nov. : Ansible, lancé depuis le PC. Pas un second outil pour un seul conteneur. Le playbook ne tourne pas sur le runner : il n'a pas à pouvoir recréer l'hyperviseur. Jeton d'API Proxmox et jeton d'enregistrement Gitea hors du dépôt, fichier ignoré par Git.
+
+Deux rôles. Le premier parle à Proxmox : CT non privilégié, `nesting`, 2 Gio, 2 cœurs, 16 Go, adresse, démarrage automatique, aucun montage de `tank`. Le second parle dedans : compte `gitea-runner`, binaire `v5.2.0` vérifié par empreinte, unité systemd, config en `600`. L'enregistrement auprès de Gitea est une tâche à part. Git ne stocke pas le fichier `.runner`.
+
+La preuve se fait sur un CT d'essai (108, autre adresse), pas en détruisant 107. 107 ne part que lorsque 108 a pris un workflow vert.
+
+## Jalons
+
+- ⬜ Rôles et playbook dans `infrastructure/ansible/`. Secrets absents du dépôt.
+- ⬜ ADR : les LXC d'infra se décrivent en Ansible ; les applications déjà en manifestes restent dans Argo CD ; Proxmox lui-même reste un mode opératoire.
+- ⬜ CT 108 créé par le playbook, runner enregistré, CI d'essai verte
+- ⬜ Deuxième passe : aucun changement
+- ⬜ 107 arrêté seulement après ça, ou 108 retiré et le récit gardé sur 107 encore en service. Un des deux, écrit.
+
+**Critère** : le runner d'essai existe parce que le playbook l'a créé, et le relancer est sans effet.
+
+Les phases 8 et 9 partent d'ici, ensemble. La phase 10 publie cette même base, puis suit la phase 8.
+
+---
+
+# Phase 8 — Le même moule, un LXC à la fois
+
+**Objectif** : chaque LXC encore posé à la main suit le moule de la phase 7. Un seul à la fois.
+
+**Dépendance** : phase 7 jouée. Avance en même temps que la phase 9.
+
+Même critère à chaque fois : CT d'essai d'abord, commande unique, deuxième passe sans changement, secrets hors de Git. Le CT en service ne bouge qu'après l'essai.
+
+Ordre, du plus simple au plus risqué :
+
+| Ordre | LXC | Pourquoi dans cet ordre |
+|-------|-----|-------------------------|
+| 1 | Navidrome, CT 106 | Lecture seule, peu d'état |
+| 2 | Jellyfin, CT 103 | Lecture seule sur les médias |
+| 3 | Samba, CT 102 | `smb.conf` est déjà dans Git ; les montages et les droits sont le sujet |
+| 4 | `servarr`, CT 105 | Plusieurs applications, un conteneur |
+| 5 | qBittorrent, CT 104 | VPN, clés hors de Git |
+| 6 | Cloudflare, CT 100 | En dernier : un échec coupe l'accès distant |
+
+## Jalons
+
+- ⬜ Navidrome
+- ⬜ Jellyfin
+- ⬜ Samba
+- ⬜ `servarr`
+- ⬜ qBittorrent
+- ⬜ Cloudflare
+
+**Critère** : la liste ci-dessus est cochée, chaque fois après un CT d'essai. La phase 10 est remise à jour à chaque ligne cochée.
+
+---
+
+# Phase 9 — Accès distant et exploitation
 
 **Objectif** : plus simple à administrer, plus sûr au quotidien.
 
-**Dépendances** : dès que plusieurs services sont en prod ; à approfondir après les phases 3–5.
+**Dépendance** : phase 7 jouée. Avance en même temps que la phase 8. Les alertes de sauvegarde sont déjà la phase 5.
 
 - Rôles de Traefik, du tunnel Cloudflare, des accès LAN. [Cloudflare.md](Cloudflare.md), [ArgoCD.md](ArgoCD.md).
 - Interfaces *arr : cinq noms en service, Access (2 nov.). Page de liens abandonnée. Navidrome en service, sans Access. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
 - Étudier WireGuard pour l'accès privé distant (**pas décidé**).
 - Séparer services publics et interfaces d'admin.
-- Contrôles utiles : dispo, disque, ZFS, sauvegardes — pas dix tableaux vides.
-- Mises à jour, redémarrages, alertes pertinentes.
-- Comptes, permissions, secrets, certificats, reprise : documentés.
+- Mises à jour, redémarrages.
+- Comptes, permissions, secrets, certificats, reprise : documentés. La reprise s'écrit sur un service qu'on sait reconstruire.
 
-**Critère** : les pannes importantes se voient ; l'admin reste privé ; les routines sont écrites.
+**Critère** : l'admin reste privé ; les routines sont écrites.
 
 ---
+
+# Phase 10 — Dépôt public allégé
+
+**Objectif** : une copie publique de ce dépôt, sur GitHub, qui montre le travail (décisions, manifestes, scripts, journal) sans donner la carte du réseau ni un secret.
+
+**Dépendance** : phase 7 jouée. Pas besoin d'attendre la fin des phases 8 et 9. La copie se remet à jour à chaque LXC de la phase 8.
+
+Décision du 4 nov. Ce dépôt-ci reste privé et reste la seule source. La copie publique ne s'édite pas à la main : une projection, rejouée depuis le PC, produit l'arbre puis le pousse. Le récit est sur le site (phase 11), qui lie cette copie.
+
+La projection garde le plus possible. Elle remplace, plutôt que de supprimer des pages entières :
+
+| Sort | Reste, récrit |
+|------|----------------|
+| Jetons, mots de passe, clés, SealedSecrets | Le manifeste, sans l'objet secret |
+| Adresses LAN, plan d'adressage, origines et UUID de tunnel | Le nom du rôle (`pve`, `k3s-01`, `samba`…) |
+| Noms DNS du labo | Un nom d'exemple. Coller le vrai nom à l'architecture donne la carte ; ces noms sont déjà résolvables |
+| Chemins d'archives, empreintes de sauvegarde, comptes | Le fait qu'une archive a été relue et qu'une empreinte a été vérifiée |
+
+`docs/Competences.md` est relu avant la publication : une ligne n'est publique que si un jalon a été joué. Les cases phase 0 encore ouvertes restent ouvertes dans la copie, elles aussi.
+
+## Jalons
+
+- ⬜ Règle ci-dessus écrite à côté du script, avec un exemple avant / après
+- ⬜ Projection rejouable. Deuxième passe : la copie publique ne change que si le labo a changé
+- ⬜ Relecture de l'arbre produit : plus d'adresse LAN, plus de secret, plus de SealedSecret, plus de nom DNS du labo
+- ⬜ `docs/Competences.md` relu après les phases 5 à 7
+- ⬜ Dépôt GitHub public créé et alimenté par la projection
+
+**Critère** : un lecteur du dépôt public suit les ADR, les manifestes et le journal ; il n'en tire ni une adresse privée, ni un secret, ni le nom DNS qui joint le service.
+
+---
+
+# Phase 11 — Site CV public
+
+**Objectif** : profil, projets, homelab. Le homelab y est raconté à partir du dépôt public, pas à partir du labo.
+
+**Dépendance** : phase 3 pour le pipeline. Phase 10 pour le contenu homelab.
+
+- Dépôt versionné, contenus publics seulement.
+- Génération + validation automatiques, puis déploiement. Exposition minimale, HTTPS.
+- Trois récits, chacun avec sa limite :
+  1. Une donnée survit à la machine. Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe ; le rollback snapshot et la reprise réelle du volume de prod restent écrits, non joués.
+  2. Un changement a un chemin et un retour arrière. Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : les manifestes se reconstruisent par GitOps ; les LXC suivent le moule de la phase 7, un à la fois.
+  3. L'accès distant est refusé par défaut. Pas de redirection de port, tunnel, Access devant l'admin. Limite : le coffre et le lecteur musique s'authentifient dans l'application.
+- Une colonne homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
+- Lien vers le dépôt public. Aucun lien vers une interface d'admin, ni vers le dépôt privé.
+
+## Jalons
+
+- ⬜ Les trois récits, leurs limites, et la colonne cloud sont sur le site
+- ⬜ Le site pointe le dépôt public de la phase 10, et seulement celui-là
+- ⬜ Première version en ligne, HTTPS
+- ⬜ Un commit valide déclenche le déploiement
+- ⬜ Relecture : rien n'a été copié à la main depuis le labo
+
+**Critère** : le site raconte le homelab, un commit le redéploie, et aucune donnée du labo privé n'y figure.
+
+---
+
 
 # Décisions encore ouvertes
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Miroir d'essai joué. Runner, workflow et déploiement avec retour arrière joués (4 nov.). L'essai Argo reste `OutOfSync` : Git est en `2`, le cluster en `1`. Forge publique `gitea.labo.example` avec Access (4 nov.). `ROOT_URL` encore l'adresse du LAN. Restauration de la forge et du runner jouée une fois (4 nov.) | Phase 3 |
+| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Contrôle des manifestes sur ce dépôt GitHub, pas sur le runner (4 nov.). `essai-deploiement` à retirer une fois ce contrôle vert. `ROOT_URL` à aligner sur `gitea.labo.example`. Archive utile encore à sortir de `k3s-01`. | Phase 6 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
 | Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
-| Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 6 |
-| Supervision | Indicateurs et alertes utiles | Phases 0 et 6 |
+| Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 9 |
+| Supervision | Un canal d'alerte, sans tableau. Pistes : ntfy, courriel, healthchecks. Une seule. WireGuard et les routines restent en phase 9. | Phase 5 |
+| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Les autres LXC suivent le même moule, un par un. Jeton Proxmox et jeton d'enregistrement hors de Git. | Phases 7 et 8 |
+| Dépôt montré | Le labo reste privé et seule source (4 nov.). Une projection rejouable alimente un second dépôt GitHub, public. Les adresses LAN deviennent des rôles, les noms DNS du labo deviennent un exemple, les secrets sortent. Le site CV pointe cette copie. | Phases 10 et 11 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
 
@@ -311,7 +475,7 @@ Idées **gardées**, pas planifiées :
 - Home Assistant
 - Paperless
 - Immich
-- Page agent sur le téléphone, une fois la forge prête — [plus tard](#page-agent-plus-tard)
+- Page agent sur le téléphone, une fois la forge prête — [plus tard](#page-agent-plus-tard). Absente du récit d'entretien tant que le pod n'existe pas.
 
 L'onduleur n'est plus un chantier : il est en place et protège le serveur. [Materiel.md](Materiel.md).
 
@@ -328,3 +492,4 @@ Pas des règles strictes.
 5. Ne pas migrer un composant qui marche juste pour « tout mettre pareil ».
 6. Données personnelles et interfaces d'admin : pas exposées « pour que ce soit plus simple ».
 7. Avant un service : RAM, CPU, disque, backups, et le temps de le soigner.
+8. Un LXC d'infra devient reproductible sur le moule déjà prouvé, un à la fois.

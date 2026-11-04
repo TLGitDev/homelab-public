@@ -53,7 +53,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 |---------|------|
 | [Journal.md](Journal.md) | Chronologie des séances |
 | [Architecture.md](Architecture.md) | Principes, schéma actuel, as-built |
-| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–6, décisions ouvertes |
+| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–11, dans l'ordre de travail |
 | [Forge.md](Forge.md) | Phase 3 : Gitea en service sur le LAN (3 nov.), édition libre. Runner CT 107 en ligne (4 nov.) |
 | [Materiel.md](Materiel.md) | Inventaire physique |
 | [Proxmox.md](Proxmox.md) | Nœud : IP, accès, [exploitation](Proxmox.md#exploitation) |
