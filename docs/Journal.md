@@ -1075,3 +1075,4 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-11-04 | CT 107 : `gitea-runner` `v5.2.0`, checksum `OK`. Compte `gitea-runner` uid 999. Configuration écrite, mode 600. Pas enregistré. Jalon pas coché. |
 | 2026-11-04 | Runner `runner` enregistré, `v5.2.0`, étiquette `host`. Service activé, `active` à 09:51:45 UTC. `.runner` en 644, 438 octets. Page Opérateurs pas encore vue. Jalon pas coché. |
 | 2026-11-04 | `.runner` resserré en 600. Journal : `declare successfully`, libellés `[host]`. Page Runners : id 1, global, Idle, `now`. Jalon coché. [FeuilleDeRoute.md](FeuilleDeRoute.md#jalons-gitea). |
+| 2026-11-04 | Workflow sur `admin/essai-miroir`, pas `homelab`. Actions du dépôt activées. CI n° 1, commit `0813dcc290`, `main`, vert en 2 s. Jalon coché. [FeuilleDeRoute.md](FeuilleDeRoute.md#jalons-gitea). |
