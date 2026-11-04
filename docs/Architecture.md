@@ -322,6 +322,7 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Recyclarr : même CT, binaire **v8.8.1**, pas d'interface. Profils MULTi.VO créés, non assignés (1er nov.). [Mediatheques.md](Mediatheques.md)
 - ✅ Lidarr : même CT, `<ip-servarr>:8686`, **3.1.6.5079**. `sons/` importé, pas de recherche (1er nov.). [Mediatheques.md](Mediatheques.md)
 - ✅ Navidrome : LXC 106, `<ip-navidrome>:4533`, lecture seule, **0.64.2**. Public `https://navidrome.labo.example`, sans Access (2 nov.). [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
+- ✅ Runner Gitea : LXC 107, `<ip-runner>`. Hors de `k3s-01` pour ne pas voir le coffre. `v5.2.0`, étiquette `host`, Idle le 4 nov. [Forge.md](Forge.md#décision)
 - ✅ Cinq noms *arr publics, Access devant (2 nov.). Page de liens abandonnée. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
 - ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
 - ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))

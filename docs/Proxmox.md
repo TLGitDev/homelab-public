@@ -52,6 +52,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-qbittorrent>` | LXC `qbittorrent` (CT 104) | LAN, port 8080. Proton VPN pour le compte du client (29 oct.). Mullvad gardé dans `wg0.conf.mullvad`. [Mediatheques.md](Mediatheques.md#proton--décision-29-oct) |
 | `<ip-servarr>` | LXC `servarr` (CT 105) | Prowlarr 2.7.0.5723 (9696), Sonarr 4.0.20.3014 (8989), Radarr 6.4.4.10685 (7878), 28 oct. Bazarr v1.6.2 (6767), 29 oct. Lidarr 3.1.6.5079 (8686), 1er nov. Public avec Access (2 nov.) : `prowlarr`, `sonarr`, `radarr`, `lidarr`, `bazarr`. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov) |
 | `<ip-navidrome>` | LXC `navidrome` (CT 106) | Port 4533, lecture seule, 0.64.2. Public `navidrome.labo.example`, sans Access (2 nov.). [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov) |
+| `<ip-runner>` | LXC `runner` (CT 107) | Créé le 4 nov., non privilégié, 2 Gio, 16 Go. Sans montage de `tank`. `gitea-runner` `v5.2.0`, étiquette `host`, vu Idle. [Forge.md](Forge.md#décision) |
 
 ## Particularités
 

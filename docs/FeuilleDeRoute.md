@@ -178,7 +178,7 @@ Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow pr
 
 ## Jalons Gitea
 
-Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La demande de fusion d'essai est fusionnée. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
+Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La demande de fusion d'essai est fusionnée. Le miroir d'essai est joué. Le runner est en ligne. Décision du 4 nov. : Argo CD lit GitHub, et `homelab` n'a pas de copie de travail sur Gitea. La suite est écrite, pas jouée. [Forge.md](Forge.md#décision).
 
 **Critère** : un changement versionné passe les tests et se déploie, avec un retour arrière.
 
@@ -187,11 +187,11 @@ Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue.
 - ✅ Pod sur `k3s-01` (3 nov.), une réplique, SQLite. Zvol `tank/vmdata/vm-101-gitea-data`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Compte `admin`. Aucun dépôt.
 - ✅ Sauvegarde du dossier de données (3 nov.), Gitea arrêté. Archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, SHA-256 `<empreinte-vérifiée>`. Relue ailleurs : base `ok`, `SECRET_KEY` de 64 caractères, compte `admin`, zéro dépôt. Pas encore copiée sur `pve`.
 - ✅ Dépôt d'essai `admin/homelab` poussé depuis le PC (3 nov.). `master` protégée : le push direct est refusé. Demande de fusion n° 1 fusionnée, commit `ad9faf2`. Argo lit toujours GitHub.
-- ⬜ Miroir vers un dépôt GitHub déjà créé. Il ne copie que les dépôts, et il ne remplace pas la sauvegarde.
-- ⬜ Runner hors de `k3s-01`.
+- ✅ Miroir d'essai (4 nov.) : `admin/essai-miroir` vers `TLGitDev/essai-miroir`, déjà créé et vide. Même commit `e2e0eb6a` des deux côtés. Pas `homelab`. Commits seulement. Le jeton reste dans le coffre.
+- ✅ Runner hors de `k3s-01` (4 nov.). LXC 107 `runner`, `<ip-runner>`, non privilégié, sans montage de `tank` ni droit sur le cluster. `gitea-runner` `v5.2.0`, étiquette `host`, service `active`. Page : id 1, global, Idle. `.runner` en 600. [Forge.md](Forge.md#décision)
 - ⬜ Workflow : push, build, tests. Le job tourne sur le runner.
-- ⬜ Déploiement repris par Argo CD, avec un retour arrière.
-- ⬜ Depuis l'extérieur : Access devant la forge. Le nom n'est pas choisi.
+- ⬜ Déploiement repris par Argo CD depuis GitHub, avec un retour arrière.
+- ⬜ Depuis l'extérieur : Access devant la forge. Le nom n'est pas choisi. À ce moment-là, retirer l'essai `admin/homelab` de Gitea.
 - ⬜ Restauration de la forge et du runner, jouée une fois.
 
 ## Page agent (plus tard)
@@ -292,7 +292,7 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Dépôt d'essai fusionné, `master` protégée. Miroir, runner et déploiement pas joués | Phase 3 |
+| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Miroir d'essai joué. Runner en ligne (4 nov.), LXC 107. Workflow et déploiement pas joués | Phase 3 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |

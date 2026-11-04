@@ -3,6 +3,7 @@ kind: Service
 metadata:
   name: gitea-service
 spec:
+  type: LoadBalancer
   selector:
     app: gitea
   ports:
