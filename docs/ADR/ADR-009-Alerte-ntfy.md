@@ -2,7 +2,7 @@
 
 ## Statut
 
-Accepté le 2026-11-05. **Pas appliqué** : les units ne sont pas encore sur `pve` ni sur `k3s-01`.
+Accepté le 2026-11-05. Appliqué le même jour. Sujet posé, `notify-ntfy` sur `pve` et `k3s-01`, essai d'échec reçu puis unit retirée. Contrôle de 08:15 activé (prochain passage le 6 nov.). Scrub planifié le 6 déc. 05:00, pas lancé le 5 nov. Rétention Restic appliquée le 5 nov. sur le run `<snapshot>` : 6 snapshots gardés, 7 retirés, `prune` de 3,999 Kio.
 
 ## Contexte
 

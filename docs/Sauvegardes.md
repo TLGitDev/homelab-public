@@ -261,7 +261,7 @@ Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden
 
 # USB / Restic
 
-Script sur `pve` : `/usr/local/sbin/backup-usb`, copie d'avant le 5 nov. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb). La copie Git ajoute la rétention (14 jours) et la date de succès. Pas encore copiée sur `pve`.
+Script sur `pve` : `/usr/local/sbin/backup-usb`, `700`, copie Git du 5 nov. installée le 5 nov. `bash -n` muet. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb). Cette copie fait le `forget` et écrit la date de succès. Premier run avec ces deux étapes : 5 nov. 10:29–10:33, snapshot `<snapshot>`.
 
 - Sources (script Git, 24 oct.) : `/tank/backups`, `/tank/documents`, `/tank/images`, `/tank/musique`, `/tank/projets`, `/tank/videos`. Pas le zvol, pas `Mediatheques`, pas `~/backups/sealed-secrets/` sur k3s-01, pas de `rsync` vers `/tank/backups/pc/`. (document privé).
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
@@ -271,10 +271,11 @@ Script sur `pve` : `/usr/local/sbin/backup-usb`, copie d'avant le 5 nov. Git : [
 - Second run **24 oct. 16:08** : snapshot `<snapshot>`, parent `<snapshot>`. 363180 fichiers (197 nouveaux), 469,8 Mio ajoutés (358,6 Mio stockés), manifeste OK, `check` OK (9 snapshots). Avant ce run : verrou orphelin du PID 1382228 (créé 11:57, processus absent), retiré par `restic unlock`. La clé était déjà montée : elle est **restée** montée.
 - Troisième run **25 oct. 13:26** : snapshot `<snapshot>`, parent `<snapshot>`. 363413 fichiers (234 nouveaux, 0 modifiés), 154 dossiers nouveaux, 200,3 Mio ajoutés (199,0 Mio stockés), 106,009 Gio lus en 1:21. Manifeste OK (363413 fichiers). `check` OK (10 snapshots, 13 index). Clé démontée. Avant le run : `find` voit le `.vcf`, le JSON SMS et le JSON Obtainium ; `ls` voit `files` et `signal-backup-2026-10-24-18-46-57`.
 - Quatrième run **2 nov. 13:53–13:58** : snapshot `<snapshot>`, parent `<snapshot>`. 363422 fichiers (10 nouveaux, 0 modifiés), 1 dossier nouveau, 4,229 Gio ajoutés (3,790 Gio stockés), 110,247 Gio lus en 2:56. Manifeste OK (363422 fichiers). `check` avant : 11 snapshots, aucune erreur. `check` après : 12 snapshots, 15 index, aucune erreur. Clé démontée. Le dernier snapshot écrit ici était `<snapshot>` (25 oct.) : le parent `<snapshot>` n'y figure pas.
+- Cinquième run **5 nov. 10:29–10:33** : snapshot `<snapshot>`, parent `<snapshot>`. 363445 fichiers (26 nouveaux, 0 modifiés), 2 dossiers nouveaux, 5 modifiés, 1,098 Gio ajoutés (1,090 Gio stockés), 111,876 Gio lus en 1:53. Manifeste OK (363445 fichiers). `check` avant : 12 snapshots, aucune erreur. `check` après : 13 snapshots, aucune erreur. Puis `forget --keep-within 14d --group-by host --prune` : 6 snapshots gardés (`<snapshot>`, `<snapshot>`, `<snapshot>`, `<snapshot>`, `<snapshot>`, `<snapshot>`). 7 retirés, dont `<snapshot>` et les copies du 19 et du 20 oct. `prune` : 14 blobs, 3,999 Kio. Il reste 317057 blobs, 86,166 Gio, 0 octet inutilisé. Date de succès réécrite (journal à 10:33:18, fichier non relu). Clé démontée.
 
 ## Comportement
 
-La liste est celle de la copie Git (5 nov.). Sur `pve`, la copie installée n'a pas encore les étapes 7 et 8.
+La liste est celle du script installé sur `pve`. Les étapes 7 et 8 ont tourné le 5 nov., run `<snapshot>`.
 
 1. Root, `flock`, **tous** les répertoires sources présents.
 2. Manifeste des fichiers (`find` sur la liste, `-print0`) pour les noms ambigus.
@@ -327,7 +328,7 @@ Hors VM : oui. Hors serveur : via `backup-usb` (chemins listés dans le script).
 - Ne copie pas tout seul la clé Sealed Secrets (elle doit déjà être sous `/tank/backups`).
 - Mot de passe requis à chaque run.
 - Disque doit être branché.
-- Rétention des snapshots Restic : **14 jours**, écrite le 5 nov., pas encore appliquée sur le dépôt. [ADR-009](ADR/ADR-009-Alerte-ntfy.md).
+- Rétention des snapshots Restic : **14 jours**, appliquée le 5 nov. sur le run `<snapshot>`. La durée est relative au snapshot le plus récent. Le `--dry-run` du matin, alors que le plus récent était `<snapshot>` (2 nov.), n'aurait retiré que `<snapshot>`. Le run de 10:31 a déplacé la fenêtre : 7 snapshots sont sortis, 6 restent. Les fichiers encore présents dans ces 6 snapshots n'ont pas été effacés. `prune` n'a retiré que 3,999 Kio. [ADR-009](ADR/ADR-009-Alerte-ntfy.md).
 - Après une erreur : regarder le montage avant de relancer. Un `repository is already locked` : `ps -p <PID>`. Processus absent → `restic unlock` sur ce dépôt, puis relancer. Processus encore là → ne pas unlock.
 
 Avant de débrancher : plus d'opération Restic, démonter, vérifier que ce n'est plus monté.
@@ -336,7 +337,7 @@ Avant de débrancher : plus d'opération Restic, démonter, vérifier que ce n'e
 
 # Alerte
 
-Décision du 5 nov. : ntfy. [ADR-009](ADR/ADR-009-Alerte-ntfy.md). Rien de cette section n'est installé.
+Décision du 5 nov. : ntfy. [ADR-009](ADR/ADR-009-Alerte-ntfy.md). Jouée le même jour : sujet en place, `notify-ntfy` sur `pve` et `k3s-01`, messages d'essai reçus, units d'échec branchées, contrôle et scrub activés, rétention appliquée sur `<snapshot>`.
 
 | Quoi | Où | Comment |
 |------|----|---------|
@@ -351,16 +352,18 @@ Un scrub en cours, ou `scan: none requested` avant le premier passage, ne prévi
 
 | Rôle | Git | Installé |
 |------|-----|----------|
-| Envoi | [`notify-ntfy`](../infrastructure/pve/scripts/notify-ntfy) | pas encore. Même fichier sur `k3s-01` |
-| Sujet | `/etc/homelab/ntfy-topic` | pas dans Git |
-| Contrôle | [`check-sauvegardes.sh`](../infrastructure/pve/scripts/check-sauvegardes.sh) | pas encore |
-| Unit d'échec | [`notify-failure@.service`](../infrastructure/pve/systemd/notify-failure@.service) | pas encore. Copie aussi sous `infrastructure/k3s-01/systemd/` |
-| Timer 08:15 | [`check-sauvegardes.timer`](../infrastructure/pve/systemd/check-sauvegardes.timer) | pas encore |
-| Scrub | [`scrub-tank.timer`](../infrastructure/pve/systemd/scrub-tank.timer) | pas encore |
+| Envoi | [`notify-ntfy`](../infrastructure/pve/scripts/notify-ntfy) | `/usr/local/sbin/notify-ntfy`, `700`, sur `pve` et `k3s-01` (5 nov.) |
+| Sujet | `/etc/homelab/ntfy-topic` | `600`, root, sur `pve` et `k3s-01` (5 nov.). Pas dans Git |
+| Contrôle | [`check-sauvegardes.sh`](../infrastructure/pve/scripts/check-sauvegardes.sh) | `/usr/local/sbin/check-sauvegardes.sh`, `700`. Lancé à la main le 5 nov. : code `0`, aucun message |
+| Unit d'échec | [`notify-failure@.service`](../infrastructure/pve/systemd/notify-failure@.service) | installée le 5 nov. sur `pve` et `k3s-01`. `OnFailure` ajouté aux deux snapshots zvol et à `backup-vaultwarden.service`. `daemon-reload` fait |
+| Timer 08:15 | [`check-sauvegardes.timer`](../infrastructure/pve/systemd/check-sauvegardes.timer) | activé le 5 nov. Prochain passage : ven. 6 nov. 08:15. Pas encore passé |
+| Scrub | [`scrub-tank.timer`](../infrastructure/pve/systemd/scrub-tank.timer) | activé le 5 nov. Prochain passage : dim. 6 déc. 05:00. `scrub-tank.service` `inactive`. Dernier scrub réel : 11 oct. 00:24, `repaired 0B`, `with 0 errors`, durée 1 s. Le `LAST` du 5 nov. 10:25 est la date écrite pour empêcher un rattrapage, pas un scrub |
 
-`OnFailure` est déjà dans les units Git de l'archive et des deux snapshots zvol. Les units sur les machines ne l'ont pas tant qu'on ne les a pas recopiées.
+`OnFailure` est dans les units Git et, depuis le 5 nov., sur les machines. Sur le disque la ligne est juste après `[Unit]`, avant `Description`. systemd n'en tient pas compte. Essai du 5 nov. 10:14 : `alerte-essai.service` sort en erreur, `notify-failure@alerte-essai` finit `status=0`, le téléphone affiche `échec alerte-essai`. L'unit est retirée. `systemctl status alerte-essai.service` : unit introuvable. `reset-failed` sur `notify-failure@alerte-essai` a répondu `not loaded` : ce service avait réussi, il n'était pas en échec.
 
-## Mise en place (pas jouée)
+## Mise en place
+
+Les blocs 1 à 6 sont joués (5 nov.). La date de succès a d'abord été `2026-11-02T13:55:23+01:00`, puis réécrite par le run `<snapshot>`. Clé démontée.
 
 Une fois ces fichiers sur le clone `k3s-01` (`/home/utilisateur/homelab`). Ne pas coller le sujet dans Git ni dans le journal.
 
