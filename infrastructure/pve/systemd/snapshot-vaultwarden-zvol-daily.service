@@ -1,5 +1,6 @@
 [Unit]
 Description=Daily ZFS snapshot of the Vaultwarden zvol
+OnFailure=notify-failure@snapshot-vaultwarden-zvol-daily.service
 
 [Service]
 Type=oneshot

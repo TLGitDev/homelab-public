@@ -1,5 +1,6 @@
 [Unit]
 Description=Hourly ZFS snapshot of the Vaultwarden zvol
+OnFailure=notify-failure@snapshot-vaultwarden-zvol-hourly.service
 
 [Service]
 Type=oneshot

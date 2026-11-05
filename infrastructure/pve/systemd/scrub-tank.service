@@ -1,0 +1,7 @@
+[Unit]
+Description=Démarrage du scrub mensuel de tank
+OnFailure=notify-failure@scrub-tank.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/zpool scrub tank

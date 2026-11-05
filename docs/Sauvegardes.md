@@ -261,7 +261,7 @@ Détail zvol : [Stockage.md](Stockage.md). Coffre : [Vaultwarden.md](Vaultwarden
 
 # USB / Restic
 
-Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb).
+Script sur `pve` : `/usr/local/sbin/backup-usb`, copie d'avant le 5 nov. Git : [`infrastructure/pve/scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb). La copie Git ajoute la rétention (14 jours) et la date de succès. Pas encore copiée sur `pve`.
 
 - Sources (script Git, 24 oct.) : `/tank/backups`, `/tank/documents`, `/tank/images`, `/tank/musique`, `/tank/projets`, `/tank/videos`. Pas le zvol, pas `Mediatheques`, pas `~/backups/sealed-secrets/` sur k3s-01, pas de `rsync` vers `/tank/backups/pc/`. (document privé).
 - Dépôt : `/mnt/usb-inspect/restic-homelab`.
@@ -274,14 +274,18 @@ Script installé : `/usr/local/sbin/backup-usb`. Git : [`infrastructure/pve/scri
 
 ## Comportement
 
+La liste est celle de la copie Git (5 nov.). Sur `pve`, la copie installée n'a pas encore les étapes 7 et 8.
+
 1. Root, `flock`, **tous** les répertoires sources présents.
 2. Manifeste des fichiers (`find` sur la liste, `-print0`) pour les noms ambigus.
 3. Si déjà monté : vérifier que c'est bien cet UUID. Sinon monter. Si le disque est monté ailleurs : erreur.
 4. `restic check`, puis **un** snapshot Restic des six chemins (incrémental après le premier run).
 5. Comparer le snapshot au manifeste : fichiers manquants ou inattendus = échec.
-6. `restic check` à nouveau, `sync`.
-7. Démonter **seulement** si le script a monté. Déjà monté au départ → reste monté.
-8. Temp (`/tmp/backup-usb.*`) toujours nettoyé. En cas d'échec, le disque reste monté pour diagnostiquer.
+6. `restic check` à nouveau.
+7. `restic forget --keep-within 14d --group-by host --prune`. `--group-by host` : un changement de chemins ne fige pas un ancien groupe pour toujours.
+8. Écrire `/var/lib/homelab/backup-usb-last-success` seulement après ce `forget`.
+9. `sync`. Démonter **seulement** si le script a monté. Déjà monté au départ → reste monté.
+10. Temp (`/tmp/backup-usb.*`) toujours nettoyé. En cas d'échec, le disque reste monté pour diagnostiquer.
 
 ### Mise à jour du script (sur `pve`, root)
 
@@ -323,10 +327,249 @@ Hors VM : oui. Hors serveur : via `backup-usb` (chemins listés dans le script).
 - Ne copie pas tout seul la clé Sealed Secrets (elle doit déjà être sous `/tank/backups`).
 - Mot de passe requis à chaque run.
 - Disque doit être branché.
-- Rétention des snapshots Restic : **pas encore** définie.
+- Rétention des snapshots Restic : **14 jours**, écrite le 5 nov., pas encore appliquée sur le dépôt. [ADR-009](ADR/ADR-009-Alerte-ntfy.md).
 - Après une erreur : regarder le montage avant de relancer. Un `repository is already locked` : `ps -p <PID>`. Processus absent → `restic unlock` sur ce dépôt, puis relancer. Processus encore là → ne pas unlock.
 
 Avant de débrancher : plus d'opération Restic, démonter, vérifier que ce n'est plus monté.
+
+---
+
+# Alerte
+
+Décision du 5 nov. : ntfy. [ADR-009](ADR/ADR-009-Alerte-ntfy.md). Rien de cette section n'est installé.
+
+| Quoi | Où | Comment |
+|------|----|---------|
+| Timer d'archive Vaultwarden | `k3s-01`, 03:00 | `OnFailure` → `échec backup-vaultwarden` |
+| Timers de snapshots zvol | `pve`, horaire et 04:00 | `OnFailure` → le nom de l'unit |
+| Copie USB plus vieille que 14 jours | `pve`, 08:15 | Fichier de date, pas le dépôt (la clé est démontée) |
+| `tank` autre que `ONLINE`, ou scrub en erreur | `pve`, 08:15 | `zpool get` et `zpool status` |
+| Espace sous 10 % libres | `pve`, 08:15 | `tank` et `rpool` |
+| Scrub de `tank` | `pve`, premier dimanche, 05:00 | `zpool scrub` rend la main tout de suite. L'état mauvais passe par le contrôle de 08:15 |
+
+Un scrub en cours, ou `scan: none requested` avant le premier passage, ne prévient pas. `with 0 errors` ne prévient pas.
+
+| Rôle | Git | Installé |
+|------|-----|----------|
+| Envoi | [`notify-ntfy`](../infrastructure/pve/scripts/notify-ntfy) | pas encore. Même fichier sur `k3s-01` |
+| Sujet | `/etc/homelab/ntfy-topic` | pas dans Git |
+| Contrôle | [`check-sauvegardes.sh`](../infrastructure/pve/scripts/check-sauvegardes.sh) | pas encore |
+| Unit d'échec | [`notify-failure@.service`](../infrastructure/pve/systemd/notify-failure@.service) | pas encore. Copie aussi sous `infrastructure/k3s-01/systemd/` |
+| Timer 08:15 | [`check-sauvegardes.timer`](../infrastructure/pve/systemd/check-sauvegardes.timer) | pas encore |
+| Scrub | [`scrub-tank.timer`](../infrastructure/pve/systemd/scrub-tank.timer) | pas encore |
+
+`OnFailure` est déjà dans les units Git de l'archive et des deux snapshots zvol. Les units sur les machines ne l'ont pas tant qu'on ne les a pas recopiées.
+
+## Mise en place (pas jouée)
+
+Une fois ces fichiers sur le clone `k3s-01` (`/home/utilisateur/homelab`). Ne pas coller le sujet dans Git ni dans le journal.
+
+### 1. Téléphone et sujet
+
+Appli ntfy (F-Droid ou Obtainium). Sujet long, aléatoire, pas un mot devinable. S'y abonner.
+
+Sur `pve`, root. La ligne collée est l'URL complète, sans espace.
+
+```bash
+install -d -m 755 /etc/homelab
+umask 077
+cat > /etc/homelab/ntfy-topic
+```
+
+Coller `https://ntfy.sh/…`, Entrée, puis Ctrl-D.
+
+```bash
+chmod 600 /etc/homelab/ntfy-topic
+```
+
+Copie vers `k3s-01`, puis le fichier source chez `utilisateur` est retiré :
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  /etc/homelab/ntfy-topic \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/ntfy-topic
+```
+
+Sur `k3s-01` :
+
+```bash
+sudo install -d -m 755 /etc/homelab
+sudo install -m 600 /home/utilisateur/ntfy-topic /etc/homelab/ntfy-topic
+rm -f /home/utilisateur/ntfy-topic
+```
+
+### 2. Script d'envoi, puis un message
+
+`command -v curl` doit afficher un chemin, sur `pve` et sur `k3s-01`. Sinon s'arrêter.
+
+Sur `pve`, root :
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/scripts/notify-ntfy \
+  /tmp/notify-ntfy
+install -m 700 /tmp/notify-ntfy /usr/local/sbin/notify-ntfy
+bash -n /usr/local/sbin/notify-ntfy
+/usr/local/sbin/notify-ntfy "essai canal, pve"
+```
+
+Le téléphone affiche `essai canal, pve`. Sinon s'arrêter. Le journal de `curl` ne doit pas contenir le sujet : le script n'écrit que `Envoi ntfy impossible.` ou `ntfy HTTP …`.
+
+Même binaire sur `k3s-01` :
+
+```bash
+sudo install -m 700 /home/utilisateur/homelab/infrastructure/pve/scripts/notify-ntfy /usr/local/sbin/notify-ntfy
+sudo bash -n /usr/local/sbin/notify-ntfy
+sudo /usr/local/sbin/notify-ntfy "essai canal, k3s-01"
+```
+
+Second message vu. Sinon s'arrêter : l'archive de 03:00 ne pourrait pas prévenir.
+
+### 3. Units d'échec
+
+Sur `pve` :
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/notify-failure@.service \
+  /tmp/notify-failure@.service
+install -m 644 /tmp/notify-failure@.service /etc/systemd/system/notify-failure@.service
+```
+
+Ajouter la ligne `OnFailure` aux deux units de snapshot déjà en place, comme dans Git. Ne pas remplacer l'unit si le reste a divergé : une ligne dans `[Unit]`.
+
+```bash
+grep -n OnFailure /etc/systemd/system/snapshot-vaultwarden-zvol-hourly.service \
+  /etc/systemd/system/snapshot-vaultwarden-zvol-daily.service
+systemctl daemon-reload
+```
+
+Sur `k3s-01`, la même unit, puis la ligne sur `backup-vaultwarden.service` :
+
+```bash
+sudo install -m 644 \
+  /home/utilisateur/homelab/infrastructure/k3s-01/systemd/notify-failure@.service \
+  /etc/systemd/system/notify-failure@.service
+sudo grep -n OnFailure /etc/systemd/system/backup-vaultwarden.service
+sudo systemctl daemon-reload
+```
+
+### 4. Rétention, à sec, puis la date
+
+Clé branchée. Sur `pve`, root. Mot de passe au clavier, pas dans la ligne de commande.
+
+```bash
+read -r -s -p "Mot de passe Restic : " RESTIC_PASSWORD
+printf '\n'
+export RESTIC_PASSWORD
+mkdir -p /mnt/usb-inspect
+MOUNTED=0
+if ! findmnt -rn -M /mnt/usb-inspect >/dev/null; then
+    mount "$(findfs UUID=340F-3DAF)" /mnt/usb-inspect
+    MOUNTED=1
+fi
+restic -r /mnt/usb-inspect/restic-homelab forget \
+  --keep-within 14d --group-by host --dry-run
+```
+
+Lire ce qui serait retiré. Si le drapeau est refusé : `restic version`, s'arrêter, ne pas inventer une autre politique. Ce `--dry-run` n'applique rien. La suite reste dans le même shell : `MOUNTED` décide du démontage.
+
+Si la liste est acceptable, écrire la date du snapshot le plus récent. Ça évite une fausse alerte tant que le prochain `backup-usb` n'a pas tourné.
+
+```bash
+python3 - <<'PY'
+import json, subprocess, pathlib
+from datetime import datetime
+raw = subprocess.check_output(
+    ["restic", "-r", "/mnt/usb-inspect/restic-homelab", "snapshots", "--json"],
+    text=True,
+)
+snaps = json.loads(raw)
+latest = max(snaps, key=lambda s: s["time"])
+when = datetime.fromisoformat(latest["time"].replace("Z", "+00:00"))
+stamp = when.isoformat(timespec="seconds")
+print(latest["short_id"], stamp)
+path = pathlib.Path("/var/lib/homelab/backup-usb-last-success")
+path.parent.mkdir(mode=0o755, exist_ok=True)
+path.write_text(stamp + "\n")
+path.chmod(0o644)
+PY
+unset RESTIC_PASSWORD
+if (( MOUNTED )); then
+    umount /mnt/usb-inspect
+fi
+```
+
+Noter l'identifiant affiché. La rétention n'est appliquée qu'au prochain `backup-usb`, avec la copie Git du script.
+
+### 5. Contrôle et scrub
+
+Sur `pve` :
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/scripts/check-sauvegardes.sh \
+  /tmp/check-sauvegardes.sh
+install -m 700 /tmp/check-sauvegardes.sh /usr/local/sbin/check-sauvegardes.sh
+bash -n /usr/local/sbin/check-sauvegardes.sh
+/usr/local/sbin/check-sauvegardes.sh
+echo "code $?"
+```
+
+Code `0`, et aucun message sur le téléphone. Un message ici veut dire qu'un seuil est déjà franchi : le lire, ne pas activer le timer par-dessus.
+
+```bash
+scp -i /root/.ssh/id_ed25519_backup_k3s \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/check-sauvegardes.service \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/check-sauvegardes.timer \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/scrub-tank.service \
+  utilisateur@<ip-k3s-01>:/home/utilisateur/homelab/infrastructure/pve/systemd/scrub-tank.timer \
+  /tmp/
+install -m 644 /tmp/check-sauvegardes.service /tmp/check-sauvegardes.timer \
+  /tmp/scrub-tank.service /tmp/scrub-tank.timer \
+  /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now check-sauvegardes.timer
+systemctl enable --now scrub-tank.timer
+systemctl list-timers 'check-sauvegardes.timer' 'scrub-tank.timer'
+```
+
+Ne pas lancer `scrub-tank.service` dans ce pas. Le premier scrub est le prochain premier dimanche, ou au démarrage si ce dimanche a été manqué (`Persistent=true`).
+
+Copier aussi `backup-usb` (mode `700`, `bash -n`) avant le prochain run. Ce run-là applique `forget` pour de vrai. Il peut durer : `prune` réécrit les paquets.
+
+### 6. Échec volontaire, puis retrait
+
+Sur `pve`, root. Unit qui n'existe que le temps de l'essai.
+
+```bash
+cat > /etc/systemd/system/alerte-essai.service <<'EOF'
+[Unit]
+Description=Essai d'alerte, à retirer
+OnFailure=notify-failure@alerte-essai.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/false
+EOF
+systemctl daemon-reload
+systemctl start alerte-essai.service || true
+sleep 2
+systemctl status notify-failure@alerte-essai.service --no-pager
+```
+
+`notify-failure@alerte-essai` est `status=0`. Le téléphone affiche `échec alerte-essai`. Ensuite :
+
+```bash
+systemctl reset-failed alerte-essai.service notify-failure@alerte-essai.service
+rm -f /etc/systemd/system/alerte-essai.service
+systemctl daemon-reload
+systemctl status alerte-essai.service
+```
+
+La dernière commande doit dire que l'unit n'existe pas. Ne pas laisser `alerte-essai.service` sur la machine.
+
+Les cinq contrôles ne sont cochés qu'une fois ce message vu, le script `backup-usb` copié, et un `forget` réel passé. Le scrub n'a pas encore tourné : le jalon « planifié » se coche quand le timer est `enabled`.
 
 ---
 

@@ -1,0 +1,10 @@
+[Unit]
+Description=Scrub de tank, le premier dimanche du mois
+
+[Timer]
+OnCalendar=Sun *-*-1..7 05:00:00
+Persistent=true
+Unit=scrub-tank.service
+
+[Install]
+WantedBy=timers.target

@@ -81,6 +81,7 @@ Aucune modification importante n'est réalisée sans comprendre le problème qu'
 | [ADR-006-Argo-CD.md](ADR/ADR-006-Argo-CD.md) | GitOps : Argo CD |
 | [ADR-007-Argo-CD-exposition.md](ADR/ADR-007-Argo-CD-exposition.md) | Exposition Argo CD, config hors `root` |
 | [ADR-008-Vaultwarden-tank.md](ADR/ADR-008-Vaultwarden-tank.md) | Vaultwarden : zvol `tank` + Local PV (appliqué) |
+| [ADR-009-Alerte-ntfy.md](ADR/ADR-009-Alerte-ntfy.md) | Alerte : ntfy (accepté le 5 nov., pas appliqué) |
 
 ---
 

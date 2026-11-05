@@ -1,0 +1,6 @@
+[Unit]
+Description=Alerte ntfy (%i)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/notify-ntfy "échec %i"

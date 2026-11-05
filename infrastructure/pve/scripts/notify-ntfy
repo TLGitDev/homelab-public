@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Publie un texte vers le sujet ntfy. L'URL est dans /etc/homelab/ntfy-topic (mode 600).
+# ADR-009. Ne pas journaliser l'URL : le sujet est le secret.
+set -eu
+
+url_file=/etc/homelab/ntfy-topic
+
+[[ -f "$url_file" ]] || {
+    echo "Fichier absent : $url_file" >&2
+    exit 1
+}
+
+url=$(head -n 1 "$url_file")
+[[ "$url" =~ ^https://[^/[:space:]]+/[^[:space:]]+$ ]] || {
+    echo "URL ntfy invalide." >&2
+    exit 1
+}
+
+message=${1:-alerte}
+[[ -n "$message" ]] || exit 1
+
+code=$(curl --silent --max-time 20 \
+    --output /dev/null \
+    --write-out '%{http_code}' \
+    --header 'Title: homelab' \
+    --header 'Priority: high' \
+    --header 'Tags: warning' \
+    --data-binary "$message" \
+    "$url") || {
+    echo "Envoi ntfy impossible." >&2
+    exit 1
+}
+
+[[ "$code" == "200" ]] || {
+    echo "ntfy HTTP ${code}" >&2
+    exit 1
+}

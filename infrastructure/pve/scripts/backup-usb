@@ -5,6 +5,9 @@ USB_UUID="340F-3DAF"
 MOUNT_POINT="/mnt/usb-inspect"
 REPOSITORY="$MOUNT_POINT/restic-homelab"
 LOCK_FILE="/run/lock/backup-usb.lock"
+# ADR-009. Relatif au snapshot le plus récent. Même durée que l'alerte d'âge.
+RESTIC_KEEP_WITHIN=14d
+STAMP_FILE=/var/lib/homelab/backup-usb-last-success
 
 # Live + copies hors VM. Pas le zvol, pas Mediatheques, pas de doublon sous backups/pc.
 SOURCE_DIRS=(
@@ -184,6 +187,18 @@ fi
 log "Contrôle Restic complet après sauvegarde..."
 restic -r "$REPOSITORY" check ||
     die "Échec du contrôle Restic après sauvegarde."
+
+log "Rétention Restic : ${RESTIC_KEEP_WITHIN}, group-by host..."
+restic -r "$REPOSITORY" forget \
+    --keep-within "$RESTIC_KEEP_WITHIN" \
+    --group-by host \
+    --prune ||
+    die "Échec de la rétention Restic."
+
+install -d -m 755 /var/lib/homelab
+date -Iseconds > "$STAMP_FILE"
+chmod 644 "$STAMP_FILE"
+log "Date de succès écrite : $STAMP_FILE"
 
 log "Synchronisation des écritures..."
 sync

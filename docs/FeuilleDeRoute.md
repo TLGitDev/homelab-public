@@ -68,7 +68,7 @@ Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : 
 - ⬜ Premier snapshot quotidien timer (22 oct. 04:00) et rétention 7 j sur la durée
 - ⬜ Restauration par rollback snapshot (prod)
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; restore d'une archive testée
-- ⬜ Rétention des snapshots Restic
+- ⬜ Rétention des snapshots Restic (14 j écrits le 5 nov., pas appliqués)
 - ✅ Restore isolée Vaultwarden (technique 20 oct. + login 21 oct.) — [Vaultwarden.md](Vaultwarden.md)
 - ⬜ Reprise réelle sur le zvol de prod ([écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
 - ✅ Clé Sealed Secrets sous `/tank/backups` (périmètre USB)
@@ -268,6 +268,8 @@ Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, télé
 
 Le canal se choisit au début. Contrainte : le message arrive sans SSH. Pistes : ntfy, courriel, healthchecks. Une seule.
 
+Décision du 5 nov. : **ntfy**. Appli sur le téléphone, instance publique, sujet hors du dépôt. Pas d'instance ici. Courriel écarté (secret SMTP, boîte qui peut retenir le message). Healthchecks écarté (il lui faut encore un canal). Limite : si `pve` ne tourne pas, le contrôle quotidien ne part pas. Rétention Restic et âge USB : **14 jours**. Espace : sous **10 %** libres, `tank` et `rpool`. [ADR-009](ADR/ADR-009-Alerte-ntfy.md). Procédure écrite, pas jouée : [Sauvegardes.md](Sauvegardes.md#alerte).
+
 Ce que le canal couvre :
 
 - échec du timer d'archive Vaultwarden ;
@@ -280,8 +282,8 @@ La rétention Restic, encore ouverte en phase 0, se ferme ici : durée choisie, 
 
 ## Jalons
 
-- ⬜ Canal choisi et noté
-- ⬜ Rétention Restic appliquée — [Sauvegardes.md](Sauvegardes.md)
+- ✅ Canal choisi et noté (5 nov.) : ntfy — [ADR-009](ADR/ADR-009-Alerte-ntfy.md)
+- ⬜ Rétention Restic appliquée — 14 j écrits, pas encore sur le dépôt. [Sauvegardes.md](Sauvegardes.md#alerte)
 - ⬜ Les cinq contrôles ci-dessus branchés sur ce canal
 - ⬜ Scrub de `tank` planifié ; un état mauvais passe par le même canal
 - ⬜ Essai : un job fait échouer exprès, le message arrive, le job d'essai est retiré
@@ -460,7 +462,7 @@ La projection garde le plus possible. Elle remplace, plutôt que de supprimer de
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
 | Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
 | Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 9 |
-| Supervision | Un canal d'alerte, sans tableau. Pistes : ntfy, courriel, healthchecks. Une seule. WireGuard et les routines restent en phase 9. | Phase 5 |
+| Supervision | ntfy (5 nov.). Instance publique, sujet hors du dépôt. Rétention Restic 14 j et seuil USB alignés, pas encore appliqués. Espace : 10 % libres. Courriel et healthchecks écartés. | Phase 5 |
 | Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Les autres LXC suivent le même moule, un par un. Jeton Proxmox et jeton d'enregistrement hors de Git. | Phases 7 et 8 |
 | Dépôt montré | Le labo reste privé et seule source (4 nov.). Une projection rejouable alimente un second dépôt GitHub, public. Les adresses LAN deviennent des rôles, les noms DNS du labo deviennent un exemple, les secrets sortent. Le site CV pointe cette copie. | Phases 10 et 11 |
 

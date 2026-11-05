@@ -1,0 +1,10 @@
+[Unit]
+Description=Contrôle quotidien des sauvegardes, de tank et de l'espace
+
+[Timer]
+OnCalendar=*-*-* 08:15:00
+Persistent=true
+Unit=check-sauvegardes.service
+
+[Install]
+WantedBy=timers.target

@@ -2,6 +2,7 @@
 Description=Backup Vaultwarden data
 Wants=network-online.target
 After=network-online.target
+OnFailure=notify-failure@backup-vaultwarden.service
 
 [Service]
 Type=oneshot

@@ -139,6 +139,9 @@ Ne jamais versionner clé SSH privée, mot de passe Restic, ni archive.
 | Timer pull | 03:15 | [`systemd/pull-vaultwarden-backup.*`](../infrastructure/pve/systemd/) |
 | USB / Restic | `/usr/local/sbin/backup-usb` (**manuel**) | [`scripts/backup-usb`](../infrastructure/pve/scripts/backup-usb) |
 | Snapshots zvol VW | `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` (horaire + 04:00) | [`scripts/snapshot-vaultwarden-zvol.sh`](../infrastructure/pve/scripts/snapshot-vaultwarden-zvol.sh) |
+| Alerte ntfy | pas installé | [`scripts/notify-ntfy`](../infrastructure/pve/scripts/notify-ntfy) |
+| Contrôle quotidien | pas installé, 08:15 | [`scripts/check-sauvegardes.sh`](../infrastructure/pve/scripts/check-sauvegardes.sh) |
+| Scrub `tank` | pas installé, 1er dimanche 05:00 | [`systemd/scrub-tank.timer`](../infrastructure/pve/systemd/scrub-tank.timer) |
 | Samba (LAN) | LXC `samba` CT 102 / `smbd` (plus sur `pve`) | [`samba/smb.conf`](../infrastructure/pve/samba/smb.conf) |
 
 Pull : SSH/SCP, clé `/root/.ssh/id_ed25519_backup_k3s`, SHA-256, `tar -tf`, pas d'écrasement si hash différent, 7 archives. Premier tar auto confirmé : `vaultwarden-2026-10-20_030012.tar`. Détail : [Vaultwarden.md](Vaultwarden.md#pve--0315).
