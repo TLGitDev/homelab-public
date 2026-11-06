@@ -152,7 +152,7 @@ Un push mirror vers GitHub écrase aussi la copie distante. Le dépôt GitHub do
 
 La forge est visée sur `k3s-01`, un pod, une réplique, SQLite. Les données vont sur un zvol à part, sous `tank/vmdata`. Le disque système (64 Go) et le zvol Vaultwarden ne les portent pas. Les manifests de ce pod restent dans le dépôt GitHub que Argo CD clone déjà (`git@github.com:TLGitDev/homelab.git`). La forge ne devient pas la seule copie de sa propre définition.
 
-La sauvegarde utile est celle du dossier de données, instance arrêtée, comme pour Vaultwarden. Elle contient `SECRET_KEY` et le jeton du miroir. Le miroir GitHub ne copie que les dépôts Git, et il écrase ce qui aurait été commité là-bas. Il ne remplace pas cette sauvegarde. Joué le 3 nov. : archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, relue ailleurs. [FeuilleDeRoute.md](FeuilleDeRoute.md#jalons-gitea).
+La sauvegarde utile est celle du dossier de données, instance arrêtée, comme pour Vaultwarden. Elle contient `SECRET_KEY` et le jeton du miroir. Le miroir GitHub ne copie que les dépôts Git, et il écrase ce qui aurait été commité là-bas. Il ne remplace pas cette sauvegarde. Joué le 3 nov. : archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, relue ailleurs, zéro dépôt. L'archive citée est celle du 4 nov., `gitea-2026-11-04_150155.tar`, SHA-256 `<empreinte-vérifiée>`. Le 6 nov. elle est sur `pve`, `/tank/backups/k3s-01/gitea/`, mode `600`, et dans le snapshot USB `<snapshot>`. La copie du 3 nov. reste sur `k3s-01` et n'est plus celle qu'on cite. [FeuilleDeRoute.md](FeuilleDeRoute.md#phase-6--forge-et-gitops-tenables).
 
 Le runner reste hors de `k3s-01`. Il pousse le manifeste vers la forge. Le miroir met à jour GitHub. Argo CD applique depuis cette copie.
 
