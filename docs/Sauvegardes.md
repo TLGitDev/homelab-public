@@ -157,7 +157,7 @@ Ces archives sont sur `tank` et dans le snapshot USB `<snapshot>` (2 nov. 13:58)
 
 # Snapshots ZFS
 
-**2026-10-21** — timers actifs. Runs **timer** horaires OK : `@auto-hourly-2026-10-21_1200` et `_1300` (journal : créé, rétention 2 puis 3 / 24). Snap manuel d'install : `_1140` + `@auto-daily-2026-10-21`. Premier quotidien **timer** : 22 oct. 04:00 ⬜. Rétention 24/7 sur plusieurs jours ⬜.
+**2026-10-21** — timers actifs. Runs **timer** horaires OK : `@auto-hourly-2026-10-21_1200` et `_1300` (journal : créé, rétention 2 puis 3 / 24). Snap manuel d'install : `_1140` + `@auto-daily-2026-10-21`. Le 22 oct. 04:00 n'a pas été lu. **6 nov. 04:00** : le timer crée `@auto-daily-2026-11-06`, détruit `@auto-daily-2026-10-26`, 7 conservés. **6 nov. 15:00** : 24 `auto-hourly`, le plus ancien est le 5 nov. 15:00 (le trou de 4 h repousse la fenêtre d'une heure). À 13:00, 14:00 et 15:00 : suppression de `_1200`, `_1300`, `_1400` du 5 nov., puis `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
 
 Un snapshot ZFS n'est **pas** une sauvegarde. Perte de `tank` = perte des snapshots **et** du zvol live.
 

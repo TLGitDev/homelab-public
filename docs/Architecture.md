@@ -331,5 +331,6 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Restore technique isolée (SQLite, Pod, HTTP 200) — [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique)
 - ✅ Restore fonctionnel isolé (login + 2FA + coffre, 2026-10-21)
 - ✅ Snapshots zvol Vaultwarden horaires (12:00 et 13:00 le 21 oct.)
-- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) + rétention 24/7
+- ✅ Quotidien timer et rétention 7 (6 nov. : `@auto-daily-2026-11-06`, 7 conservés). Le 22 oct. 04:00 n'a pas été lu.
+- ✅ Rétention horaire 24 (6 nov. 15:00 : 24 snapshots, du 5 nov. 15:00 au 6 nov. 15:00, trou de 4 h). Plus aucun horaire d'octobre.
 - ⬜ Reprise réelle zvol (procédure écrite) + rétention Restic

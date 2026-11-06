@@ -36,7 +36,7 @@ Phase 7   Un LXC se reconstruit
             └── Phase 11  Site CV public
 ```
 
-Les phases 0 à 5 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre, premier quotidien timer.
+Les phases 0 à 5 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
 
 La phase 5 est jouée. La phase 6 commence par sortir l'archive Gitea de `k3s-01`. Puis : contrôle des manifestes, `ROOT_URL`, retrait de l'essai. La phase 7 s'enregistre une fois ce `ROOT_URL` posé.
 
@@ -65,7 +65,8 @@ Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéa
 Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : écrits, **non joués** sur la prod (volontaire).
 
 - ✅ Snapshots zvol Vaultwarden : script + timers horaires (rétention 24) ; runs auto `_1200` / `_1300` — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs)
-- ⬜ Premier snapshot quotidien timer (22 oct. 04:00) et rétention 7 j sur la durée
+- ✅ Quotidien timer et rétention 7 (6 nov. 04:00 : `@auto-daily-2026-11-06` créé, `@auto-daily-2026-10-26` détruit, 7 conservés). Le 22 oct. 04:00 n'a pas été lu ; ce snapshot est déjà sorti de la fenêtre. Le 21 oct. était un run manuel.
+- ✅ Rétention horaire 24 (6 nov. 15:00 : 24 `auto-hourly`, du 5 nov. 15:00 au 6 nov. 15:00, trou de 4 h). À 13:00, 14:00 et 15:00 le journal détruit l'heure qui dépasse et dit `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
 - ⬜ Restauration par rollback snapshot (prod)
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; restore d'une archive testée
 - ✅ Rétention des snapshots Restic (14 j, appliquée le 5 nov., run `<snapshot>`)
