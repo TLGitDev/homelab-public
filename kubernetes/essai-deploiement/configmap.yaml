@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: essai-deploiement
-  namespace: essai
-data:
-  version: "2"
