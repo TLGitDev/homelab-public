@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: controle-schema-invalide
+spec:
+  replicas: 1
