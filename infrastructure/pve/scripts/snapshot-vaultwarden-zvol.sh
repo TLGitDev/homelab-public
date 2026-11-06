@@ -12,11 +12,10 @@ log() {
     echo "[$(date '+%F %T')] $*"
 }
 
+# À 04:00 les deux timers partent ensemble. Le second attend.
+# TimeoutStartSec=2min alerte si le verrou reste pris.
 exec 9>"$LOCK_FILE"
-flock -n 9 || {
-    log "Un snapshot est déjà en cours."
-    exit 1
-}
+flock 9
 
 case "$KIND" in
     hourly)

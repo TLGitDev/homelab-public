@@ -179,6 +179,8 @@ Pas de Sanoid pour v1. Script + timers systemd sur `pve` :
 
 Git ≠ `pve`. Clone k3s-01 : `/home/utilisateur/homelab` (pas `/homelab`). Copier, `700`, `bash -n`, run manuel, **puis** activer les timers.
 
+**6 nov. 04:00** — les deux timers partent ensemble. Le quotidien crée `@auto-daily-2026-11-06` et détruit `@auto-daily-2026-10-26` (7 conservés). L'horaire sort tout de suite : `Un snapshot est déjà en cours.`, `OnFailure`, ntfy. Pas de `@auto-hourly-2026-11-06_0400`. Les autres horaires du 6 nov. sont là, de `_0000` à `_0300` puis de `_0500` à `_1400`. Le 6 nov. à 15:00, `/usr/local/sbin/snapshot-vaultwarden-zvol.sh` attend sur le verrou (`flock 9`, plus de `-n`). `bash -n` muet. Le prochain 04:00 n'a pas encore eu lieu.
+
 ## Rétention
 
 | Fréquence | Garder | Nom visé |
