@@ -204,7 +204,9 @@ Application `root` : path `kubernetes/argocd/applications/`, auto-sync. Aujourd'
 
 `Application`, `SealedSecret` et `IngressRoute` ne sont pas dans ce schéma. Ils sont ignorés. Une image absente, un mauvais nom de Service, un secret en clair ou un conteneur privilégié passent : le schéma les accepte.
 
-Joué le 6 nov. : exécution Manifestes n° 1, commit `0a70da8`, verte en 11 s. Si une exécution suivante est rouge, on ne clique pas **Sync**. Le commit est déjà sur `master`. Argo CD l'appliquerait quand même.
+Joué le 6 nov. : exécution Manifestes n° 1, commit `0a70da8`, verte en 11 s. Le même jour, le commit `66f4880` ajoute `kubernetes/controle-schema/configmap.yaml`, un ConfigMap `controle-schema-invalide` avec un champ `spec`. Le contrôle échoue en 10 s, code de sortie 1. Le fichier est retiré dans `193e6cd`. L'exécution suivante est verte en 8 s. Ce dossier n'est suivi par aucune application Argo.
+
+Si une exécution est rouge, on ne clique pas **Sync**. Le commit est déjà sur `master`. Argo CD l'appliquerait quand même, pour un chemin qu'il suit.
 
 ---
 
