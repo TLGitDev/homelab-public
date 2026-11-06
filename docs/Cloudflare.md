@@ -122,7 +122,7 @@ MFA : application TOTP (KeePassXC).
 
 **Argo CD** (`argocd.labo.example`) : Access actif (même logique que Proxmox : outil d'admin). Puis login Argo CD. [ArgoCD.md](ArgoCD.md), [ADR-007](ADR/ADR-007-Argo-CD-exposition.md).
 
-**Gitea** (`gitea.labo.example`) : Access actif (4 nov.), même logique. Origine `http://<ip-k3s-01>:3000`, sans Traefik. Puis login Gitea. `ROOT_URL` reste l'adresse du LAN. [Forge.md](Forge.md#décision).
+**Gitea** (`gitea.labo.example`) : Access actif (4 nov.), même logique. Origine `http://<ip-k3s-01>:3000`, sans Traefik. Puis login Gitea. Le 6 nov., `ROOT_URL` = `https://gitea.labo.example/`. Connexion Access aboutie le même jour. `LOCAL_ROOT_URL` reste `http://<ip-k3s-01>:3000/`. [Forge.md](Forge.md#décision).
 
 **Jellyfin** : pas de route. Visé après la mise en service LAN : Access, puis le tunnel vers le LXC `http://<ip-jellyfin>:8096`, pas vers Traefik. [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct).
 
