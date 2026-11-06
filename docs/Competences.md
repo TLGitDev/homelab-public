@@ -319,7 +319,7 @@ Hors phases. Pas commencé.
 - Documenter l'ensemble de l'infrastructure.
 - Expliquer chaque décision technique prise.
 
-Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai, alerte de sauvegarde (phase 5, 5 nov.). Encore ouverts : forge tenable (phase 6), reconstruction des LXC (phases 7 et 8), exploitation (phase 9), dépôt public (phase 10), site (phase 11), remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
+Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai, forge tenable (phase 6, 6 nov.), alerte de sauvegarde (phase 5, 5 nov.). Encore ouverts : reconstruction des LXC (phases 7 et 8), exploitation (phase 9), dépôt public (phase 10), site (phase 11), remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
 
 Les définitions (hyperviseur, LXC, ZFS, CIDR, etc.) sont dans [Glossaire.md](Glossaire.md).
 
