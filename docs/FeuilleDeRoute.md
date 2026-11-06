@@ -38,7 +38,7 @@ Phase 7   Un LXC se reconstruit
 
 Les phases 0 à 5 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
 
-La phase 5 est jouée. Le premier jalon de la phase 6 est joué : l'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Ensuite : contrôle des manifestes, `ROOT_URL`, retrait de l'essai. La phase 7 s'enregistre une fois ce `ROOT_URL` posé.
+La phase 5 est jouée. Deux jalons de la phase 6 sont joués : l'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`, et le contrôle des manifestes est vert sur `0a70da8`. Ensuite : un manifeste invalide, `ROOT_URL`, retrait de l'essai. La phase 7 s'enregistre une fois ce `ROOT_URL` posé.
 
 Les phases 8, 9 et 10 partent de la phase 7. La 8 et la 9 avancent ensemble. La 10 publie dès la phase 7, puis se remet à jour à chaque LXC de la phase 8. La phase 11 s'y branche. La page agent reste hors de cette suite tant qu'elle n'existe pas.
 
@@ -310,7 +310,7 @@ Décisions du 4 nov., pour cette phase :
 Dans cet ordre.
 
 - ✅ Archive utile recopiée hors de `k3s-01` (6 nov.). `pve` : `/tank/backups/k3s-01/gitea/gitea-2026-11-04_150155.tar`, mode `600`, `root`, SHA-256 `<empreinte-vérifiée>`, identique à la source, archive lisible. Snapshot USB `<snapshot>`. C'est l'archive citée. Celle du 3 nov. reste sur `k3s-01` et ne l'est plus. — [Sauvegardes.md](Sauvegardes.md#usb--restic)
-- ⬜ Contrôle GitHub : YAML lu, manifestes confrontés au schéma Kubernetes du K3s en place. L'arbre courant est vert.
+- ✅ Contrôle GitHub (6 nov.). `kubeconform` v0.8.0, schéma Kubernetes 1.36.4, strict. Exécution Manifestes n° 1, commit `0a70da8`, verte en 11 s. Ne déploie pas. `Application`, `SealedSecret` et `IngressRoute` ignorés. Argo CD ne bloque pas le Sync : on ne le clique pas si le contrôle est rouge. — [ArgoCD.md](ArgoCD.md#contrôle-des-manifestes)
 - ⬜ Un manifeste volontairement invalide rend le contrôle rouge, puis il est retiré.
 - ⬜ `ROOT_URL` = `https://gitea.labo.example`. Connexion via Access vérifiée. L'adresse de clone affichée est le nom public. L'accès LAN répond encore.
 - ⬜ `essai-deploiement` retiré du cluster et du dépôt. Argo ne le suit plus. Phase 3 garde le récit du rollback.
@@ -457,7 +457,7 @@ La projection garde le plus possible. Elle remplace, plutôt que de supprimer de
 
 | Sujet | Décision | Quand |
 |-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Contrôle des manifestes sur ce dépôt GitHub, pas sur le runner (4 nov.). `essai-deploiement` à retirer une fois ce contrôle vert. `ROOT_URL` à aligner sur `gitea.labo.example`. Archive utile sortie de `k3s-01` le 6 nov. (`<snapshot>`). | Phase 6 |
+| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Contrôle des manifestes sur ce dépôt GitHub, pas sur le runner. Vert le 6 nov. (Manifestes n° 1, `0a70da8`). `essai-deploiement` à retirer après l'essai rouge. `ROOT_URL` à aligner sur `gitea.labo.example`. Archive utile sortie de `k3s-01` le 6 nov. (`<snapshot>`). | Phase 6 |
 | Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
 | Sauvegarde Android | Outils par catégorie | Phase 2 |
 | Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |

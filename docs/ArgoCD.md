@@ -198,6 +198,16 @@ Application `root` : path `kubernetes/argocd/applications/`, auto-sync. Aujourd'
 
 ---
 
+# Contrôle des manifestes
+
+À chaque push, et sur chaque demande de fusion, GitHub lit `kubernetes/` avec `kubeconform` v0.8.0. Schéma Kubernetes 1.36.4, celui de `k3s-01` relevé le 6 nov., en mode strict. Fichier : [`.github/workflows/manifestes.yml`](../.github/workflows/manifestes.yml). Le contrôle ne déploie rien et ne parle pas à Argo CD.
+
+`Application`, `SealedSecret` et `IngressRoute` ne sont pas dans ce schéma. Ils sont ignorés. Une image absente, un mauvais nom de Service, un secret en clair ou un conteneur privilégié passent : le schéma les accepte.
+
+Joué le 6 nov. : exécution Manifestes n° 1, commit `0a70da8`, verte en 11 s. Si une exécution suivante est rouge, on ne clique pas **Sync**. Le commit est déjà sur `master`. Argo CD l'appliquerait quand même.
+
+---
+
 # Workflow
 
 **Ajouter une application**
