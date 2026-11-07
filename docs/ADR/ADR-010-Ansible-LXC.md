@@ -2,7 +2,7 @@
 
 ## Statut
 
-Accepté le 2026-11-07. Le playbook est dans le dépôt (`c1a1e07`). Il n'a pas été lancé. Le CT 108 n'existe pas.
+Accepté le 2026-11-07. Jouée le même jour sur le CT 108 : créé par le playbook, runner enregistré, Essai n° 3 verte en 2 s (`4ce9657`). Deuxième passe sans changement. Le 108 a ensuite été retiré. Le récit reste sur le 107, en service.
 
 ## Contexte
 
@@ -39,7 +39,7 @@ Le playbook parle à l'API de `pve`, puis entre dans le CT par `pct`. Il ne tour
 
 ## Conséquences
 
-- La preuve se fait sur le CT 108. Le 107 reste en service tant que 108 n'a pas pris un workflow vert.
-- Ensuite, un des deux : arrêter 107, ou retirer 108 et garder le récit sur 107. Le choix n'est pas fait.
+- La preuve a été jouée sur le CT 108. Essai n° 3, commit `4ce9657`, verte en 2 s. Le 107 est resté en service.
+- Choix du 7 nov. : retirer 108 et garder le récit sur 107. `pct destroy 108 --purge`. Relancer le playbook recréerait le 108.
 - La phase 8 reprend ce moule, un LXC à la fois, essai d'abord.
 - Jeton d'API Proxmox et jeton d'enregistrement Gitea : `infrastructure/ansible/secrets.yml`, hors du dépôt.

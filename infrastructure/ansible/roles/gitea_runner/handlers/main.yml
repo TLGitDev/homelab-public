@@ -1,3 +1,9 @@
 - name: Recharger systemd
   ansible.builtin.systemd:
     daemon_reload: true
+
+- name: Relancer gitea-runner
+  ansible.builtin.systemd:
+    name: gitea-runner
+    state: restarted
+  when: runner_file.stat.exists | default(false)

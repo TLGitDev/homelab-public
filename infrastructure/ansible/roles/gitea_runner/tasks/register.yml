@@ -21,10 +21,13 @@
 
 - name: Protéger le fichier d'enregistrement
   ansible.builtin.file:
-    path: /var/lib/gitea-runner/.runner
+    path: "{{ item }}"
     owner: gitea-runner
     group: gitea-runner
     mode: "0600"
+  loop:
+    - /var/lib/gitea-runner/.runner
+    - /var/lib/gitea-runner/.runner.lock
 
 - name: Démarrer le service
   ansible.builtin.systemd:

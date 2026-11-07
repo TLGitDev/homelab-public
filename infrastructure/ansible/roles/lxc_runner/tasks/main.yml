@@ -3,7 +3,7 @@
     msg: Ce playbook ne touche pas au CT 107.
   when: runner_vmid | int == 107
 
-- name: Créer le CT d'essai et le démarrer
+- name: Créer le CT d'essai
   community.proxmox.proxmox:
     api_host: "{{ proxmox_api_host }}"
     api_user: root@pam
@@ -28,5 +28,16 @@
     netif:
       net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ runner_gateway }},ip={{ runner_address }},type=veth"
     update: false
+    state: present
+  no_log: true
+
+- name: Démarrer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    vmid: "{{ runner_vmid }}"
     state: started
   no_log: true

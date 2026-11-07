@@ -36,9 +36,9 @@ Phase 7   Un LXC se reconstruit
             └── Phase 11  Site CV public
 ```
 
-Les phases 0 à 6 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
+Les phases 0 à 7 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
 
-La phase 6 est jouée (6 nov.). L'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Le contrôle des manifestes a été vert (`0a70da8`), rouge sur un ConfigMap invalide (`66f4880`), puis vert après retrait (`193e6cd`). `ROOT_URL` est `https://gitea.labo.example/` (`e2a1837`). `essai-deploiement` est sorti du dépôt (`60a930e`) et du cluster : application et namespace `essai` absents, `root` `Synced` et `Healthy` sur `60a930e`. La phase 7 est en cours : le playbook est dans le dépôt (`c1a1e07`) et l'[ADR-010](ADR/ADR-010-Ansible-LXC.md) est accepté. Le CT 108 n'est pas créé.
+La phase 6 est jouée (6 nov.). L'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Le contrôle des manifestes a été vert (`0a70da8`), rouge sur un ConfigMap invalide (`66f4880`), puis vert après retrait (`193e6cd`). `ROOT_URL` est `https://gitea.labo.example/` (`e2a1837`). `essai-deploiement` est sorti du dépôt (`60a930e`) et du cluster : application et namespace `essai` absents, `root` `Synced` et `Healthy` sur `60a930e`. La phase 7 est jouée (7 nov.). Le playbook est dans le dépôt (`c1a1e07`) et l'[ADR-010](ADR/ADR-010-Ansible-LXC.md) est accepté. Le CT 108 a servi de preuve (Essai n° 3, `4ce9657`, verte en 2 s, deuxième passe sans changement), puis il a été retiré. Le récit reste sur le 107, en service. Relancer le playbook recréerait le 108.
 
 Les phases 8, 9 et 10 partent de la phase 7. La 8 et la 9 avancent ensemble. La 10 publie dès la phase 7, puis se remet à jour à chaque LXC de la phase 8. La phase 11 s'y branche. La page agent reste hors de cette suite tant qu'elle n'existe pas.
 
@@ -329,15 +329,15 @@ Décision du 4 nov. : Ansible, lancé depuis le PC. Pas un second outil pour un 
 
 Deux rôles. Le premier parle à Proxmox : CT non privilégié, `nesting`, 2 Gio, 2 cœurs, 16 Go, adresse, démarrage automatique, aucun montage de `tank`. Le second parle dedans : compte `gitea-runner`, binaire `v5.2.0` vérifié par empreinte, unité systemd, config en `600`. L'enregistrement auprès de Gitea est une tâche à part. Git ne stocke pas le fichier `.runner`.
 
-La preuve se fait sur un CT d'essai (108, autre adresse), pas en détruisant 107. 107 ne part que lorsque 108 a pris un workflow vert.
+La preuve s'est faite sur un CT d'essai (108, autre adresse), sans détruire 107. 108 a pris un workflow vert, puis il a été retiré. Le récit reste sur 107.
 
 ## Jalons
 
-- ✅ Rôles et playbook dans `infrastructure/ansible/` (7 nov.). Commit `c1a1e07`. `secrets.yml` ignoré. Le playbook vise le CT 108 `runner-essai` `<ip-runner-ct108>/24` et refuse le 107. Pas encore lancé.
+- ✅ Rôles et playbook dans `infrastructure/ansible/` (7 nov.). Commit `c1a1e07`. `secrets.yml` ignoré. Le playbook vise le CT 108 `runner-essai` `<ip-runner-ct108>/24` et refuse le 107.
 - ✅ ADR (7 nov.) : les LXC d'infra se décrivent en Ansible ; les applications déjà en manifestes restent dans Argo CD ; Proxmox lui-même reste un mode opératoire. — [ADR-010](ADR/ADR-010-Ansible-LXC.md)
-- ⬜ CT 108 créé par le playbook, runner enregistré, CI d'essai verte
-- ⬜ Deuxième passe : aucun changement
-- ⬜ 107 arrêté seulement après ça, ou 108 retiré et le récit gardé sur 107 encore en service. Un des deux, écrit.
+- ✅ CT 108 créé par le playbook, runner enregistré, CI d'essai verte (7 nov.). `runner-essai`, `<ip-runner-ct108>/24`. Compte `gitea-runner` uid 999 gid 991, maison `/var/lib/gitea-runner`. Binaire `v5.2.0`, empreinte `2eb05e7c09701ba194c6a43b8669db7eadf0d5c69b6f59f5710426fd68f82f98`. `.runner` en 600. Service `active`. Enregistré auprès de `http://<ip-k3s-01>:3000/`, nom `runner-essai`, étiquette `essai`. Workflow sur `admin/essai-miroir` : `.gitea/workflows/essai.yaml`, commit `4ce9657`, Essai n° 3, branche `main`, verte en 2 s. Le 107 a pris l'ancienne CI (n° 2, étiquette `host`), verte en 2 s.
+- ✅ Deuxième passe : aucun changement (7 nov.). `localhost` et `runner-essai`, `changed=0`. L'enregistrement n'est pas rejoué. Corrections du playbook : création puis démarrage, commandes dans un shell, maison et verrou.
+- ✅ 108 retiré, récit gardé sur 107 (7 nov.). `pct destroy 108 --purge`. `pct list` : 100, 102 à 107. 107 `running`. `<ip-runner-ct108>` ne répond plus. Workflow `essai` retiré de `admin/essai-miroir`, commit `c8cee20`. CI n° 4 partie sur le 107, étiquette `host`. Le runner `runner-essai` (id 2) a été retiré de la page Runners. Relancer le playbook recréerait le 108.
 
 **Critère** : le runner d'essai existe parce que le playbook l'a créé, et le relancer est sans effet.
 
@@ -464,7 +464,7 @@ La projection garde le plus possible. Elle remplace, plutôt que de supprimer de
 | Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
 | Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 9 |
 | Supervision | ntfy (5 nov.), joué. Instance publique, sujet hors du dépôt. Cinq contrôles branchés, scrub planifié le 6 déc. Seuil USB et rétention Restic : 14 j, appliqués. Espace : 10 % libres. | Phase 5 |
-| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Écrit le 7 nov. ([ADR-010](ADR/ADR-010-Ansible-LXC.md)). Playbook `c1a1e07`, secrets hors de Git. CT 108 pas encore créé. Les autres LXC suivent le même moule, un par un. | Phases 7 et 8 |
+| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Écrit le 7 nov. ([ADR-010](ADR/ADR-010-Ansible-LXC.md)). Playbook `c1a1e07`, secrets hors de Git. CT 108 créé le 7 nov., Essai n° 3 verte en 2 s (`4ce9657`), deuxième passe sans changement, puis retiré (`c8cee20`). Le récit reste sur le 107. Les autres LXC suivent le même moule, un par un. | Phases 7 et 8 |
 | Dépôt montré | Le labo reste privé et seule source (4 nov.). Une projection rejouable alimente un second dépôt GitHub, public. Les adresses LAN deviennent des rôles, les noms DNS du labo deviennent un exemple, les secrets sortent. Le site CV pointe cette copie. | Phases 10 et 11 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
