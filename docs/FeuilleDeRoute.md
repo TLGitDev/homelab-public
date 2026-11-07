@@ -38,7 +38,7 @@ Phase 7   Un LXC se reconstruit
 
 Les phases 0 à 6 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
 
-La phase 6 est jouée (6 nov.). L'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Le contrôle des manifestes a été vert (`0a70da8`), rouge sur un ConfigMap invalide (`66f4880`), puis vert après retrait (`193e6cd`). `ROOT_URL` est `https://gitea.labo.example/` (`e2a1837`). `essai-deploiement` est sorti du dépôt (`60a930e`) et du cluster : application et namespace `essai` absents, `root` `Synced` et `Healthy` sur `60a930e`. La phase 7 est la suite.
+La phase 6 est jouée (6 nov.). L'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Le contrôle des manifestes a été vert (`0a70da8`), rouge sur un ConfigMap invalide (`66f4880`), puis vert après retrait (`193e6cd`). `ROOT_URL` est `https://gitea.labo.example/` (`e2a1837`). `essai-deploiement` est sorti du dépôt (`60a930e`) et du cluster : application et namespace `essai` absents, `root` `Synced` et `Healthy` sur `60a930e`. La phase 7 est en cours : le playbook est dans le dépôt (`c1a1e07`) et l'[ADR-010](ADR/ADR-010-Ansible-LXC.md) est accepté. Le CT 108 n'est pas créé.
 
 Les phases 8, 9 et 10 partent de la phase 7. La 8 et la 9 avancent ensemble. La 10 publie dès la phase 7, puis se remet à jour à chaque LXC de la phase 8. La phase 11 s'y branche. La page agent reste hors de cette suite tant qu'elle n'existe pas.
 
@@ -333,8 +333,8 @@ La preuve se fait sur un CT d'essai (108, autre adresse), pas en détruisant 107
 
 ## Jalons
 
-- ⬜ Rôles et playbook dans `infrastructure/ansible/`. Secrets absents du dépôt.
-- ⬜ ADR : les LXC d'infra se décrivent en Ansible ; les applications déjà en manifestes restent dans Argo CD ; Proxmox lui-même reste un mode opératoire.
+- ✅ Rôles et playbook dans `infrastructure/ansible/` (7 nov.). Commit `c1a1e07`. `secrets.yml` ignoré. Le playbook vise le CT 108 `runner-essai` `<ip-runner-ct108>/24` et refuse le 107. Pas encore lancé.
+- ✅ ADR (7 nov.) : les LXC d'infra se décrivent en Ansible ; les applications déjà en manifestes restent dans Argo CD ; Proxmox lui-même reste un mode opératoire. — [ADR-010](ADR/ADR-010-Ansible-LXC.md)
 - ⬜ CT 108 créé par le playbook, runner enregistré, CI d'essai verte
 - ⬜ Deuxième passe : aucun changement
 - ⬜ 107 arrêté seulement après ça, ou 108 retiré et le récit gardé sur 107 encore en service. Un des deux, écrit.
@@ -464,7 +464,7 @@ La projection garde le plus possible. Elle remplace, plutôt que de supprimer de
 | Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
 | Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. WireGuard pas décidé | Phase 9 |
 | Supervision | ntfy (5 nov.), joué. Instance publique, sujet hors du dépôt. Cinq contrôles branchés, scrub planifié le 6 déc. Seuil USB et rétention Restic : 14 j, appliqués. Espace : 10 % libres. | Phase 5 |
-| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Les autres LXC suivent le même moule, un par un. Jeton Proxmox et jeton d'enregistrement hors de Git. | Phases 7 et 8 |
+| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Écrit le 7 nov. ([ADR-010](ADR/ADR-010-Ansible-LXC.md)). Playbook `c1a1e07`, secrets hors de Git. CT 108 pas encore créé. Les autres LXC suivent le même moule, un par un. | Phases 7 et 8 |
 | Dépôt montré | Le labo reste privé et seule source (4 nov.). Une projection rejouable alimente un second dépôt GitHub, public. Les adresses LAN deviennent des rôles, les noms DNS du labo deviennent un exemple, les secrets sortent. Le site CV pointe cette copie. | Phases 10 et 11 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
