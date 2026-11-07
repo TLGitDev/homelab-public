@@ -1,0 +1,2 @@
+# Minimal config file. Every option it does not set keeps its default.
+# "gitea-runner config generate" prints all options, "config set <key> <value>" sets one here.

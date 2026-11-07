@@ -1,0 +1,78 @@
+- name: Installer curl et git
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Créer le groupe gitea-runner
+  ansible.builtin.group:
+    name: gitea-runner
+    gid: "{{ gitea_runner_gid }}"
+    system: true
+
+- name: Créer le compte gitea-runner
+  ansible.builtin.user:
+    name: gitea-runner
+    uid: "{{ gitea_runner_uid }}"
+    group: gitea-runner
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Créer les répertoires du runner
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - path: /etc/gitea-runner
+      owner: root
+      group: root
+      mode: "0755"
+    - path: /var/lib/gitea-runner
+      owner: gitea-runner
+      group: gitea-runner
+      mode: "0750"
+
+- name: Installer gitea-runner {{ gitea_runner_version }}
+  ansible.builtin.get_url:
+    url: "https://dl.gitea.com/gitea-runner/{{ gitea_runner_version }}/gitea-runner-{{ gitea_runner_version }}-linux-amd64"
+    dest: /usr/local/bin/gitea-runner
+    owner: root
+    group: root
+    mode: "0755"
+    checksum: "{{ gitea_runner_checksum }}"
+
+- name: Poser la config
+  ansible.builtin.copy:
+    src: config.yaml
+    dest: /etc/gitea-runner/config.yaml
+    owner: gitea-runner
+    group: gitea-runner
+    mode: "0600"
+
+- name: Poser l'unité
+  ansible.builtin.copy:
+    src: gitea-runner.service
+    dest: /etc/systemd/system/gitea-runner.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Recharger systemd
+
+- name: Voir si le runner est enregistré
+  ansible.builtin.stat:
+    path: /var/lib/gitea-runner/.runner
+  register: runner_file
+
+- name: Démarrer le service déjà enregistré
+  ansible.builtin.systemd:
+    name: gitea-runner
+    enabled: true
+    state: started
+  when: runner_file.stat.exists

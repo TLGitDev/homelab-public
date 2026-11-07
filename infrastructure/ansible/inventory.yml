@@ -1,0 +1,9 @@
+all:
+  hosts:
+    localhost:
+      ansible_connection: local
+    runner-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 108

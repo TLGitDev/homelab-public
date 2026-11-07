@@ -1,0 +1,25 @@
+# Référence : CT 107, relevé le 7 nov. 2026. Ce fichier décrit le CT d'essai.
+# Le 107 n'est pas une cible.
+
+runner_vmid: 108
+runner_hostname: runner-essai
+runner_address: <ip-runner-ct108>/24
+runner_gateway: <ip-box>
+runner_nameserver: <ip-box>
+runner_cores: 2
+runner_memory: 2048
+runner_swap: 512
+runner_disk: local-zfs:16
+runner_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+runner_node: pve
+proxmox_api_host: <ip-pve>
+
+gitea_runner_version: 5.2.0
+gitea_runner_checksum: sha256:2eb05e7c09701ba194c6a43b8669db7eadf0d5c69b6f59f5710426fd68f82f98
+gitea_runner_uid: 999
+gitea_runner_gid: 991
+# Le nom public est derrière Access. Le 107 s'est enregistré sur l'adresse du LAN.
+gitea_instance_url: http://<ip-k3s-01>:3000
+gitea_runner_name: runner-essai
+# Étiquette à part, pour ne pas prendre les jobs `host` du 107. Le schéma par défaut est l'hôte.
+gitea_runner_labels: essai

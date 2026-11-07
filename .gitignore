@@ -9,6 +9,7 @@ Desktop.ini
 *.pem
 *.key
 secrets/
+infrastructure/ansible/secrets.yml
 
 # Clés privées et identifiants
 id_rsa

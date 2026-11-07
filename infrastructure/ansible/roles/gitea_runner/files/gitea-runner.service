@@ -1,0 +1,19 @@
+[Unit]
+Description=Gitea Actions runner
+Documentation=https://gitea.com/gitea/runner
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/local/bin/gitea-runner daemon --config /etc/gitea-runner/config.yaml
+WorkingDirectory=/var/lib/gitea-runner
+User=gitea-runner
+Group=gitea-runner
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=3h
+
+[Install]
+WantedBy=multi-user.target

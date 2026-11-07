@@ -1,0 +1,32 @@
+- name: Refuser le CT de référence
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas au CT 107.
+  when: runner_vmid | int == 107
+
+- name: Créer le CT d'essai et le démarrer
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ runner_node }}"
+    vmid: "{{ runner_vmid }}"
+    hostname: "{{ runner_hostname }}"
+    ostemplate: "{{ runner_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ runner_cores }}"
+    memory: "{{ runner_memory }}"
+    swap: "{{ runner_swap }}"
+    disk: "{{ runner_disk }}"
+    nameserver: "{{ runner_nameserver }}"
+    features:
+      - nesting=1
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ runner_gateway }},ip={{ runner_address }},type=veth"
+    update: false
+    state: started
+  no_log: true
