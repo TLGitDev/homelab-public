@@ -1,3 +1,7 @@
+# Enregistre le runner auprès de Gitea, une seule fois.
+# creates : si .runner est déjà là, la commande n'est pas relancée.
+# Le jeton vient de l'environnement et n'est pas affiché (no_log).
+
 - name: Enregistrer le runner auprès de la forge
   ansible.builtin.command:
     argv:

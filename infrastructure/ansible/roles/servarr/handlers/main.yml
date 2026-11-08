@@ -1,0 +1,31 @@
+# Recharge systemd puis relance le service dont l'unité a changé.
+# L'ordre ici est celui d'exécution : d'abord le rechargement.
+
+- name: Recharger systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Relancer prowlarr
+  ansible.builtin.systemd:
+    name: prowlarr
+    state: restarted
+
+- name: Relancer sonarr
+  ansible.builtin.systemd:
+    name: sonarr
+    state: restarted
+
+- name: Relancer radarr
+  ansible.builtin.systemd:
+    name: radarr
+    state: restarted
+
+- name: Relancer lidarr
+  ansible.builtin.systemd:
+    name: lidarr
+    state: restarted
+
+- name: Relancer bazarr
+  ansible.builtin.systemd:
+    name: bazarr
+    state: restarted

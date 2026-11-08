@@ -1,0 +1,19 @@
+[Unit]
+Description=Bazarr Daemon
+After=network.target sonarr.service radarr.service
+
+[Service]
+WorkingDirectory=/opt/bazarr
+User=bazarr
+Group=bazarr
+SupplementaryGroups=media
+UMask=0007
+Type=simple
+ExecStart=/var/lib/bazarr/venv/bin/python /opt/bazarr/bazarr.py
+KillSignal=SIGINT
+TimeoutStopSec=20
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

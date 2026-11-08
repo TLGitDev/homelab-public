@@ -1,0 +1,12 @@
+# Le filtre est rechargé dans les tâches, avant la preuve.
+# Ici : le tunnel, puis qBittorrent, si leur fichier a changé.
+
+- name: Relancer wg-quick
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    state: restarted
+
+- name: Relancer qbittorrent
+  ansible.builtin.systemd:
+    name: qbittorrent-nox@qbittorrent
+    state: restarted

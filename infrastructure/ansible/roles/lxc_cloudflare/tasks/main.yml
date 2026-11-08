@@ -1,0 +1,101 @@
+# Crée le CT 114. Refuse les CT déjà pris, dont le 100 (tunnel en service).
+# Même forme que le 100 : un cœur, 512 Mo, 8 Go, non privilégié, sans
+# nesting et sans idmap écrite. Il démarre en premier, avec 30 secondes
+# d'attente. Pas de fichier de pare-feu.
+
+- name: Refuser les CT déjà pris
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas aux CT 100 à 113.
+  when: cloudflare_vmid | int in [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113]
+
+- name: Voir si le CT d'essai existe déjà
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ cloudflare_vmid }}"
+  register: ct_existant
+  changed_when: false
+  failed_when: false
+
+- name: Refuser un CT qui n'est pas l'essai
+  ansible.builtin.fail:
+    msg: Le CT {{ cloudflare_vmid }} existe et ce n'est pas {{ cloudflare_hostname }}.
+  when:
+    - ct_existant.rc == 0
+    - cloudflare_hostname not in ct_existant.stdout
+
+- name: Créer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ cloudflare_node }}"
+    vmid: "{{ cloudflare_vmid }}"
+    hostname: "{{ cloudflare_hostname }}"
+    ostemplate: "{{ cloudflare_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ cloudflare_cores }}"
+    memory: "{{ cloudflare_memory }}"
+    swap: "{{ cloudflare_swap }}"
+    disk: "{{ cloudflare_disk }}"
+    startup: order=1,up=30
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ cloudflare_gateway }},ip={{ cloudflare_address }},type=veth"
+    update: false
+    state: present
+  no_log: true
+
+# update: false ne corrige pas un CT déjà créé sans cette ligne.
+- name: Poser l'ordre de démarrage
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    conf=/etc/pve/lxc/{{ cloudflare_vmid }}.conf
+    want='startup: order=1,up=30'
+    if grep -qxF "$want" "$conf"; then
+      echo ok
+    else
+      pct set {{ cloudflare_vmid }} -startup order=1,up=30
+      echo changed
+    fi
+    SH
+  register: startup_result
+  changed_when: startup_result.stdout == "changed"
+
+- name: Vérifier l'ordre de démarrage
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ cloudflare_vmid }}"
+  register: ct_config
+  changed_when: false
+  failed_when: "'startup: order=1,up=30' not in ct_config.stdout"
+
+# Juste après la création, la liste du cluster peut omettre le nom.
+# On le donne, sinon le module plante sur cette clé.
+- name: Démarrer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ cloudflare_node }}"
+    hostname: "{{ cloudflare_hostname }}"
+    vmid: "{{ cloudflare_vmid }}"
+    state: started
+  no_log: true

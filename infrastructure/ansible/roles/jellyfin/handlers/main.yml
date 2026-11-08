@@ -1,0 +1,6 @@
+# Relance Jellyfin si le compte a changé. Le paquet fournit l'unité.
+
+- name: Relancer jellyfin
+  ansible.builtin.systemd:
+    name: jellyfin
+    state: restarted

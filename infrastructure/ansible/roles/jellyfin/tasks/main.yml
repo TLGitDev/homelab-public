@@ -1,0 +1,119 @@
+# Installe Jellyfin 12.4 dans le CT, sur le modèle du 103.
+# Le paquet démarre tout de suite : on ne l'arrête que dans ce cas, le temps
+# de fixer le compte et de le mettre dans media. Un second passage ne le coupe pas.
+# Pas de compte web, pas de bibliothèque. La preuve est /health = Healthy.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+# Le modèle Debian a une liste de paquets trop vieille.
+- name: Installer gpg
+  ansible.builtin.apt:
+    name:
+      - gpg
+      - ca-certificates
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Créer le trousseau apt
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Télécharger la clé Jellyfin
+  ansible.builtin.get_url:
+    url: https://repo.jellyfin.org/jellyfin_team.gpg.key
+    dest: /tmp/jellyfin_team.gpg.key
+    mode: "0644"
+    checksum: "{{ jellyfin_key_checksum }}"
+
+- name: Installer la clé
+  ansible.builtin.command:
+    argv:
+      - gpg
+      - --dearmor
+      - --yes
+      - -o
+      - /etc/apt/keyrings/jellyfin.gpg
+      - /tmp/jellyfin_team.gpg.key
+    creates: /etc/apt/keyrings/jellyfin.gpg
+
+- name: Poser la source Jellyfin
+  ansible.builtin.copy:
+    src: jellyfin.sources
+    dest: /etc/apt/sources.list.d/jellyfin.sources
+    owner: root
+    group: root
+    mode: "0644"
+  register: jellyfin_source
+
+# Une source neuve doit être lue tout de suite. Le lendemain, le cache du jour suffit.
+- name: Installer Jellyfin {{ jellyfin_version }}
+  ansible.builtin.apt:
+    name:
+      - "jellyfin={{ jellyfin_version }}"
+      - "{{ jellyfin_ffmpeg_package }}={{ jellyfin_ffmpeg_version }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ (0 if jellyfin_source is changed else 86400) | int }}"
+  register: jellyfin_apt
+
+- name: Arrêter le service le temps de la config
+  ansible.builtin.systemd:
+    name: jellyfin
+    state: stopped
+  when: jellyfin_apt is changed
+  failed_when: false
+
+- name: Fixer le groupe jellyfin
+  ansible.builtin.group:
+    name: jellyfin
+    gid: "{{ jellyfin_gid }}"
+    system: true
+
+- name: Créer le groupe media
+  ansible.builtin.group:
+    name: media
+    gid: "{{ jellyfin_media_gid }}"
+
+- name: Mettre le compte dans media
+  ansible.builtin.user:
+    name: jellyfin
+    uid: "{{ jellyfin_uid }}"
+    group: jellyfin
+    groups: media
+    append: true
+    home: /var/lib/jellyfin
+    create_home: false
+    system: true
+  notify: Relancer jellyfin
+
+- name: Vérifier la lecture des films
+  ansible.builtin.command: runuser -u jellyfin -- test -d /mnt/mediatheques/films
+  changed_when: false
+
+- name: Démarrer le service
+  ansible.builtin.systemd:
+    name: jellyfin
+    enabled: true
+    state: started
+
+- name: Voir la santé locale
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8096/health
+    return_content: true
+  register: jellyfin_health
+  retries: 12
+  delay: 5
+  until: jellyfin_health.status == 200 and (jellyfin_health.content | trim) == "Healthy"

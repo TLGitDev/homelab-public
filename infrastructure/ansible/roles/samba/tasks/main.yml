@@ -1,0 +1,83 @@
+# Installe Samba dans le CT, sur le modèle du 102.
+# Le paquet peut démarrer nmbd : on l'arrête. NetBIOS est coupé, comme sur le 102.
+# Pas de smbpasswd. La config écoute l'adresse de l'essai, pas celle du 102.
+# La preuve : smbd actif, utilisateur lit les cinq dossiers, et l'écriture est refusée.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+# Le modèle Debian a une liste de paquets trop vieille.
+- name: Installer Samba {{ samba_version }}
+  ansible.builtin.apt:
+    name: "samba={{ samba_version }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Créer le groupe perso
+  ansible.builtin.group:
+    name: perso
+    gid: "{{ samba_gid }}"
+
+- name: Créer le compte utilisateur
+  ansible.builtin.user:
+    name: utilisateur
+    uid: "{{ samba_uid }}"
+    group: perso
+    home: /nonexistent
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Poser la config
+  ansible.builtin.template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Relancer smbd
+
+- name: Arrêter nmbd
+  ansible.builtin.systemd:
+    name: nmbd
+    enabled: false
+    state: stopped
+
+- name: Vérifier la lecture
+  ansible.builtin.command: runuser -u utilisateur -- sh -c 'test -d /tank/documents && test -d /tank/images && test -d /tank/musique && test -d /tank/projets && test -d /tank/videos'
+  changed_when: false
+
+- name: Vérifier que l'écriture est refusée
+  ansible.builtin.command: runuser -u utilisateur -- test -w /tank/documents
+  register: samba_write
+  changed_when: false
+  failed_when: samba_write.rc == 0
+
+- name: Démarrer smbd
+  ansible.builtin.systemd:
+    name: smbd
+    enabled: true
+    state: started
+
+- name: Vérifier la config
+  ansible.builtin.command: testparm -s
+  changed_when: false
+
+- name: Voir smbd
+  ansible.builtin.command: systemctl is-active smbd
+  register: samba_smbd
+  changed_when: false
+  failed_when: samba_smbd.stdout != "active"
+
+- name: Voir nmbd
+  ansible.builtin.command: systemctl is-active nmbd
+  register: samba_nmbd
+  changed_when: false
+  failed_when: samba_nmbd.stdout != "inactive"

@@ -1,0 +1,123 @@
+# Pose cloudflared dans le CT, à la version encore publiée.
+# Le 100 a 2026.10.4, qui n'est plus dans le dépôt.
+# Pas de jeton du 100 : le service reste arrêté et désactivé.
+# Le fichier token de l'essai contient seulement le mot essai.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+- name: Installer gpg
+  ansible.builtin.apt:
+    name:
+      - gpg
+      - ca-certificates
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Créer le trousseau apt
+  ansible.builtin.file:
+    path: /usr/share/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Télécharger la clé Cloudflare
+  ansible.builtin.get_url:
+    url: https://pkg.cloudflare.com/cloudflare-main.gpg
+    dest: /usr/share/keyrings/cloudflare-main.gpg
+    mode: "0644"
+    checksum: "{{ cloudflare_key_checksum }}"
+
+- name: Poser le dépôt cloudflared
+  ansible.builtin.copy:
+    src: cloudflared.list
+    dest: /etc/apt/sources.list.d/cloudflared.list
+    owner: root
+    group: root
+    mode: "0644"
+  register: cloudflare_source
+
+- name: Installer cloudflared {{ cloudflare_version }}
+  ansible.builtin.apt:
+    name: "cloudflared={{ cloudflare_version }}"
+    state: present
+    update_cache: true
+    cache_valid_time: "{{ (0 if cloudflare_source is changed else 86400) | int }}"
+  register: cloudflare_apt
+
+- name: Arrêter cloudflared si le paquet vient de s'installer
+  ansible.builtin.systemd:
+    name: cloudflared
+    state: stopped
+  when: cloudflare_apt is changed
+  failed_when: false
+
+- name: Préparer /etc/cloudflared
+  ansible.builtin.file:
+    path: /etc/cloudflared
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Poser un fichier token d'essai
+  ansible.builtin.copy:
+    dest: /etc/cloudflared/token
+    content: "essai\n"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Poser l'unité
+  ansible.builtin.copy:
+    src: cloudflared.service
+    dest: /etc/systemd/system/cloudflared.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Laisser cloudflared arrêté
+  ansible.builtin.systemd:
+    name: cloudflared
+    enabled: false
+    state: stopped
+    daemon_reload: true
+
+- name: Version installée
+  ansible.builtin.command: /usr/bin/cloudflared --version
+  register: cloudflare_bin
+  changed_when: false
+  failed_when: cloudflare_version not in cloudflare_bin.stdout
+
+- name: Le fichier token est celui de l'essai
+  ansible.builtin.command: cat /etc/cloudflared/token
+  register: cloudflare_token
+  changed_when: false
+  failed_when: cloudflare_token.stdout != 'essai'
+
+- name: cloudflared n'est pas lancé
+  ansible.builtin.command: systemctl is-active cloudflared
+  register: cloudflare_state
+  changed_when: false
+  failed_when: cloudflare_state.stdout != 'inactive'
+
+- name: cloudflared n'est pas activé au démarrage
+  ansible.builtin.command: systemctl is-enabled cloudflared
+  register: cloudflare_enabled
+  changed_when: false
+  failed_when: cloudflare_enabled.stdout != 'disabled'
+
+- name: Résolveur de la box
+  ansible.builtin.command: cat /etc/resolv.conf
+  register: cloudflare_resolv
+  changed_when: false
+  failed_when: "'nameserver <ip-box>' not in cloudflare_resolv.stdout"

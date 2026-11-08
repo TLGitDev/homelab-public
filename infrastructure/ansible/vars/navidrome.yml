@@ -1,0 +1,23 @@
+# Chiffres de Navidrome d'essai. La référence est le CT 106, relevé le 8 nov. 2026.
+# On décrit ici le CT 109. Le 106 reste en service. Le 108 reste celui du runner.
+
+# Forme du conteneur, calquée sur le 106. Disque 8 Go, pas 16.
+navidrome_vmid: 109
+navidrome_hostname: navidrome-essai
+navidrome_address: <ip-navidrome-ct109>/24
+navidrome_gateway: <ip-box>
+navidrome_nameserver: <ip-box>
+navidrome_cores: 2
+navidrome_memory: 2048
+navidrome_swap: 512
+navidrome_disk: local-zfs:8
+navidrome_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+navidrome_node: pve
+proxmox_api_host: <ip-pve>
+
+# Paquet .deb et compte, tels que sur le 106. media est le groupe qui lit tank.
+navidrome_version: 0.64.2
+navidrome_deb_checksum: sha256:b9ecb35eb6e042d6b019d504c0df40fa676f9a5a18db6513f551e124af7085e3
+navidrome_uid: 999
+navidrome_gid: 991
+navidrome_media_gid: 1000

@@ -1,0 +1,31 @@
+# Playbook de servarr d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/servarr.yml
+#
+# Deux étapes : créer le conteneur, puis y poser les programmes.
+# Le CT en service est le 105. Cet essai est le 112, une autre adresse.
+# Le dossier des médias est celui de tank, monté en lecture seule.
+# Pas de compte web, pas de clé d'API, pas de recyclarr sync.
+# Recyclarr est seulement le binaire : sur le 105 il n'a pas d'unité.
+# Le pare-feu recopie le fichier lu le 8 nov. : 9696, 8989, 7878, 6767.
+# Lidarr écoute en local sur 8686, comme sur le 105, sans règle de pare-feu.
+# Les jetons sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 112 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/servarr.yml
+    - ../secrets.yml
+  roles:
+    - lxc_servarr
+
+# 2. Entrer dans le CT et y poser les programmes du 105.
+- name: Poser les programmes dans le CT
+  hosts: servarr-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/servarr.yml
+  roles:
+    - servarr

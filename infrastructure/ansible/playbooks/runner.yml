@@ -1,0 +1,45 @@
+# Playbook du runner d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/runner.yml
+# L'enregistrement, plus tard :
+#   ansible-playbook playbooks/runner.yml --tags register
+#
+# Trois étapes. Les deux premières reconstruisent le conteneur.
+# La troisième parle à Gitea et n'est pas rejouée toute seule.
+# Les jetons sont dans secrets.yml, à côté, ignoré par Git.
+# Ce playbook vise le CT 108. Il refuse le 107, le runner en service.
+
+# 1. Depuis le PC, demander à l'API de Proxmox de créer puis démarrer le CT.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/runner.yml
+    - ../secrets.yml
+  roles:
+    - lxc_runner
+
+# 2. Entrer dans le CT 108 et y installer gitea-runner.
+# Le service ne démarre que si le fichier .runner existe déjà.
+- name: Poser le runner dans le CT
+  hosts: runner-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/runner.yml
+  roles:
+    - gitea_runner
+
+# 3. Enregistrer le runner auprès de la forge.
+# Le tag never empêche cette étape lors d'un lancement sans --tags register.
+- name: Enregistrer le runner
+  hosts: runner-essai
+  gather_facts: false
+  tags: [register, never]
+  vars_files:
+    - ../vars/runner.yml
+    - ../secrets.yml
+  tasks:
+    - name: Enregistrer
+      ansible.builtin.import_role:
+        name: gitea_runner
+        tasks_from: register

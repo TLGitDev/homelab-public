@@ -1,0 +1,96 @@
+# Installe Navidrome 0.64.2 dans le CT, sur le modèle du 106.
+# Le paquet démarre tout de suite avec un dossier musique vide : on ne l'arrête
+# que dans ce cas, le temps de mettre le compte dans media et de poser la config.
+# Ensuite, un fichier qui change relance le service. Un second passage ne le coupe pas.
+# Pas de compte web. La preuve est un HTTP 200 ou 302.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+- name: Télécharger Navidrome {{ navidrome_version }}
+  ansible.builtin.get_url:
+    url: "https://github.com/navidrome/navidrome/releases/download/v{{ navidrome_version }}/navidrome_{{ navidrome_version }}_linux_amd64.deb"
+    dest: /tmp/navidrome.deb
+    mode: "0644"
+    checksum: "{{ navidrome_deb_checksum }}"
+
+# Le modèle Debian a une liste de paquets trop vieille : ffmpeg n'y est plus.
+# On la rafraîchit. cache_valid_time évite un changement au second passage.
+- name: Installer le paquet
+  ansible.builtin.apt:
+    deb: /tmp/navidrome.deb
+    update_cache: true
+    cache_valid_time: 86400
+  register: navidrome_deb
+
+- name: Arrêter le service le temps de la config
+  ansible.builtin.systemd:
+    name: navidrome
+    state: stopped
+  when: navidrome_deb is changed
+  failed_when: false
+
+- name: Créer le groupe media
+  ansible.builtin.group:
+    name: media
+    gid: "{{ navidrome_media_gid }}"
+
+- name: Mettre le compte dans media
+  ansible.builtin.user:
+    name: navidrome
+    uid: "{{ navidrome_uid }}"
+    group: navidrome
+    groups: media
+    append: true
+    home: /var/lib/navidrome
+    create_home: false
+  notify: Relancer navidrome
+
+- name: Vérifier la lecture de la musique
+  ansible.builtin.command: runuser -u navidrome -- test -d /mnt/mediatheques/sons
+  changed_when: false
+
+- name: Poser la config
+  ansible.builtin.copy:
+    src: navidrome.toml
+    dest: /etc/navidrome/navidrome.toml
+    owner: navidrome
+    group: navidrome
+    mode: "0644"
+  notify: Relancer navidrome
+
+- name: Poser l'unité
+  ansible.builtin.copy:
+    src: navidrome.service
+    dest: /etc/systemd/system/navidrome.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Recharger systemd
+    - Relancer navidrome
+
+- name: Démarrer le service
+  ansible.builtin.systemd:
+    name: navidrome
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# Le modèle n'a pas curl. Python est déjà là : c'est lui qui lit la réponse.
+- name: Voir la réponse locale
+  ansible.builtin.uri:
+    url: http://127.0.0.1:4533/
+    follow_redirects: none
+    status_code: [200, 302]
+  register: navidrome_http
+  retries: 5
+  delay: 2
+  until: navidrome_http.status in [200, 302]

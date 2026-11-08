@@ -1,3 +1,7 @@
+# Actions lancées seulement si une tâche a fait notify.
+# Recharger après un changement d'unité. Relancer le service
+# seulement s'il est déjà enregistré.
+
 - name: Recharger systemd
   ansible.builtin.systemd:
     daemon_reload: true

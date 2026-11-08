@@ -1,0 +1,254 @@
+# Pose dans le CT les programmes lus sur le 105, aux mêmes versions.
+# Les archives restent dans /var/tmp : un second passage ne les retélécharge pas.
+# Pas de compte web, pas de clé d'API, pas de recyclarr sync, rien n'est copié
+# depuis le 105. Le montage est en lecture seule : sonarr lit, il n'écrit pas.
+# Recyclarr n'a pas d'unité. On vérifie seulement sa version.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+# Avant les paquets : sinon apt prend les uid 102 à 107 pour d'autres comptes.
+- name: Créer le groupe media
+  ansible.builtin.group:
+    name: media
+    gid: "{{ servarr_media_gid }}"
+    system: true
+
+- name: Créer les groupes des comptes
+  ansible.builtin.group:
+    name: "{{ item.name }}"
+    gid: "{{ item.gid }}"
+    system: true
+  loop: "{{ servarr_accounts }}"
+
+- name: Créer les comptes
+  ansible.builtin.user:
+    name: "{{ item.name }}"
+    uid: "{{ item.uid }}"
+    group: "{{ item.name }}"
+    groups: "{{ ['media'] if item.media else omit }}"
+    append: "{{ item.media }}"
+    home: "/var/lib/{{ item.name }}"
+    create_home: true
+    shell: /usr/sbin/nologin
+    system: true
+  loop: "{{ servarr_accounts }}"
+
+- name: Régler les dossiers des comptes
+  ansible.builtin.file:
+    path: "/var/lib/{{ item.name }}"
+    state: directory
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    mode: "0750"
+  loop: "{{ servarr_accounts }}"
+
+# Le modèle Debian a une liste de paquets trop vieille.
+# Pas de unrar : il n'est pas dans les dépôts posés sur le 105.
+- name: Installer les paquets
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - sqlite3
+      - python3-venv
+      - python3-dev
+      - python3-pip
+      - python3-setuptools
+      - unzip
+      - ffmpeg
+      - 7zip
+      - libxml2-dev
+      - libxslt1-dev
+      - git
+      - wget
+      - xz-utils
+      - mediainfo
+      - libchromaprint-tools
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Télécharger les archives *arr
+  ansible.builtin.get_url:
+    url: "{{ item.url }}"
+    dest: "/var/tmp/{{ item.archive }}"
+    mode: "0644"
+    checksum: "{{ item.checksum }}"
+    timeout: 180
+    http_agent: Mozilla/5.0
+    headers:
+      Accept: application/octet-stream
+  loop: "{{ servarr_archives }}"
+
+- name: Extraire les archives *arr
+  ansible.builtin.unarchive:
+    src: "/var/tmp/{{ item.archive }}"
+    dest: /opt
+    remote_src: true
+    owner: "{{ item.name }}"
+    group: "{{ item.name }}"
+    creates: "{{ item.binary }}"
+  loop: "{{ servarr_archives }}"
+
+- name: Télécharger Bazarr
+  ansible.builtin.get_url:
+    url: "{{ servarr_bazarr_url }}"
+    dest: /var/tmp/bazarr.zip
+    mode: "0644"
+    checksum: "{{ servarr_bazarr_checksum }}"
+    timeout: 180
+    http_agent: Mozilla/5.0
+    headers:
+      Accept: application/octet-stream
+
+- name: Préparer /opt/bazarr
+  ansible.builtin.file:
+    path: /opt/bazarr
+    state: directory
+    owner: bazarr
+    group: bazarr
+    mode: "0755"
+
+- name: Extraire Bazarr
+  ansible.builtin.unarchive:
+    src: /var/tmp/bazarr.zip
+    dest: /opt/bazarr
+    remote_src: true
+    creates: /opt/bazarr/bazarr.py
+
+- name: Donner Bazarr à son compte
+  ansible.builtin.file:
+    path: /opt/bazarr
+    state: directory
+    owner: bazarr
+    group: bazarr
+    recurse: true
+
+- name: Créer le venv de Bazarr
+  ansible.builtin.command: runuser -u bazarr -- python3 -m venv /var/lib/bazarr/venv
+  args:
+    creates: /var/lib/bazarr/venv/bin/pip
+
+# Un second passage dit already satisfied : ce n'est pas un changement.
+- name: Installer les dépendances de Bazarr
+  ansible.builtin.command: runuser -u bazarr -- /var/lib/bazarr/venv/bin/pip install -r /opt/bazarr/requirements.txt
+  register: bazarr_pip
+  changed_when: "'Successfully installed' in (bazarr_pip.stdout + bazarr_pip.stderr)"
+  timeout: 600
+
+- name: Télécharger Recyclarr
+  ansible.builtin.get_url:
+    url: "{{ servarr_recyclarr_url }}"
+    dest: /var/tmp/recyclarr-linux-x64.tar.xz
+    mode: "0644"
+    checksum: "{{ servarr_recyclarr_checksum }}"
+    timeout: 180
+    http_agent: Mozilla/5.0
+    headers:
+      Accept: application/octet-stream
+
+- name: Extraire Recyclarr
+  ansible.builtin.unarchive:
+    src: /var/tmp/recyclarr-linux-x64.tar.xz
+    dest: /usr/local/bin
+    remote_src: true
+    creates: /usr/local/bin/recyclarr
+
+- name: Régler le binaire Recyclarr
+  ansible.builtin.file:
+    path: /usr/local/bin/recyclarr
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Poser les unités
+  ansible.builtin.copy:
+    src: "{{ item }}.service"
+    dest: "/etc/systemd/system/{{ item }}.service"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - prowlarr
+    - sonarr
+    - radarr
+    - lidarr
+    - bazarr
+  notify:
+    - Recharger systemd
+    - "Relancer {{ item }}"
+
+- name: Activer les services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - prowlarr
+    - sonarr
+    - radarr
+    - lidarr
+    - bazarr
+
+- name: Sonarr lit les dossiers
+  ansible.builtin.shell: runuser -u sonarr -- test -d /mnt/mediatheques/films && runuser -u sonarr -- test -d /mnt/mediatheques/series && runuser -u sonarr -- test -d /mnt/mediatheques/sons
+  changed_when: false
+
+- name: Sonarr ne peut pas écrire
+  ansible.builtin.command: runuser -u sonarr -- test -w /mnt/mediatheques/films
+  register: servarr_write
+  changed_when: false
+  failed_when: servarr_write.rc == 0
+
+- name: Pages locales
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ item.port }}/"
+    follow_redirects: none
+    status_code: [200, 302]
+  loop: "{{ servarr_archives }}"
+  register: servarr_page
+  retries: 24
+  delay: 5
+  until: servarr_page.status in [200, 302]
+
+- name: Page locale de Bazarr
+  ansible.builtin.uri:
+    url: http://127.0.0.1:6767/
+    follow_redirects: none
+    status_code: [200, 302]
+  register: bazarr_page
+  retries: 24
+  delay: 5
+  until: bazarr_page.status in [200, 302]
+
+- name: Versions dans le journal
+  ansible.builtin.shell: journalctl -u {{ item.name }} -o cat --no-pager | grep -F -m1 'Version {{ item.version }}'
+  loop: "{{ servarr_archives }}"
+  changed_when: false
+
+- name: Version de Bazarr
+  ansible.builtin.command: cat /opt/bazarr/VERSION
+  register: bazarr_version
+  changed_when: false
+  failed_when: (bazarr_version.stdout | trim) not in ['1.6.2', 'v1.6.2']
+
+- name: Version de Recyclarr
+  ansible.builtin.command: /usr/local/bin/recyclarr --version
+  register: recyclarr_version
+  changed_when: false
+  failed_when: servarr_recyclarr_version not in recyclarr_version.stdout
+
+- name: Recyclarr n'est pas un service
+  ansible.builtin.command: systemctl is-active recyclarr
+  register: recyclarr_state
+  changed_when: false
+  failed_when: recyclarr_state.stdout != "inactive"

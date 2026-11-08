@@ -1,0 +1,12 @@
+[Unit]
+After=wg-quick@wg0.service qbittorrent-nox@qbittorrent.service
+BindsTo=wg-quick@wg0.service
+[Service]
+User=qbittorrent
+Group=qbittorrent
+ExecStart=/usr/local/sbin/proton-port
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+[Install]
+WantedBy=multi-user.target

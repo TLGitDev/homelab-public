@@ -1,0 +1,195 @@
+# Crée le CT 113. Refuse les CT déjà pris, dont le 104 (qBittorrent en service).
+# Le montage de /tank/mediatheques/telechargements doit rester ro=1 :
+# on vérifie la ligne avant de démarrer. Le 104, lui, écrit.
+# Proxmox refuse ce montage à un jeton d'API, même root@pam : pct le pose
+# en SSH, en root sur pve. L'idmap fait correspondre le groupe media du CT
+# au groupe 987 de pve. /dev/net/tun est celui lu sur le 104.
+# Le pare-feu est celui lu le 8 nov. : TCP 8080, sans ligne vide entre
+# les deux sections.
+
+- name: Refuser les CT déjà pris
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas aux CT 100 à 112.
+  when: qbittorrent_vmid | int in [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112]
+
+- name: Voir si le CT d'essai existe déjà
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ qbittorrent_vmid }}"
+  register: ct_existant
+  changed_when: false
+  failed_when: false
+
+- name: Refuser un CT qui n'est pas l'essai
+  ansible.builtin.fail:
+    msg: Le CT {{ qbittorrent_vmid }} existe et ce n'est pas {{ qbittorrent_hostname }}.
+  when:
+    - ct_existant.rc == 0
+    - qbittorrent_hostname not in ct_existant.stdout
+
+- name: Créer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ qbittorrent_node }}"
+    vmid: "{{ qbittorrent_vmid }}"
+    hostname: "{{ qbittorrent_hostname }}"
+    ostemplate: "{{ qbittorrent_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ qbittorrent_cores }}"
+    memory: "{{ qbittorrent_memory }}"
+    swap: "{{ qbittorrent_swap }}"
+    disk: "{{ qbittorrent_disk }}"
+    nameserver: "{{ qbittorrent_nameserver }}"
+    features:
+      - nesting=1
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ qbittorrent_gateway }},ip={{ qbittorrent_address }},type=veth"
+    update: false
+    state: present
+  no_log: true
+
+# update: false ne corrige pas un CT déjà créé avec 10.2.0.1.
+- name: Résolveur de la box
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    conf=/etc/pve/lxc/{{ qbittorrent_vmid }}.conf
+    want='nameserver: {{ qbittorrent_nameserver }}'
+    if grep -qxF "$want" "$conf"; then
+      echo ok
+    else
+      pct set {{ qbittorrent_vmid }} -nameserver {{ qbittorrent_nameserver }}
+      echo changed
+    fi
+    SH
+  register: ns_result
+  changed_when: ns_result.stdout == "changed"
+
+- name: Monter les téléchargements en lecture seule
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    conf=/etc/pve/lxc/{{ qbittorrent_vmid }}.conf
+    want='mp0: /tank/mediatheques/telechargements,mp=/mnt/telechargements,ro=1'
+    if grep -qxF "$want" "$conf"; then
+      echo ok
+    else
+      pct set {{ qbittorrent_vmid }} -mp0 /tank/mediatheques/telechargements,mp=/mnt/telechargements,ro=1
+      echo changed
+    fi
+    SH
+  register: mount_result
+  changed_when: mount_result.stdout == "changed"
+
+# pct config d'un CT allumé ne reprend pas un idmap écrit après le démarrage.
+# On s'arrête sur ce qu'il affiche, pas sur le fichier.
+- name: Arrêter le CT si l'idmap manque
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    tun='lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file'
+    idmap='lxc.idmap: g 1000 987 1'
+    cfg=$(pct config {{ qbittorrent_vmid }})
+    if printf '%s\n' "$cfg" | grep -qxF "$tun" && printf '%s\n' "$cfg" | grep -qxF "$idmap"; then
+      echo ok
+    else
+      pct stop {{ qbittorrent_vmid }} || true
+      echo changed
+    fi
+    SH
+  register: stop_result
+  changed_when: stop_result.stdout == "changed"
+
+- name: Poser l'idmap et /dev/net/tun
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/lxc/{{ qbittorrent_vmid }}.conf")
+    idmap = [
+        "lxc.idmap: u 0 100000 65536",
+        "lxc.idmap: g 0 100000 1000",
+        "lxc.idmap: g 1000 987 1",
+        "lxc.idmap: g 1001 101001 64535",
+    ]
+    tun = [
+        "lxc.cgroup2.devices.allow: c 10:200 rwm",
+        "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file",
+    ]
+    text = p.read_text()
+    kept = []
+    for line in text.splitlines():
+        if line.startswith("lxc.idmap:"):
+            continue
+        if line in tun:
+            continue
+        kept.append(line)
+    new = "\n".join(kept + idmap + tun) + "\n"
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: idmap_result
+  changed_when: idmap_result.stdout == "changed"
+
+- name: Vérifier le montage en lecture seule
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ qbittorrent_vmid }}"
+  register: ct_config
+  changed_when: false
+  failed_when: >-
+    'mp0: /tank/mediatheques/telechargements,mp=/mnt/telechargements,ro=1' not in ct_config.stdout
+    or 'lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' not in ct_config.stdout
+
+- name: Poser le pare-feu du CT
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/firewall/{{ qbittorrent_vmid }}.fw")
+    new = "\n".join([
+        "[OPTIONS]",
+        "enable: 1",
+        "policy_in: DROP",
+        "policy_out: ACCEPT",
+        "[RULES]",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 8080",
+        "",
+    ])
+    text = p.read_text() if p.exists() else ""
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: firewall_result
+  changed_when: firewall_result.stdout == "changed"
+
+- name: Démarrer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    vmid: "{{ qbittorrent_vmid }}"
+    state: started
+  no_log: true

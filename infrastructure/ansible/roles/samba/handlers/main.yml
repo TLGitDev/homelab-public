@@ -1,0 +1,6 @@
+# Relance smbd si la config copiée a changé. nmbd reste arrêté.
+
+- name: Relancer smbd
+  ansible.builtin.systemd:
+    name: smbd
+    state: restarted

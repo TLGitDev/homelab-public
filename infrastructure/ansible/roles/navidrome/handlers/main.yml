@@ -1,0 +1,11 @@
+# Recharge systemd si l'unité copiée a changé, puis relance le service.
+# L'ordre compte : le rechargement passe avant la relance.
+
+- name: Recharger systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Relancer navidrome
+  ansible.builtin.systemd:
+    name: navidrome
+    state: restarted

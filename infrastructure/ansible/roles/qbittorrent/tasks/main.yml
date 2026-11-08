@@ -1,0 +1,250 @@
+# Pose qBittorrent dans le CT, sur le modèle du 104.
+# Le paquet peut démarrer le service trop tôt : on ne l'arrête que dans ce cas.
+# Pas de clé Proton, pas de mot de passe web, pas de proton-port lancé.
+# La preuve : le service répond, le compte ne sort pas sans tunnel,
+# root sort encore, et l'écriture sur tank est refusée.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+# Avant les paquets : sinon apt peut prendre l'uid 102.
+- name: Créer le groupe media
+  ansible.builtin.group:
+    name: media
+    gid: "{{ qbittorrent_media_gid }}"
+    system: true
+
+- name: Créer le groupe qbittorrent
+  ansible.builtin.group:
+    name: qbittorrent
+    gid: "{{ qbittorrent_gid }}"
+    system: true
+
+- name: Créer le compte qbittorrent
+  ansible.builtin.user:
+    name: qbittorrent
+    uid: "{{ qbittorrent_uid }}"
+    group: qbittorrent
+    groups:
+      - media
+    append: true
+    home: /var/lib/qbittorrent
+    create_home: true
+    shell: /usr/sbin/nologin
+    system: true
+
+- name: Régler le dossier du compte
+  ansible.builtin.file:
+    path: /var/lib/qbittorrent
+    state: directory
+    owner: qbittorrent
+    group: qbittorrent
+    mode: "0750"
+
+# 10.2.0.1 ne répond pas tant que le tunnel n'existe pas. La box, si.
+- name: Résolveur joignable
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: "nameserver {{ qbittorrent_nameserver }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+# Le modèle Debian a une liste de paquets trop vieille.
+- name: Installer les paquets
+  ansible.builtin.apt:
+    name:
+      - "qbittorrent-nox={{ qbittorrent_package }}"
+      - "wireguard-tools={{ wireguard_tools_package }}"
+      - "nftables={{ nftables_package }}"
+      - "natpmpc={{ natpmpc_package }}"
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+  register: qbit_apt
+
+- name: Arrêter qBittorrent si le paquet vient de s'installer
+  ansible.builtin.systemd:
+    name: qbittorrent-nox@qbittorrent
+    state: stopped
+  when: qbit_apt is changed
+  failed_when: false
+
+- name: Préparer /etc/wireguard
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Créer une clé WireGuard d'essai
+  ansible.builtin.shell: umask 077; wg genkey > /etc/wireguard/trial.key
+  args:
+    creates: /etc/wireguard/trial.key
+
+- name: Lire la clé d'essai
+  ansible.builtin.slurp:
+    src: /etc/wireguard/trial.key
+  register: qbittorrent_wg_key
+  no_log: true
+
+- name: Poser wg0.conf
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    qbittorrent_wg_private: "{{ qbittorrent_wg_key.content | b64decode | trim }}"
+  no_log: true
+  notify:
+    - Relancer wg-quick
+    - Relancer qbittorrent
+
+- name: Poser le script du tunnel
+  ansible.builtin.copy:
+    src: ajuster-wg0.py
+    dest: /usr/local/sbin/ajuster-wg0.py
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Poser le filtre
+  ansible.builtin.copy:
+    src: nftables.conf
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0755"
+  register: nft_copy
+
+- name: Poser le script de port
+  ansible.builtin.copy:
+    src: proton-port
+    dest: /usr/local/sbin/proton-port
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Préparer le drop-in
+  ansible.builtin.file:
+    path: /etc/systemd/system/qbittorrent-nox@qbittorrent.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Poser le drop-in
+  ansible.builtin.copy:
+    src: override.conf
+    dest: /etc/systemd/system/qbittorrent-nox@qbittorrent.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Relancer qbittorrent
+
+- name: Poser l'unité proton-port
+  ansible.builtin.copy:
+    src: proton-port.service
+    dest: /etc/systemd/system/proton-port.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Laisser proton-port arrêté
+  ansible.builtin.systemd:
+    name: proton-port
+    enabled: false
+    state: stopped
+    daemon_reload: true
+
+- name: Activer le filtre
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# Le paquet a déjà chargé le fichier Debian. Un started ne le relit pas.
+- name: Recharger le filtre si le fichier a changé
+  ansible.builtin.systemd:
+    name: nftables
+    state: restarted
+  when: nft_copy is changed
+
+- name: Activer le tunnel d'essai
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    enabled: true
+    state: started
+
+- name: Activer qBittorrent
+  ansible.builtin.systemd:
+    name: qbittorrent-nox@qbittorrent
+    enabled: true
+    state: started
+
+- name: Le compte lit les dossiers
+  ansible.builtin.shell: runuser -u qbittorrent -- test -d /mnt/telechargements/complets && runuser -u qbittorrent -- test -d /mnt/telechargements/incomplets
+  changed_when: false
+
+- name: Le compte ne peut pas écrire
+  ansible.builtin.command: runuser -u qbittorrent -- test -w /mnt/telechargements
+  register: qbit_write
+  changed_when: false
+  failed_when: qbit_write.rc == 0
+
+- name: Le compte ne sort pas par la box
+  ansible.builtin.command: runuser -u qbittorrent -- curl -4 -s --max-time 10 -o /dev/null -w '%{http_code}' http://1.1.1.1
+  register: qbit_cut
+  changed_when: false
+  failed_when: qbit_cut.stdout != '000'
+
+- name: Root sort encore
+  ansible.builtin.command: curl -4 -s --max-time 10 -o /dev/null -w '%{http_code}' http://1.1.1.1
+  register: root_net
+  changed_when: false
+  failed_when: root_net.stdout != '301'
+
+- name: Page locale
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8080/
+    follow_redirects: none
+    status_code: [200, 302]
+  register: qbit_page
+  retries: 12
+  delay: 5
+  until: qbit_page.status in [200, 302]
+
+- name: Versions des paquets
+  ansible.builtin.command: dpkg-query -W -f '${Package} ${Version}\n' qbittorrent-nox wireguard-tools nftables natpmpc
+  register: qbit_pkg
+  changed_when: false
+  failed_when: >-
+    'qbittorrent-nox ' ~ qbittorrent_package not in qbit_pkg.stdout
+    or 'wireguard-tools ' ~ wireguard_tools_package not in qbit_pkg.stdout
+    or 'nftables ' ~ nftables_package not in qbit_pkg.stdout
+    or 'natpmpc ' ~ natpmpc_package not in qbit_pkg.stdout
+
+- name: proton-port n'est pas lancé
+  ansible.builtin.command: systemctl is-active proton-port
+  register: proton_state
+  changed_when: false
+  failed_when: proton_state.stdout != 'inactive'
+
+- name: Résolveur de la box
+  ansible.builtin.command: cat /etc/resolv.conf
+  register: qbit_resolv
+  changed_when: false
+  failed_when: "'nameserver ' ~ qbittorrent_nameserver not in qbit_resolv.stdout"

@@ -1,0 +1,20 @@
+# Chiffres du CT d'essai. Le CT en service est le 100, <ip-cloudflare>.
+# Cet essai est le 114, <ip-cloudflare-ct114>. Relancer le playbook recrée le 114.
+# Le 100 a cloudflared 2026.10.4. Le dépôt bookworm ne publie plus que
+# 2026.10.7 : l'essai installe cette version.
+# Pas de jeton. Le fichier du 100 fait 184 octets et reste là.
+# Un second cloudflared avec le même jeton prendrait le tunnel du 100.
+
+cloudflare_vmid: 114
+cloudflare_hostname: cloudflare-essai
+cloudflare_address: <ip-cloudflare-ct114>/24
+cloudflare_gateway: <ip-box>
+cloudflare_cores: 1
+cloudflare_memory: 512
+cloudflare_swap: 512
+cloudflare_disk: local-zfs:8
+cloudflare_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+cloudflare_node: pve
+proxmox_api_host: <ip-pve>
+cloudflare_version: 2026.10.7
+cloudflare_key_checksum: sha256:1bd95f4082b320d541bee351560fc2765aa9f9cd8efa4c9e32135e63f252721d

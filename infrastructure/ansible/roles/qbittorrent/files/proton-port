@@ -1,0 +1,35 @@
+#!/bin/sh
+set -eu
+gw=10.2.0.1
+api=http://<ip-qbittorrent-ct113>:8080
+passfile=/var/lib/qbittorrent/web.pass
+state=/var/lib/qbittorrent/proton-port.last
+cookie=$(mktemp)
+trap 'rm -f "$cookie"' EXIT
+login() {
+  curl -fsS -c "$cookie" --max-time 10 \
+    -H "Referer: ${api}/" \
+    --data-urlencode "username=admin" \
+    --data-urlencode "password@${passfile}" \
+    "$api/api/v2/auth/login" >/dev/null
+}
+while true; do
+  out=$(natpmpc -a 1 0 udp 60 -g "$gw" && natpmpc -a 1 0 tcp 60 -g "$gw") || {
+    echo "natpmpc en erreur" >&2
+    sleep 10
+    continue
+  }
+  port=$(printf '%s\n' "$out" | sed -n 's/.*public port \([0-9][0-9]*\).*/\1/p' | head -n 1)
+  prev=
+  [ -f "$state" ] && prev=$(cat "$state")
+  if [ -n "$port" ] && [ "$port" != "$prev" ]; then
+    login
+    curl -fsS -b "$cookie" --max-time 10 \
+      -H "Referer: ${api}/" \
+      --data-urlencode "json={\"listen_port\":${port}}" \
+      "$api/api/v2/app/setPreferences"
+    printf '%s\n' "$port" > "$state"
+    echo "port $port"
+  fi
+  sleep 45
+done

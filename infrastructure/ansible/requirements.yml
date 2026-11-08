@@ -1,3 +1,6 @@
+# Collection Ansible qui sait parler à l'API de Proxmox.
+# Installée une fois dans le venv du PC : ansible-galaxy collection install -r requirements.yml
+
 collections:
   - name: community.proxmox
     version: 2.1.0

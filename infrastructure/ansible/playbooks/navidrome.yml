@@ -1,0 +1,28 @@
+# Playbook de Navidrome d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/navidrome.yml
+#
+# Deux étapes : créer le conteneur, puis installer Navidrome dedans.
+# Le CT en service est le 106. Cet essai est le 109, une autre adresse.
+# Le dossier de musique est celui de tank, monté en lecture seule.
+# Pas de compte web : la preuve est que le service répond.
+# Les jetons sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 109 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/navidrome.yml
+    - ../secrets.yml
+  roles:
+    - lxc_navidrome
+
+# 2. Entrer dans le CT et y poser Navidrome 0.64.2.
+- name: Poser Navidrome dans le CT
+  hosts: navidrome-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/navidrome.yml
+  roles:
+    - navidrome

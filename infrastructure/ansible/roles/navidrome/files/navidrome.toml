@@ -1,0 +1,4 @@
+DataFolder = "/var/lib/navidrome"
+MusicFolder = "/mnt/mediatheques/sons"
+Address = "0.0.0.0"
+Port = 4533

@@ -1,0 +1,29 @@
+# Playbook de Jellyfin d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/jellyfin.yml
+#
+# Deux étapes : créer le conteneur, puis installer Jellyfin dedans.
+# Le CT en service est le 103. Cet essai est le 110, une autre adresse.
+# Le dossier des médias est celui de tank, monté en lecture seule.
+# Pas de compte web, pas de copie de la bibliothèque du 103.
+# La preuve est /health qui répond Healthy.
+# Les jetons sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 110 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/jellyfin.yml
+    - ../secrets.yml
+  roles:
+    - lxc_jellyfin
+
+# 2. Entrer dans le CT et y poser Jellyfin 12.4.
+- name: Poser Jellyfin dans le CT
+  hosts: jellyfin-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/jellyfin.yml
+  roles:
+    - jellyfin

@@ -1,0 +1,33 @@
+# Chiffres du CT d'essai. Le CT en service est le 104, <ip-qbittorrent>.
+# Cet essai est le 113, <ip-qbittorrent-ct113>. Relancer le playbook recrée le 113.
+# Le 104 écrit dans /tank/mediatheques/telechargements. L'essai monte
+# le même dossier en lecture seule.
+# Le 104 résout via 10.2.0.1, et sa config Proxmox dit 10.64.0.1.
+# Les deux ne répondent qu'une fois le tunnel levé. L'essai n'a pas ce
+# tunnel : il résout via la box, <ip-box>, pour pouvoir installer.
+# Pas de clé Proton, pas de wg0.conf.mullvad, pas de mot de passe web.
+# La clé WireGuard de l'essai est créée dans le CT. Le pair est une
+# adresse de test : la poignée de main n'aboutit pas, le 104 garde son tunnel.
+
+qbittorrent_vmid: 113
+qbittorrent_hostname: qbittorrent-essai
+qbittorrent_address: <ip-qbittorrent-ct113>/24
+qbittorrent_bind_address: <ip-qbittorrent-ct113>
+qbittorrent_gateway: <ip-box>
+qbittorrent_nameserver: <ip-box>
+qbittorrent_cores: 2
+qbittorrent_memory: 2048
+qbittorrent_swap: 512
+qbittorrent_disk: local-zfs:8
+qbittorrent_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+qbittorrent_node: pve
+proxmox_api_host: <ip-pve>
+qbittorrent_uid: 102
+qbittorrent_gid: 105
+qbittorrent_media_gid: 1000
+qbittorrent_package: 5.1.0-2
+wireguard_tools_package: 1.0.20210914-3
+nftables_package: 1.1.3-1
+natpmpc_package: 20230423-1.2+b3
+qbittorrent_wg_peer: <clé-publique-serveur-vpn>
+qbittorrent_wg_endpoint: 192.0.2.1:51820

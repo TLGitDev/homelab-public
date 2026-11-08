@@ -1,0 +1,29 @@
+# Playbook de Samba d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/samba.yml
+#
+# Deux étapes : créer le conteneur, puis installer Samba dedans.
+# Le CT en service est le 102. Cet essai est le 111, une autre adresse.
+# Les cinq dossiers de tank sont montés en lecture seule.
+# Pas de mot de passe Samba : il reste hors de Git, dans le 102.
+# La preuve est smbd actif, nmbd arrêté, et utilisateur qui lit sans pouvoir écrire.
+# Les jetons sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 111 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/samba.yml
+    - ../secrets.yml
+  roles:
+    - lxc_samba
+
+# 2. Entrer dans le CT et y poser Samba.
+- name: Poser Samba dans le CT
+  hosts: samba-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/samba.yml
+  roles:
+    - samba

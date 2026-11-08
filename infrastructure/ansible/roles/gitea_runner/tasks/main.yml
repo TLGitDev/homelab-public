@@ -1,3 +1,8 @@
+# Installe gitea-runner dans le CT, sur le modèle du 107.
+# pct n'a pas de shell : les commandes brutes passent par sh -c.
+# Ansible a besoin de Python dans le CT pour les tâches suivantes.
+# Le service ne part que lorsque .runner existe. L'enregistrement est ailleurs.
+
 - name: Voir si Python est là
   ansible.builtin.raw: sh -c 'command -v python3'
   register: python3_present
@@ -77,6 +82,8 @@
     mode: "0644"
   notify: Recharger systemd
 
+# .runner est écrit par la tâche register, pas par ce fichier.
+# Sans lui, on ne démarre pas : un runner non enregistré boucle.
 - name: Voir si le runner est enregistré
   ansible.builtin.stat:
     path: /var/lib/gitea-runner/.runner

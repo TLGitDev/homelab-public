@@ -1,3 +1,8 @@
+# Crée le CT 108 sur pve, puis le démarre.
+# state: present ne démarre pas un conteneur absent : d'où les deux tâches.
+# update: false : un second passage ne réécrit pas un CT déjà là.
+# no_log : la tâche reçoit le mot de passe root et le jeton d'API.
+
 - name: Refuser le CT de référence
   ansible.builtin.fail:
     msg: Ce playbook ne touche pas au CT 107.

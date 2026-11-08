@@ -1,0 +1,31 @@
+# Playbook de qBittorrent d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/qbittorrent.yml
+#
+# Deux étapes : créer le conteneur, puis y poser qBittorrent.
+# Le CT en service est le 104. Cet essai est le 113, une autre adresse.
+# Le dossier des téléchargements est celui de tank, monté en lecture seule.
+# Pas de clé Proton, pas de mot de passe web, pas de copie des torrents.
+# proton-port n'est pas démarré : son script parle à l'interface web.
+# La clé WireGuard de l'essai naît dans le CT. Le pair est 192.0.2.1,
+# une adresse de test : rien ne joint le serveur Proton du 104.
+# Les jetons sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 113 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/qbittorrent.yml
+    - ../secrets.yml
+  roles:
+    - lxc_qbittorrent
+
+# 2. Entrer dans le CT et y poser qBittorrent.
+- name: Poser qBittorrent dans le CT
+  hosts: qbittorrent-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/qbittorrent.yml
+  roles:
+    - qbittorrent

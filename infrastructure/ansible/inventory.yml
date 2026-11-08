@@ -1,10 +1,53 @@
+# Les machines auxquelles Ansible parle.
+# ansible_host est l'adresse réelle. Le nom (localhost, runner-essai) est celui
+# qu'utilisent les playbooks dans hosts:.
+
 all:
   hosts:
+    # Le PC. C'est lui qui appelle l'API de Proxmox.
+    # L'interpréteur est celui du venv WSL, là où proxmoxer est installé.
     localhost:
       ansible_connection: local
       ansible_python_interpreter: /opt/ansible-venv/bin/python3
+    # Le CT 108, joint par pct en SSH vers pve. Pas le 107.
     runner-essai:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 108
+    # Le CT 109, même chemin. Pas le 106.
+    navidrome-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 109
+    # Le CT 110, même chemin. Pas le 103.
+    jellyfin-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 110
+    # Le CT 111, même chemin. Pas le 102.
+    samba-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 111
+    # Le CT 112, même chemin. Pas le 105.
+    servarr-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 112
+    # Le CT 113, même chemin. Pas le 104.
+    qbittorrent-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 113
+    # Le CT 114, même chemin. Pas le 100.
+    cloudflare-essai:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 114

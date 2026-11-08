@@ -1,0 +1,151 @@
+# Crée le CT 112. Refuse les CT déjà pris, dont le 105 (servarr en service).
+# Le montage de /tank/mediatheques doit rester ro=1 : on vérifie la ligne
+# avant de démarrer. Le 105, lui, écrit. Proxmox refuse ce montage à un
+# jeton d'API, même root@pam : pct le pose en SSH, en root sur pve.
+# L'idmap fait correspondre le groupe media du CT au groupe 987 de pve.
+# Le pare-feu est celui lu le 8 nov. sur le 105 : quatre ports, pas 8686.
+
+- name: Refuser les CT déjà pris
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas aux CT 100 à 111.
+  when: servarr_vmid | int in [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]
+
+- name: Voir si le CT d'essai existe déjà
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ servarr_vmid }}"
+  register: ct_existant
+  changed_when: false
+  failed_when: false
+
+- name: Refuser un CT qui n'est pas l'essai
+  ansible.builtin.fail:
+    msg: Le CT {{ servarr_vmid }} existe et ce n'est pas {{ servarr_hostname }}.
+  when:
+    - ct_existant.rc == 0
+    - servarr_hostname not in ct_existant.stdout
+
+- name: Créer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ servarr_node }}"
+    vmid: "{{ servarr_vmid }}"
+    hostname: "{{ servarr_hostname }}"
+    ostemplate: "{{ servarr_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ servarr_cores }}"
+    memory: "{{ servarr_memory }}"
+    swap: "{{ servarr_swap }}"
+    disk: "{{ servarr_disk }}"
+    nameserver: "{{ servarr_nameserver }}"
+    features:
+      - nesting=1
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ servarr_gateway }},ip={{ servarr_address }},type=veth"
+    update: false
+    state: present
+  no_log: true
+
+- name: Monter tank en lecture seule
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    conf=/etc/pve/lxc/{{ servarr_vmid }}.conf
+    want='mp0: /tank/mediatheques,mp=/mnt/mediatheques,ro=1'
+    if grep -qxF "$want" "$conf"; then
+      echo ok
+    else
+      pct set {{ servarr_vmid }} -mp0 /tank/mediatheques,mp=/mnt/mediatheques,ro=1
+      echo changed
+    fi
+    SH
+  register: mount_result
+  changed_when: mount_result.stdout == "changed"
+
+- name: Poser l'idmap du groupe media
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/lxc/{{ servarr_vmid }}.conf")
+    idmap = [
+        "lxc.idmap: u 0 100000 65536",
+        "lxc.idmap: g 0 100000 1000",
+        "lxc.idmap: g 1000 987 1",
+        "lxc.idmap: g 1001 101001 64535",
+    ]
+    text = p.read_text()
+    kept = [line for line in text.splitlines() if not line.startswith("lxc.idmap:")]
+    new = "\n".join(kept + idmap) + "\n"
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: idmap_result
+  changed_when: idmap_result.stdout == "changed"
+
+- name: Vérifier le montage en lecture seule
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ servarr_vmid }}"
+  register: ct_config
+  changed_when: false
+  failed_when: "'mp0: /tank/mediatheques,mp=/mnt/mediatheques,ro=1' not in ct_config.stdout"
+
+- name: Poser le pare-feu du CT
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/firewall/{{ servarr_vmid }}.fw")
+    new = "\n".join([
+        "[OPTIONS]",
+        "enable: 1",
+        "policy_in: DROP",
+        "policy_out: ACCEPT",
+        "",
+        "[RULES]",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 9696",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 8989",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 7878",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 6767",
+        "",
+    ])
+    text = p.read_text() if p.exists() else ""
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: firewall_result
+  changed_when: firewall_result.stdout == "changed"
+
+- name: Démarrer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    vmid: "{{ servarr_vmid }}"
+    state: started
+  no_log: true

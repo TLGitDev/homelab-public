@@ -1,0 +1,51 @@
+# Chiffres de Samba d'essai. La référence est le CT 102, relevé le 8 nov. 2026.
+# On décrit ici le CT 111. Le 102 reste en service et continue d'écrire.
+# Le 108, le 109 et le 110 restent les numéros des autres playbooks.
+# Les cinq dossiers sont les mêmes, mais en lecture seule : l'essai ne modifie pas tank.
+
+samba_vmid: 111
+samba_hostname: samba-essai
+samba_address: <ip-samba-ct111>/24
+samba_bind_address: <ip-samba-ct111>
+samba_gateway: <ip-box>
+samba_nameserver: <ip-box>
+samba_cores: 1
+samba_memory: 512
+samba_swap: 512
+samba_disk: local-zfs:4
+samba_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+samba_node: pve
+proxmox_api_host: <ip-pve>
+
+# Paquet Debian, tel que sur le 102. Pas de dépôt supplémentaire.
+samba_version: 2:4.22.11+dfsg-0+deb13u1
+
+# Compte du CT. L'idmap envoie l'uid 1000 vers l'uid 999 de pve (utilisateur)
+# et le gid 1000 vers le gid 988 de pve (perso).
+samba_uid: 1000
+samba_gid: 1000
+
+samba_mounts:
+  - index: 0
+    spec: /tank/documents,mp=/tank/documents,ro=1
+    line: "mp0: /tank/documents,mp=/tank/documents,ro=1"
+  - index: 1
+    spec: /tank/images,mp=/tank/images,ro=1
+    line: "mp1: /tank/images,mp=/tank/images,ro=1"
+  - index: 2
+    spec: /tank/musique,mp=/tank/musique,ro=1
+    line: "mp2: /tank/musique,mp=/tank/musique,ro=1"
+  - index: 3
+    spec: /tank/projets,mp=/tank/projets,ro=1
+    line: "mp3: /tank/projets,mp=/tank/projets,ro=1"
+  - index: 4
+    spec: /tank/videos,mp=/tank/videos,ro=1
+    line: "mp4: /tank/videos,mp=/tank/videos,ro=1"
+
+samba_idmap:
+  - "lxc.idmap: u 0 100000 1000"
+  - "lxc.idmap: g 0 100000 1000"
+  - "lxc.idmap: u 1000 999 1"
+  - "lxc.idmap: g 1000 988 1"
+  - "lxc.idmap: u 1001 101001 64535"
+  - "lxc.idmap: g 1001 101001 64535"

@@ -1,0 +1,28 @@
+# Chiffres de Jellyfin d'essai. La référence est le CT 103, relevé le 8 nov. 2026.
+# On décrit ici le CT 110. Le 103 reste en service.
+# Le 108 reste celui du runner, le 109 celui de Navidrome.
+
+# Forme du conteneur, calquée sur le 103. 4 Gio, disque 16 Go.
+jellyfin_vmid: 110
+jellyfin_hostname: jellyfin-essai
+jellyfin_address: <ip-jellyfin-ct110>/24
+jellyfin_gateway: <ip-box>
+jellyfin_nameserver: <ip-box>
+jellyfin_cores: 2
+jellyfin_memory: 4096
+jellyfin_swap: 512
+jellyfin_disk: local-zfs:16
+jellyfin_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+jellyfin_node: pve
+proxmox_api_host: <ip-pve>
+
+# Jellyfin 12.4+deb13, comme sur le 103. Le paquet publié aujourd'hui dépend
+# de jellyfin-ffmpeg8. Le 103 a encore jellyfin-ffmpeg7, posé le 28 oct.
+# On prend ffmpeg8 8.1.3-2-trixie, en tête du dépôt. media lit tank.
+jellyfin_version: 12.4+deb13
+jellyfin_ffmpeg_package: jellyfin-ffmpeg8
+jellyfin_ffmpeg_version: 8.1.3-2-trixie
+jellyfin_key_checksum: sha256:a0cde241ae297fa6f0265c0bf15ce9eb9ee97c008904a59ab367a67d59532839
+jellyfin_uid: 102
+jellyfin_gid: 105
+jellyfin_media_gid: 1000

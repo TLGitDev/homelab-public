@@ -1,0 +1,71 @@
+# Chiffres du CT d'essai. Le CT en service est le 105, <ip-servarr>.
+# Cet essai est le 112, <ip-servarr-ct112>. Relancer le playbook recrée le 112.
+# Les versions sont celles lues le 8 nov. dans le journal du 105.
+# Bazarr n'avait pas de ligne Version : on reprend le 1.6.2 du 29 oct.
+# Les empreintes sont celles publiées par GitHub pour ces archives.
+# Celle de Lidarr est aussi celle écrite dans Mediatheques.md.
+# Celle de Prowlarr a en plus été recalculée sur le fichier téléchargé.
+# L'adresse /releases/download répond 504 depuis ici. L'adresse d'API
+# ci-dessous est le même fichier : elle redirige vers l'archive, et
+# l'empreinte est revérifiée après le téléchargement.
+
+servarr_vmid: 112
+servarr_hostname: servarr-essai
+servarr_address: <ip-servarr-ct112>/24
+servarr_gateway: <ip-box>
+servarr_nameserver: <ip-box>
+servarr_cores: 2
+servarr_memory: 4096
+servarr_swap: 512
+servarr_disk: local-zfs:16
+servarr_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+servarr_node: pve
+proxmox_api_host: <ip-pve>
+servarr_media_gid: 1000
+
+# Comptes lus sur le 105. media seulement pour ceux qui écrivent dans la médiathèque.
+# Prowlarr et Recyclarr restent hors de media.
+servarr_accounts:
+  - { name: prowlarr, uid: 102, gid: 105, media: false }
+  - { name: sonarr, uid: 103, gid: 106, media: true }
+  - { name: radarr, uid: 104, gid: 107, media: true }
+  - { name: bazarr, uid: 105, gid: 108, media: true }
+  - { name: recyclarr, uid: 106, gid: 109, media: false }
+  - { name: lidarr, uid: 107, gid: 110, media: true }
+
+servarr_archives:
+  - name: prowlarr
+    archive: Prowlarr.master.2.7.0.5723.linux-core-x64.tar.gz
+    url: https://api.github.com/repos/Prowlarr/Prowlarr/releases/assets/679045504
+    checksum: sha256:d65cb9fb442a8a3ded055d7027db9a08f519acb7908c7afe72175aa7c337783c
+    binary: /opt/Prowlarr/Prowlarr
+    version: 2.7.0.5723
+    port: 9696
+  - name: sonarr
+    archive: Sonarr.main.4.0.20.3014.linux-x64.tar.gz
+    url: https://api.github.com/repos/Sonarr/Sonarr/releases/assets/568369830
+    checksum: sha256:1fc48544b5a3401b2fc3df8d0642c1e6a73a28e41a351169edd9cd8f54770db5
+    binary: /opt/Sonarr/Sonarr
+    version: 4.0.20.3014
+    port: 8989
+  - name: radarr
+    archive: Radarr.master.6.4.4.10685.linux-core-x64.tar.gz
+    url: https://api.github.com/repos/Radarr/Radarr/releases/assets/563738260
+    checksum: sha256:a1d726129535e739d4efaf93b5fdd771bb1c78349f55ceac70e365e37b5a12a3
+    binary: /opt/Radarr/Radarr
+    version: 6.4.4.10685
+    port: 7878
+  - name: lidarr
+    archive: Lidarr.master.3.1.6.5079.linux-core-x64.tar.gz
+    url: https://api.github.com/repos/Lidarr/Lidarr/releases/assets/564254663
+    checksum: sha256:fed16c58f5de797be955e830a3a93994f020c1d8d60f5a6cb061d7647d45b8bc
+    binary: /opt/Lidarr/Lidarr
+    version: 3.1.6.5079
+    port: 8686
+
+servarr_bazarr_url: https://api.github.com/repos/morpheus65535/bazarr/releases/assets/589673056
+servarr_bazarr_checksum: sha256:82d1c61ea8508b28503d820bd5924360cc503467e7de51fa29205cac34c2627b
+servarr_bazarr_version: 1.6.2
+servarr_recyclarr_url: https://api.github.com/repos/recyclarr/recyclarr/releases/assets/685138035
+servarr_recyclarr_checksum: sha256:960fe20cf2dd1c322ca7a6395469dcbefeaa7df08b217caad7686023b840feb9
+servarr_recyclarr_version: v8.8.1

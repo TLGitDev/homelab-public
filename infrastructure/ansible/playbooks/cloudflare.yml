@@ -1,0 +1,29 @@
+# Playbook de Cloudflare d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/cloudflare.yml
+#
+# Deux étapes : créer le conteneur, puis y poser cloudflared.
+# Le CT en service est le 100. Cet essai est le 114, une autre adresse.
+# Pas de fichier de pare-feu, comme le 100. Pas d'idmap particulière.
+# Pas de jeton : le service reste arrêté. Le tunnel du 100 continue.
+# Le dépôt ne publie plus que 2026.10.7. Le 100 a encore 2026.10.4.
+# Les jetons Proxmox sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 114 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/cloudflare.yml
+    - ../secrets.yml
+  roles:
+    - lxc_cloudflare
+
+# 2. Entrer dans le CT et y poser cloudflared, sans le démarrer.
+- name: Poser cloudflared dans le CT
+  hosts: cloudflare-essai
+  gather_facts: false
+  vars_files:
+    - ../vars/cloudflare.yml
+  roles:
+    - cloudflare

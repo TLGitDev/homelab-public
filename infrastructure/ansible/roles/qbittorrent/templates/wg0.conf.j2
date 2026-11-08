@@ -1,0 +1,22 @@
+[Interface]
+Table = 51820
+FwMark = 51820
+PostUp = ip rule del uidrange 102-102 lookup 51820 priority 200 || true
+PostUp = ip rule add uidrange 102-102 lookup 51820 priority 200
+PostUp = ip -6 rule del uidrange 102-102 lookup 51820 priority 200 || true
+PostUp = ip -6 rule add uidrange 102-102 lookup 51820 priority 200
+PostUp = ip rule del to <réseau-lan> lookup main priority 100 || true
+PostUp = ip rule add to <réseau-lan> lookup main priority 100
+PreDown = ip rule del uidrange 102-102 lookup 51820 priority 200 || true
+PreDown = ip -6 rule del uidrange 102-102 lookup 51820 priority 200 || true
+PreDown = ip rule del to <réseau-lan> lookup main priority 100 || true
+PostUp = ip route replace 10.2.0.1/32 dev wg0
+PreDown = ip route del 10.2.0.1/32 dev wg0 || true
+PrivateKey = {{ qbittorrent_wg_private }}
+Address = 10.2.0.2/32
+
+[Peer]
+PublicKey = {{ qbittorrent_wg_peer }}
+AllowedIPs = 0.0.0.0/0, ::/0
+Endpoint = {{ qbittorrent_wg_endpoint }}
+PersistentKeepalive = 25
