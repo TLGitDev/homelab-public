@@ -10,7 +10,7 @@
 # l'empreinte est revérifiée après le téléchargement.
 
 servarr_vmid: 112
-servarr_hostname: servarr-essai
+servarr_hostname: servarr
 servarr_address: <ip-servarr-ct112>/24
 servarr_gateway: <ip-box>
 servarr_nameserver: <ip-box>

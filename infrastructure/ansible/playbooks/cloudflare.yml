@@ -21,7 +21,7 @@
 
 # 2. Entrer dans le CT et y poser cloudflared, sans le démarrer.
 - name: Poser cloudflared dans le CT
-  hosts: cloudflare-essai
+  hosts: cloudflare
   gather_facts: false
   vars_files:
     - ../vars/cloudflare.yml

@@ -23,7 +23,7 @@
 
 # 2. Entrer dans le CT et y poser les programmes du 105.
 - name: Poser les programmes dans le CT
-  hosts: servarr-essai
+  hosts: servarr
   gather_facts: false
   vars_files:
     - ../vars/servarr.yml

@@ -34,7 +34,7 @@ Utilisateur : `root`
 
 Realm : Linux PAM
 
-Accès distant : `proxmox.labo.example` via Cloudflare Tunnel + Access (aucun port ouvert sur le routeur).
+Accès distant : `proxmox.labo.example` via Cloudflare Tunnel + Access. Depuis le 9 nov., le téléphone ouvre aussi `https://<ip-pve>:8006` par WireGuard (CT 115). Aucune redirection IPv4. La box a une règle IPv6, UDP 51820, vers l'adresse globale du 115. Cette adresse n'est pas écrite ici.
 
 ## Plan d'adressage
 
@@ -45,6 +45,7 @@ Source de vérité pour les IP du homelab.
 | `<ip-box>` | Box / passerelle / DNS | Réseau domestique |
 | `<ip-pve-prévue>` | — | Adresse initialement prévue pour Proxmox, **jamais appliquée** |
 | `<ip-cloudflare>` | LXC `cloudflare` (CT 100) | Tunnel Cloudflare |
+| `<ip-wireguard>` | LXC `wireguard` (CT 115) | Passerelle WireGuard, en service le 9 nov. Téléphone `<ip-wg-téléphone>/32`. Le PC fixe n'a pas de clé. |
 | `<ip-k3s-01>` | K3s (Traefik :80) | Cluster applicatif |
 | `<ip-samba>` | LXC `samba` (CT 102) | SMB LAN (as-built 24 oct.) |
 | `<ip-pve>` | Proxmox (`pve`) | Adresse réelle du nœud |

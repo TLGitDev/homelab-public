@@ -21,7 +21,7 @@
 
 # 2. Entrer dans le CT et y poser Jellyfin 12.4.
 - name: Poser Jellyfin dans le CT
-  hosts: jellyfin-essai
+  hosts: jellyfin
   gather_facts: false
   vars_files:
     - ../vars/jellyfin.yml

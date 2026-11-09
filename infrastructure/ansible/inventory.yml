@@ -1,5 +1,5 @@
 # Les machines auxquelles Ansible parle.
-# ansible_host est l'adresse réelle. Le nom (localhost, runner-essai) est celui
+# ansible_host est l'adresse réelle. Le nom (localhost, runner) est celui
 # qu'utilisent les playbooks dans hosts:.
 
 all:
@@ -10,44 +10,50 @@ all:
       ansible_connection: local
       ansible_python_interpreter: /opt/ansible-venv/bin/python3
     # Le CT 108, joint par pct en SSH vers pve. Pas le 107.
-    runner-essai:
+    runner:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 108
     # Le CT 109, même chemin. Pas le 106.
-    navidrome-essai:
+    navidrome:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 109
     # Le CT 110, même chemin. Pas le 103.
-    jellyfin-essai:
+    jellyfin:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 110
     # Le CT 111, même chemin. Pas le 102.
-    samba-essai:
+    samba:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 111
     # Le CT 112, même chemin. Pas le 105.
-    servarr-essai:
+    servarr:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 112
     # Le CT 113, même chemin. Pas le 104.
-    qbittorrent-essai:
+    qbittorrent:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 113
     # Le CT 114, même chemin. Pas le 100.
-    cloudflare-essai:
+    cloudflare:
       ansible_host: <ip-pve>
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 114
+    # Le CT 115. Pas le 108, pas le 101.
+    wireguard:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 115

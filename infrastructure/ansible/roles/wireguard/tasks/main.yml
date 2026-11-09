@@ -1,0 +1,211 @@
+# Pose la passerelle dans le CT.
+# Deux clés sont créées ici, une fois : le serveur et le téléphone.
+# Un second passage les garde. <ip-wg-téléphone> est le téléphone.
+# Le filtre laisse sortir de wg0 seulement vers les services listés,
+# puis réécrit la source en <ip-wireguard> : les services répondent au CT.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+- name: Résolveur de la box
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: "nameserver {{ acces_nameserver }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Installer WireGuard et nftables
+  ansible.builtin.apt:
+    name:
+      - wireguard-tools
+      - nftables
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Laisser passer IPv4
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+
+- name: Préparer /etc/wireguard
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Créer la clé du serveur
+  ansible.builtin.shell: umask 077; wg genkey > /etc/wireguard/server.key
+  args:
+    creates: /etc/wireguard/server.key
+
+- name: Retirer la clé du PC
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/wireguard/trial.key
+    - /root/wireguard.conf
+
+- name: Créer la clé du téléphone
+  ansible.builtin.shell: umask 077; wg genkey > /etc/wireguard/telephone.key
+  args:
+    creates: /etc/wireguard/telephone.key
+
+- name: Lire la clé du serveur
+  ansible.builtin.slurp:
+    src: /etc/wireguard/server.key
+  register: acces_server_key
+  no_log: true
+
+- name: Lire la clé du téléphone
+  ansible.builtin.slurp:
+    src: /etc/wireguard/telephone.key
+  register: acces_phone_key
+  no_log: true
+
+- name: Préparer les clés du modèle
+  ansible.builtin.set_fact:
+    acces_server_private: "{{ acces_server_key.content | b64decode | trim }}"
+    acces_phone_private: "{{ acces_phone_key.content | b64decode | trim }}"
+  no_log: true
+
+- name: Clé publique du serveur
+  ansible.builtin.command: wg pubkey
+  args:
+    stdin: "{{ acces_server_private }}"
+  register: acces_server_pub
+  changed_when: false
+  no_log: true
+
+- name: Clé publique du téléphone
+  ansible.builtin.command: wg pubkey
+  args:
+    stdin: "{{ acces_phone_private }}"
+  register: acces_phone_pub
+  changed_when: false
+  no_log: true
+
+- name: Retenir les clés publiques
+  ansible.builtin.set_fact:
+    acces_server_public: "{{ acces_server_pub.stdout }}"
+    acces_phone_public: "{{ acces_phone_pub.stdout }}"
+    acces_peer_list:
+      - { public: "{{ acces_phone_pub.stdout }}", address: "{{ acces_phone_address }}" }
+
+- name: Poser wg0.conf
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  register: acces_wg
+
+- name: Poser le fichier du téléphone
+  ansible.builtin.template:
+    src: client.conf.j2
+    dest: /root/telephone.conf
+    owner: root
+    group: root
+    mode: "0600"
+  vars:
+    peer_address: "{{ acces_phone_address }}"
+    peer_private: "{{ acces_phone_private }}"
+  no_log: true
+
+- name: Poser le filtre
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+  register: acces_nft
+
+- name: Activer le filtre
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+
+- name: Recharger le filtre si le fichier a changé
+  ansible.builtin.systemd:
+    name: nftables
+    state: restarted
+  when: acces_nft is changed
+
+- name: Activer WireGuard
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    enabled: true
+    state: started
+
+- name: Voir les pairs chargés
+  ansible.builtin.command: wg show wg0 peers
+  register: acces_peers_live
+  changed_when: false
+  failed_when: false
+
+- name: Recharger WireGuard
+  ansible.builtin.systemd:
+    name: wg-quick@wg0
+    state: restarted
+  when: >-
+    acces_wg is changed
+    or acces_peers_live.stdout_lines | length != 1
+    or acces_phone_public not in acces_peers_live.stdout
+
+- name: Port d'écoute
+  ansible.builtin.command: wg show wg0 listen-port
+  register: acces_port
+  changed_when: false
+  failed_when: acces_port.stdout != (acces_listen_port | string)
+
+- name: Le pair du téléphone est le seul
+  ansible.builtin.command: wg show wg0 peers
+  register: acces_peers
+  changed_when: false
+  failed_when: >-
+    acces_peers.stdout_lines | length != 1
+    or acces_phone_public not in acces_peers.stdout
+
+- name: Le transfert est ouvert
+  ansible.builtin.command: sysctl -n net.ipv4.ip_forward
+  register: acces_forward
+  changed_when: false
+  failed_when: acces_forward.stdout != "1"
+
+- name: Le filtre refuse le reste
+  ansible.builtin.command: nft list ruleset
+  register: acces_rules
+  changed_when: false
+  failed_when: >-
+    'policy drop' not in acces_rules.stdout
+    or '<ip-pve>' not in acces_rules.stdout
+    or 'dport 8006' not in acces_rules.stdout
+
+- name: Le fichier du téléphone reste privé
+  ansible.builtin.command: stat -c %a /root/telephone.conf
+  register: acces_phone_mode
+  changed_when: false
+  failed_when: acces_phone_mode.stdout != "600"
+
+- name: Versions installées
+  ansible.builtin.command: dpkg-query -W wireguard-tools nftables
+  register: acces_versions
+  changed_when: false

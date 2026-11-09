@@ -6,7 +6,7 @@
 # Un second cloudflared avec le même jeton prendrait le tunnel du 100.
 
 cloudflare_vmid: 114
-cloudflare_hostname: cloudflare-essai
+cloudflare_hostname: cloudflare
 cloudflare_address: <ip-cloudflare-ct114>/24
 cloudflare_gateway: <ip-box>
 cloudflare_cores: 1

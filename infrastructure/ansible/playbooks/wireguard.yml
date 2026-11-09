@@ -1,0 +1,30 @@
+# Playbook de la passerelle WireGuard d'essai.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/wireguard.yml
+#
+# Deux étapes : créer le conteneur, puis y poser WireGuard.
+# Le 115, <ip-wireguard>. Le 108 reste au runner. Le 101 est k3s-01.
+# Pas de clé Proton. La clé du téléphone naît dans le CT.
+# UDP 51820 est accepté depuis le LAN et en IPv6.
+# La box a une règle UDP 51820 vers l'adresse IPv6 du 115.
+# Les noms Cloudflare restent publiés.
+# Les jetons Proxmox sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 115 et le démarrer.
+- name: Créer le CT d'essai
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/wireguard.yml
+    - ../secrets.yml
+  roles:
+    - lxc_wireguard
+
+# 2. Entrer dans le CT et y poser la passerelle.
+- name: Poser WireGuard dans le CT
+  hosts: wireguard
+  gather_facts: false
+  vars_files:
+    - ../vars/wireguard.yml
+  roles:
+    - wireguard

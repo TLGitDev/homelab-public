@@ -241,7 +241,7 @@ As-built : [Mediatheques.md](Mediatheques.md). Jellyfin, qBittorrent, la pile *a
 | Origine HTTP du tunnel, HTTPS chez Cloudflare | 🟢 |
 | VLAN | 🔲 |
 | NAT | 🔲 |
-| WireGuard pour l'accès privé distant | 🔲 |
+| WireGuard pour l'accès privé distant | 🟡 |
 
 ---
 
@@ -319,7 +319,7 @@ Hors phases. Pas commencé.
 - Documenter l'ensemble de l'infrastructure.
 - Expliquer chaque décision technique prise.
 
-Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai, forge tenable (phase 6, 6 nov.), alerte de sauvegarde (phase 5, 5 nov.), runner reconstruit par Ansible (phase 7, 7 nov.), Navidrome d'essai (phase 8, 8 nov., récit sur le 106), Jellyfin d'essai (phase 8, 8 nov., récit sur le 103), Samba d'essai (phase 8, 8 nov., récit sur le 102), servarr d'essai (phase 8, 8 nov., récit sur le 105), qBittorrent d'essai (phase 8, 8 nov., récit sur le 104), Cloudflare d'essai (phase 8, 8 nov., récit sur le 100). Encore ouverts : exploitation (phase 9), dépôt public (phase 10), site (phase 11), remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
+Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai, forge tenable (phase 6, 6 nov.), alerte de sauvegarde (phase 5, 5 nov.), runner reconstruit par Ansible (phase 7, 7 nov.), Navidrome d'essai (phase 8, 8 nov., récit sur le 106), Jellyfin d'essai (phase 8, 8 nov., récit sur le 103), Samba d'essai (phase 8, 8 nov., récit sur le 102), servarr d'essai (phase 8, 8 nov., récit sur le 105), qBittorrent d'essai (phase 8, 8 nov., récit sur le 104), Cloudflare d'essai (phase 8, 8 nov., récit sur le 100). Passerelle WireGuard en service (phase 9, 9 nov., CT 115, téléphone seul, Proxmox hors Wi-Fi). Encore ouverts : le reste de l'exploitation (phase 9), dépôt public (phase 10), site (phase 11), remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
 
 Les définitions (hyperviseur, LXC, ZFS, CIDR, etc.) sont dans [Glossaire.md](Glossaire.md).
 

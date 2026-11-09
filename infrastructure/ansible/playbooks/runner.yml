@@ -22,7 +22,7 @@
 # 2. Entrer dans le CT 108 et y installer gitea-runner.
 # Le service ne démarre que si le fichier .runner existe déjà.
 - name: Poser le runner dans le CT
-  hosts: runner-essai
+  hosts: runner
   gather_facts: false
   vars_files:
     - ../vars/runner.yml
@@ -32,7 +32,7 @@
 # 3. Enregistrer le runner auprès de la forge.
 # Le tag never empêche cette étape lors d'un lancement sans --tags register.
 - name: Enregistrer le runner
-  hosts: runner-essai
+  hosts: runner
   gather_facts: false
   tags: [register, never]
   vars_files:

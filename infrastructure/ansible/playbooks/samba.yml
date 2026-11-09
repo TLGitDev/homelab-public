@@ -21,7 +21,7 @@
 
 # 2. Entrer dans le CT et y poser Samba.
 - name: Poser Samba dans le CT
-  hosts: samba-essai
+  hosts: samba
   gather_facts: false
   vars_files:
     - ../vars/samba.yml

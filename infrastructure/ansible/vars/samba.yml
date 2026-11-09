@@ -4,7 +4,7 @@
 # Les cinq dossiers sont les mêmes, mais en lecture seule : l'essai ne modifie pas tank.
 
 samba_vmid: 111
-samba_hostname: samba-essai
+samba_hostname: samba
 samba_address: <ip-samba-ct111>/24
 samba_bind_address: <ip-samba-ct111>
 samba_gateway: <ip-box>

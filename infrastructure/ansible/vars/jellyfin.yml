@@ -4,7 +4,7 @@
 
 # Forme du conteneur, calquée sur le 103. 4 Gio, disque 16 Go.
 jellyfin_vmid: 110
-jellyfin_hostname: jellyfin-essai
+jellyfin_hostname: jellyfin
 jellyfin_address: <ip-jellyfin-ct110>/24
 jellyfin_gateway: <ip-box>
 jellyfin_nameserver: <ip-box>

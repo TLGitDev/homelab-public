@@ -1,0 +1,160 @@
+# Crée le CT 115. Refuse les CT déjà pris, dont le 101 (k3s-01)
+# et le 108 (le playbook du runner le recrée).
+# /dev/net/tun est celui lu sur le 104. On l'écrit CT arrêté :
+# pct config d'un CT allumé ne reprend pas ces lignes.
+# UDP 51820 depuis le LAN seulement.
+
+- name: Refuser les CT déjà pris
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas aux CT 100 à 114.
+  when: acces_vmid | int in [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114]
+
+- name: Voir si le CT d'essai existe déjà
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ acces_vmid }}"
+  register: ct_existant
+  changed_when: false
+  failed_when: false
+
+- name: Refuser un CT qui n'est pas l'essai
+  ansible.builtin.fail:
+    msg: Le CT {{ acces_vmid }} existe et ce n'est pas {{ acces_hostname }}.
+  when:
+    - ct_existant.rc == 0
+    - acces_hostname not in ct_existant.stdout
+
+- name: Créer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ acces_node }}"
+    vmid: "{{ acces_vmid }}"
+    hostname: "{{ acces_hostname }}"
+    ostemplate: "{{ acces_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ acces_cores }}"
+    memory: "{{ acces_memory }}"
+    swap: "{{ acces_swap }}"
+    disk: "{{ acces_disk }}"
+    nameserver: "{{ acces_nameserver }}"
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ acces_gateway }},ip={{ acces_address }},type=veth"
+    update: false
+    state: present
+  no_log: true
+
+- name: Résolveur de la box
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    conf=/etc/pve/lxc/{{ acces_vmid }}.conf
+    want='nameserver: {{ acces_nameserver }}'
+    if grep -qxF "$want" "$conf"; then
+      echo ok
+    else
+      pct set {{ acces_vmid }} -nameserver {{ acces_nameserver }}
+      echo changed
+    fi
+    SH
+  register: ns_result
+  changed_when: ns_result.stdout == "changed"
+
+- name: Arrêter le CT si /dev/net/tun manque
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} bash -s <<'SH'
+    tun='lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file'
+    cfg=$(pct config {{ acces_vmid }})
+    if printf '%s\n' "$cfg" | grep -qxF "$tun"; then
+      echo ok
+    else
+      pct stop {{ acces_vmid }} || true
+      echo changed
+    fi
+    SH
+  register: stop_result
+  changed_when: stop_result.stdout == "changed"
+
+- name: Poser /dev/net/tun
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/lxc/{{ acces_vmid }}.conf")
+    tun = [
+        "lxc.cgroup2.devices.allow: c 10:200 rwm",
+        "lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file",
+    ]
+    text = p.read_text()
+    kept = [line for line in text.splitlines() if line not in tun]
+    new = "\n".join(kept + tun) + "\n"
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: tun_result
+  changed_when: tun_result.stdout == "changed"
+
+- name: Vérifier /dev/net/tun
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ acces_vmid }}"
+  register: ct_config
+  changed_when: false
+  failed_when: "'lxc.mount.entry: /dev/net/tun dev/net/tun none bind,create=file' not in ct_config.stdout"
+
+- name: Poser le pare-feu du CT
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/firewall/{{ acces_vmid }}.fw")
+    new = "\n".join([
+        "[OPTIONS]",
+        "enable: 1",
+        "policy_in: DROP",
+        "policy_out: ACCEPT",
+        "[RULES]",
+        "IN ACCEPT -source <réseau-lan> -p udp -dport {{ acces_listen_port }}",
+        "IN ACCEPT -source ::/0 -p udp -dport {{ acces_listen_port }}",
+        "",
+    ])
+    text = p.read_text() if p.exists() else ""
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: firewall_result
+  changed_when: firewall_result.stdout == "changed"
+
+- name: Démarrer le CT d'essai
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ acces_node }}"
+    hostname: "{{ acces_hostname }}"
+    vmid: "{{ acces_vmid }}"
+    state: started
+  no_log: true

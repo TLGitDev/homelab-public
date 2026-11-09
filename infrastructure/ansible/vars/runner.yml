@@ -3,7 +3,7 @@
 
 # Forme du conteneur, calquée sur le 107.
 runner_vmid: 108
-runner_hostname: runner-essai
+runner_hostname: runner
 runner_address: <ip-runner-ct108>/24
 runner_gateway: <ip-box>
 runner_nameserver: <ip-box>

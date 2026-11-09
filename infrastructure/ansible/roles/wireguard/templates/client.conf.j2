@@ -1,0 +1,9 @@
+[Interface]
+Address = {{ peer_address }}
+PrivateKey = {{ peer_private }}
+
+[Peer]
+PublicKey = {{ acces_server_public }}
+Endpoint = {{ acces_endpoint }}
+AllowedIPs = {{ acces_destinations | map(attribute='addr') | unique | join('/32, ') }}/32
+PersistentKeepalive = 25

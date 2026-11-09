@@ -10,7 +10,7 @@
 # adresse de test : la poignée de main n'aboutit pas, le 104 garde son tunnel.
 
 qbittorrent_vmid: 113
-qbittorrent_hostname: qbittorrent-essai
+qbittorrent_hostname: qbittorrent
 qbittorrent_address: <ip-qbittorrent-ct113>/24
 qbittorrent_bind_address: <ip-qbittorrent-ct113>
 qbittorrent_gateway: <ip-box>

@@ -1,0 +1,41 @@
+# Passerelle WireGuard d'essai. Rien en service n'écoute encore ce rôle.
+# Le 115, <ip-wireguard>. Relancer le playbook recrée le 115.
+# Le 108 reste au playbook du runner. Le 101 est la VM k3s-01.
+# Les clés naissent dans le CT. Elles ne sont pas dans Git.
+# UDP 51820 est ouvert depuis le LAN et en IPv6.
+# La box a une règle vers l'adresse IPv6 du 115.
+# Les routes Cloudflare restent en place.
+# <réseau-wg> n'est pas le réseau Proton du 104.
+
+acces_vmid: 115
+acces_hostname: wireguard
+acces_address: <ip-wireguard>/24
+acces_gateway: <ip-box>
+acces_nameserver: <ip-box>
+acces_cores: 1
+acces_memory: 512
+acces_swap: 512
+acces_disk: local-zfs:8
+acces_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+acces_node: pve
+proxmox_api_host: <ip-pve>
+acces_listen_port: 51820
+acces_network: <réseau-wg>
+acces_server_address: <ip-wg-serveur>/24
+acces_phone_address: <ip-wg-téléphone>/32
+acces_endpoint: <ip-wireguard>:51820
+# <ip-box> n'est pas dans la liste : c'est la box.
+# La mettre ici enverrait toute son interface dans le tunnel.
+acces_destinations:
+  - { addr: <ip-k3s-01>, proto: tcp, port: "80" }
+  - { addr: <ip-k3s-01>, proto: tcp, port: "3000" }
+  - { addr: <ip-samba>, proto: tcp, port: "445" }
+  - { addr: <ip-pve>, proto: tcp, port: "8006" }
+  - { addr: <ip-jellyfin>, proto: tcp, port: "8096" }
+  - { addr: <ip-qbittorrent>, proto: tcp, port: "8080" }
+  - { addr: <ip-servarr>, proto: tcp, port: "6767" }
+  - { addr: <ip-servarr>, proto: tcp, port: "7878" }
+  - { addr: <ip-servarr>, proto: tcp, port: "8686" }
+  - { addr: <ip-servarr>, proto: tcp, port: "8989" }
+  - { addr: <ip-servarr>, proto: tcp, port: "9696" }
+  - { addr: <ip-navidrome>, proto: tcp, port: "4533" }

@@ -1,0 +1,10 @@
+[Interface]
+Address = {{ acces_server_address }}
+ListenPort = {{ acces_listen_port }}
+PrivateKey = {{ acces_server_private }}
+
+{% for peer in acces_peer_list %}
+[Peer]
+PublicKey = {{ peer.public }}
+AllowedIPs = {{ peer.address }}
+{% endfor %}

@@ -3,7 +3,7 @@
 
 # Forme du conteneur, calquée sur le 106. Disque 8 Go, pas 16.
 navidrome_vmid: 109
-navidrome_hostname: navidrome-essai
+navidrome_hostname: navidrome
 navidrome_address: <ip-navidrome-ct109>/24
 navidrome_gateway: <ip-box>
 navidrome_nameserver: <ip-box>

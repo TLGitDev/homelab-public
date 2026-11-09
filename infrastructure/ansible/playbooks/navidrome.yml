@@ -20,7 +20,7 @@
 
 # 2. Entrer dans le CT et y poser Navidrome 0.64.2.
 - name: Poser Navidrome dans le CT
-  hosts: navidrome-essai
+  hosts: navidrome
   gather_facts: false
   vars_files:
     - ../vars/navidrome.yml
