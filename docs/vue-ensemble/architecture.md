@@ -13,14 +13,13 @@ flowchart LR
     CF -->|"tunnel sortant"| C100["CT 100<br/>cloudflare"]
 
     subgraph LAN["LAN <réseau-lan>"]
-        C100 --> PVE["pve<br/>Proxmox :8006"]
         C100 --> TR["k3s-01<br/>Traefik :80"]
         C100 --> GI["k3s-01<br/>Gitea :3000"]
         C100 --> SV["CT 105<br/>servarr"]
         C100 --> ND["CT 106<br/>navidrome"]
         TR --> VW["Vaultwarden"]
         TR --> AR["Argo CD"]
-        WG --> PVE
+        WG --> PVE["pve<br/>Proxmox :8006"]
     end
 ```
 
@@ -175,13 +174,13 @@ Le chemin d'une requête publique vers une application du cluster est le suivant
 Internet → Cloudflare → tunnel → LXC cloudflare → Traefik (<ip-k3s-01>:80) → Ingress → Service → Pod
 ```
 
-Proxmox et Gitea font exception : le tunnel les joint directement, sans passer par Traefik.
+Gitea fait exception : le tunnel le joint directement, sans passer par Traefik.
 
 ## 5. Exposition des services
 
 | Service | Adresse publique | Cloudflare Access | Origine |
 | --- | --- | --- | --- |
-| Proxmox | `proxmox.labo.example` | Oui | `https://<ip-pve>:8006` |
+| Proxmox | Aucune : route `proxmox.labo.example` désactivée le 10 nov. 2026 | — | LAN, ou WireGuard depuis le téléphone |
 | Argo CD | `argocd.labo.example` | Oui | Traefik, `<ip-k3s-01>:80` |
 | Gitea | `gitea.labo.example` | Oui | `<ip-k3s-01>:3000`, sans Traefik |
 | Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | `<outil>.labo.example` | Oui | CT 105 `servarr` |
@@ -192,7 +191,7 @@ Proxmox et Gitea font exception : le tunnel les joint directement, sans passer p
 | qBittorrent | Aucune | — | LAN seulement (`<ip-qbittorrent>:8080`) |
 | Samba | Aucune | — | LAN seulement, sans accès Internet |
 
-Les outils d'administration sont tous derrière Access, avec MFA. Vaultwarden et Navidrome n'y sont pas, parce que ces applications authentifient déjà leurs clients elles-mêmes. Le téléphone joint aussi le LAN par WireGuard (CT 115).
+Les outils d'administration publiés sont tous derrière Access, avec MFA. Proxmox n'est plus publié du tout. Vaultwarden et Navidrome n'y sont pas, parce que ces applications authentifient déjà leurs clients elles-mêmes. Le téléphone joint aussi le LAN par WireGuard (CT 115).
 
 ## 6. Stockage
 
@@ -250,6 +249,7 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 
 | Date | Jalon |
 | --- | --- |
+| 10 nov. 2026 | Route Cloudflare `proxmox.labo.example` désactivée : Proxmox ne se joint plus à distance que par WireGuard. Vaultwarden devient joignable sur le LAN en HTTPS (`<ip-k3s-01>:443`). |
 | 6 nov. 2026 | Rétention des snapshots du zvol vérifiée : 7 quotidiens (dernier `@auto-daily-2026-11-06`) et 24 horaires (du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h). Plus aucun snapshot horaire d'octobre. |
 | 6 nov. 2026 | Archive utile de Gitea copiée sous `/tank/backups/k3s-01/gitea/`, puis sauvegardée par Restic (snapshot `<snapshot>`). |
 | 4 nov. 2026 | Runner Gitea (CT 107) en ligne, vu « Idle ». |
