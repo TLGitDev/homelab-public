@@ -50,7 +50,7 @@ qBittorrent écoute sur le port 8080. Il se joint par le LAN ou par WireGuard, e
 
 ### `servarr` — CT 105
 
-Ce conteneur regroupe les outils de gestion des médiathèques. Leurs interfaces se joignent par le LAN ou par WireGuard. Du 2 nov. au 10 nov. 2026 au plus tard, cinq d'entre elles étaient aussi publiées sur Internet derrière Cloudflare Access ; ces routes sont désactivées. Voir [servarr.md](../exploitation/mediatheques/servarr.md).
+Ce conteneur regroupe les outils de gestion des médiathèques. Leurs interfaces se joignent par le LAN ou par WireGuard. Du 2 au 10 nov. 2026, cinq d'entre elles étaient aussi publiées sur Internet derrière Cloudflare Access ; ces routes sont désactivées. Voir [servarr.md](../exploitation/mediatheques/servarr.md).
 
 | Outil | Port | Version | Installé le |
 | --- | --- | --- | --- |
