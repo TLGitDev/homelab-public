@@ -129,7 +129,7 @@ Relevé au **5 nov. 2026**, après les phases 0 à 5. Les niveaux du tableau n'o
 | Droits de fichiers (groupe, mode) | 🟢 |
 | Vérification d'une copie (SHA-256) | 🟢 |
 
-Phase 2 (téléphone) close le 25 oct. (document privé).
+Phase 2 (téléphone) close le 25 oct. [Android.md](Android.md).
 
 | Compétence | Niveau |
 |------------|--------|

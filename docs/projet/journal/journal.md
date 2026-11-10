@@ -955,7 +955,7 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-21 | Snapshots horaires auto OK (`_1200`, `_1300`) ; daily timer encore ouvert. |
 | 2026-10-21 | Noter : `backup-usb` du 20 oct. OK ; clé Sealed Secrets ≠ tars (pas dans Restic tant qu'elle n'est pas sous `/tank/backups`). |
 | 2026-10-21 | Clé Sealed Secrets : copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (périmètre `backup-usb`). |
-| 2026-10-21 | Phase 0 assez solide ; démarrer la phase 1 : inventaire (document privé). |
+| 2026-10-21 | Phase 0 assez solide ; démarrer la phase 1 : inventaire [Donnees.md](Donnees.md). |
 | 2026-10-23 | Phase 1 : dataset `tank/documents` + première copie depuis le PC (originaux conservés). |
 | 2026-10-23 | Pas de staging `/tank/backups/pc/documents`. Copier d'abord PC → `tank` ; élargir `backup-usb` à la fin. SMB plus tard. |
 | 2026-10-23 | Dossier / phase 4 : `Multimedia` → `Mediatheques`. |
@@ -967,7 +967,7 @@ Index. Un sprint a aussi un chapitre plus haut. Une ligne sans numéro de sprint
 | 2026-10-24 | LXC `samba` as-built : cinq partages, Windows `\\<ip-samba>`, user `utilisateur` (sans l'IP). |
 | 2026-10-24 | SMB : lecture + écriture Windows validées. |
 | 2026-10-24 | Restore perso : `<snapshot>` → `/tmp`, SHA-256 identique. Phase 1 close. |
-| 2026-10-24 | Phase 2 : inventaire (document privé). |
+| 2026-10-24 | Phase 2 : inventaire [Android.md](Android.md). |
 | 2026-10-24 | Android : LineageOS 22.2 / Android 15, aussi GrapheneOS. Périmètre : photos → `tank/images`, contacts, SMS si possible. |
 | 2026-10-24 | Apps : liste déclarée. Obtainium (GitHub ou APK éditeur). Export JSON plus tard sur `tank`, pas dans Git. |
 | 2026-10-24 | Apps : liste (document privé). Scanner QR hors périmètre. Aurora Store visé pour le reste, compte à part, pas le mode anonyme. |

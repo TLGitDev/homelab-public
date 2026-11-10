@@ -302,8 +302,8 @@ Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). 
 - ✅ Snapshots zvol Vaultwarden (horaires auto ; daily timer 22 oct.)
 - ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/` ; archive Gitea utile sous `/tank/backups/k3s-01/gitea/`, snapshot `<snapshot>` (6 nov.)
 - ⬜ Supervision
-- ✅ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LXC `samba` (CT 102, `.40`) — (document privé)
-- ✅ Phase 2 : close le 25 oct. Snapshot `<snapshot>`. Restore du `.vcf` OK. Photos et SMS gardés en sauvegarde, sans restore. — (document privé)
+- ✅ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LXC `samba` (CT 102, `.40`) — [Donnees.md](Donnees.md)
+- ✅ Phase 2 : close le 25 oct. Snapshot `<snapshot>`. Restore du `.vcf` OK. Photos et SMS gardés en sauvegarde, sans restore. — [Android.md](Android.md)
 
 ## Plateforme
 
