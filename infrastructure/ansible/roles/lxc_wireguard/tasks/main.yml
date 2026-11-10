@@ -134,6 +134,8 @@
         "[RULES]",
         "IN ACCEPT -source <réseau-lan> -p udp -dport {{ acces_listen_port }}",
         "IN ACCEPT -source ::/0 -p udp -dport {{ acces_listen_port }}",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport {{ acces_portal_port }}",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 443",
         "",
     ])
     text = p.read_text() if p.exists() else ""

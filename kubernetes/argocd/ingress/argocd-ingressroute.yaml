@@ -19,3 +19,9 @@ spec:
       services:
         - name: argocd-server
           port: 80
+
+    - match: Host(`<ip-k3s-01>`)
+      kind: Rule
+      services:
+        - name: argocd-server
+          port: 80

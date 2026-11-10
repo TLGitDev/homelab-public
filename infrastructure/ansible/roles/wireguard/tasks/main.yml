@@ -27,6 +27,7 @@
     name:
       - wireguard-tools
       - nftables
+      - openssl
     state: present
     update_cache: true
     cache_valid_time: 86400
@@ -128,6 +129,82 @@
     peer_private: "{{ acces_phone_private }}"
   no_log: true
 
+- name: Dossier de la page
+  ansible.builtin.file:
+    path: /var/www/portail
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Poser la page
+  ansible.builtin.copy:
+    src: portail/
+    dest: /var/www/portail/
+    owner: root
+    group: root
+    mode: "0644"
+  register: acces_page
+
+- name: Dossier du certificat
+  ansible.builtin.file:
+    path: /etc/portail
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Certificat de la page
+  ansible.builtin.shell: umask 077; openssl req -x509 -newkey rsa:2048 -sha256 -days 825 -nodes -keyout /etc/portail/key.pem -out /etc/portail/cert.pem -subj /CN=<ip-wireguard> -addext subjectAltName=IP:<ip-wireguard>
+  args:
+    creates: /etc/portail/cert.pem
+
+- name: Poser le serveur de la page
+  ansible.builtin.copy:
+    src: portail.py
+    dest: /usr/local/sbin/portail.py
+    owner: root
+    group: root
+    mode: "0755"
+  register: acces_page_bin
+
+- name: Unité de la page
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/portail.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Page des services
+      After=network-online.target
+
+      [Service]
+      ExecStart=/usr/bin/python3 /usr/local/sbin/portail.py
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+  register: acces_page_unit
+
+- name: Relire systemd
+  ansible.builtin.systemd:
+    name: portail
+    daemon_reload: true
+  when: acces_page_unit is changed
+
+- name: Activer la page
+  ansible.builtin.systemd:
+    name: portail
+    enabled: true
+    state: started
+
+- name: Recharger la page si elle a changé
+  ansible.builtin.systemd:
+    name: portail
+    state: restarted
+  when: acces_page is changed or acces_page_bin is changed or acces_page_unit is changed
+
 - name: Poser le filtre
   ansible.builtin.template:
     src: nftables.conf.j2
@@ -198,6 +275,14 @@
     'policy drop' not in acces_rules.stdout
     or '<ip-pve>' not in acces_rules.stdout
     or 'dport 8006' not in acces_rules.stdout
+
+- name: La page répond en HTTPS
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - import ssl, urllib.request; ctx = ssl._create_unverified_context(); page = urllib.request.urlopen("https://127.0.0.1/", context=ctx).read().decode(); raise SystemExit(0 if "Labo" in page else 1)
+  changed_when: false
 
 - name: Le fichier du téléphone reste privé
   ansible.builtin.command: stat -c %a /root/telephone.conf

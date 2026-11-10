@@ -1,5 +1,5 @@
-# Passerelle WireGuard d'essai. Rien en service n'écoute encore ce rôle.
-# Le 115, <ip-wireguard>. Relancer le playbook recrée le 115.
+# Passerelle WireGuard. La page des services écoute sur les ports 80 et 443 du 115.
+# Le 115, <ip-wireguard>. Relancer le playbook le laisse en place.
 # Le 108 reste au playbook du runner. Le 101 est la VM k3s-01.
 # Les clés naissent dans le CT. Elles ne sont pas dans Git.
 # UDP 51820 est ouvert depuis le LAN et en IPv6.
@@ -24,6 +24,7 @@ acces_network: <réseau-wg>
 acces_server_address: <ip-wg-serveur>/24
 acces_phone_address: <ip-wg-téléphone>/32
 acces_endpoint: <ip-wireguard>:51820
+acces_portal_port: 80
 # <ip-box> n'est pas dans la liste : c'est la box.
 # La mettre ici enverrait toute son interface dans le tunnel.
 acces_destinations:
@@ -39,3 +40,4 @@ acces_destinations:
   - { addr: <ip-servarr>, proto: tcp, port: "8989" }
   - { addr: <ip-servarr>, proto: tcp, port: "9696" }
   - { addr: <ip-navidrome>, proto: tcp, port: "4533" }
+  - { addr: <ip-wireguard>, proto: tcp, port: "80" }
