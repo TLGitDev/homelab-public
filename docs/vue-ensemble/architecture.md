@@ -1,24 +1,40 @@
-# Architecture du Homelab
+# Architecture du homelab
 
-> Principes et état de conception.
->
-> Ce fichier ne décrit pas les manipulations ([Journal.md](Journal.md)), le matériel ([Materiel.md](Materiel.md)), ni les cours détaillés.
-> Stockage : [Stockage.md](Stockage.md). Accès distant : [Cloudflare.md](Cloudflare.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Kubernetes : [Kubernetes.md](Kubernetes.md). GitOps : [ArgoCD.md](ArgoCD.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md). IP et nœud : [Proxmox.md](Proxmox.md). Cible : [FeuilleDeRoute.md](FeuilleDeRoute.md).
-> L'index de toute la documentation est dans [README.md](README.md).
+Le homelab tourne sur un seul serveur physique, `pve`, sous Proxmox VE. Les services d'infrastructure légers vivent chacun dans un conteneur LXC. Les applications tournent sur un cluster K3s à un nœud, piloté en GitOps par Argo CD. Les données dorment sur un miroir ZFS. Depuis Internet, on n'entre que par un tunnel Cloudflare sortant ou par WireGuard.
 
----
+Ce document décrit les principes et l'état actuel. Il ne décrit ni les manipulations (voir le [journal](../projet/journal/)), ni le matériel ([materiel.md](materiel.md)), ni la cible ([FeuilleDeRoute.md](../FeuilleDeRoute.md)).
 
-# Philosophie
+## 1. Vue d'ensemble
 
-Construire une infrastructure : fiable, sécurisée, documentée, maintenable, évolutive.
+```mermaid
+flowchart LR
+    U([Internet]) --> CF["Cloudflare<br/>Access + MFA"]
+    T([Téléphone]) -->|"WireGuard<br/>UDP 51820, IPv6"| WG["CT 115<br/>wireguard"]
+    CF -->|"tunnel sortant"| C100["CT 100<br/>cloudflare"]
 
-Ce homelab n'est pas construit dans le but d'obtenir rapidement un résultat. L'objectif est de comprendre chaque technologie utilisée. Chaque choix doit pouvoir être justifié. Chaque commande exécutée doit pouvoir être expliquée.
+    subgraph LAN["LAN <réseau-lan>"]
+        C100 --> PVE["pve<br/>Proxmox :8006"]
+        C100 --> TR["k3s-01<br/>Traefik :80"]
+        C100 --> GI["k3s-01<br/>Gitea :3000"]
+        C100 --> SV["CT 105<br/>servarr"]
+        C100 --> ND["CT 106<br/>navidrome"]
+        TR --> VW["Vaultwarden"]
+        TR --> AR["Argo CD"]
+        WG --> PVE
+    end
+```
 
-L'objectif final est de devenir autonome dans la conception, l'administration et le dépannage d'une infrastructure personnelle.
+Le serveur ouvre lui-même une connexion **sortante** vers Cloudflare. Aucun port n'est redirigé vers le LAN en IPv4. La seule ouverture sur la box est une règle IPv6 vers la passerelle WireGuard.
 
-Construire une infrastructure fiable ne consiste pas à éviter les pannes, mais à faire en sorte qu'elles soient prévisibles, limitées et facilement réparables.
+## 2. Principes
 
-Ordre de travail :
+### Méthode de travail
+
+L'objectif n'est pas d'obtenir vite un résultat, mais de comprendre chaque technologie. Chaque choix doit pouvoir être justifié, et chaque commande expliquée. Le but final est de devenir autonome pour concevoir, administrer et dépanner une infrastructure.
+
+Une infrastructure fiable n'est pas une infrastructure sans pannes. C'est une infrastructure dont les pannes sont prévisibles, limitées et faciles à réparer.
+
+Le travail suit toujours le même ordre :
 
 > Comprendre → Manipuler → Vérifier → Documenter → Automatiser
 
@@ -26,311 +42,241 @@ Pour chaque nouvelle technologie :
 
 1. Comprendre le problème qu'elle résout.
 2. Comprendre son architecture.
-3. Identifier les concepts fondamentaux.
+3. Identifier ses concepts fondamentaux.
 4. Observer son fonctionnement.
 5. Passer à la pratique.
 6. Documenter ce qui a été appris.
 
-Les commandes viennent en dernier. L'objectif est de comprendre les mécanismes plutôt que de mémoriser des procédures.
+Les commandes viennent en dernier : on cherche à comprendre les mécanismes, pas à mémoriser des procédures.
 
----
+### Diagnostiquer avant d'agir
 
-# Principes
+On ne corrige jamais un problème au hasard. On suit six étapes :
 
-## Diagnostic avant action
+1. Observer.
+2. Émettre une hypothèse.
+3. Vérifier cette hypothèse.
+4. Identifier la cause racine.
+5. Corriger.
+6. Vérifier que le problème a disparu.
 
-Un problème ne doit jamais être corrigé au hasard.
+### Vérifier plutôt que supposer
 
-1. Observer
-2. Émettre une hypothèse
-3. Vérifier
-4. Identifier la cause racine
-5. Corriger
-6. Vérifier que le problème est résolu
+Une information n'est vraie qu'une fois vérifiée : adresse IP, port, chemin, certificat, DNS, journal, nom de domaine. Une hypothèse se confirme par un test (`curl`, `ping`, `systemctl status`, `zpool status`…), pas par une conviction. Une erreur de configuration est souvent plus probable qu'un bug logiciel. Les sprints 7 et 8 du [journal](../projet/journal/) en donnent des exemples.
 
-## Vérifier plutôt que supposer
+### Comprendre avant d'exécuter
 
-Toute information doit être vérifiée avant d'être considérée comme vraie : adresses IP, ports, chemins, certificats, DNS, journaux, noms de domaine.
+Avant de lancer une commande, on sait ce qu'elle doit faire, comment elle le fait, ce qu'elle modifie et comment revenir en arrière.
 
-Les hypothèses se confirment par un test (`curl`, `ping`, `systemctl status`, `zpool status`…), pas par une conviction.
+### Installer n'est pas configurer
 
-Une erreur de configuration est souvent plus probable qu'une défaillance logicielle.
+Installer un logiciel le rend disponible. Le configurer lui donne son rôle. Par exemple, `apt install cloudflared` installe le binaire ; c'est `cloudflared service install <token>` qui le relie au tunnel.
 
-Exemples déjà rencontrés : [Journal.md](Journal.md) (sprints 7 et 8).
+### Une identité n'est pas un nom
 
-## Comprendre avant d'exécuter
+Les outils d'administration s'appuient sur des identifiants stables. Les noms lisibles, eux, peuvent changer.
 
-Aucune commande n'est exécutée sans comprendre :
+| Identifiant stable | Nom lisible, qui peut changer |
+| --- | --- |
+| ID du conteneur (`100`) | Nom d'hôte (`cloudflare`) |
+| UUID du tunnel | Nom du tunnel |
 
-- son objectif ;
-- son fonctionnement ;
-- ce qu'elle modifie ;
-- la manière de revenir en arrière.
+### Penser en couches
 
-## Installer ≠ Configurer
-
-Installer un logiciel, c'est le rendre disponible. Le configurer, c'est lui donner son rôle.
-
-Exemple :
-
-```
-apt install cloudflared
-        ↓
-cloudflared service install <token>
-```
-
-## Une identité n'est pas un nom
-
-| Identifiant stable | Nom humain (peut changer) |
-|--------------------|---------------------------|
-| CT ID (`100`) | hostname (`cloudflare`) |
-| Tunnel UUID | nom du tunnel |
-
-Les outils d'administration utilisent principalement les identifiants numériques.
-
-## Architecture en couches
-
-Chaque couche dépend de la précédente. Une erreur peut provenir d'une couche inférieure.
+Chaque couche dépend de celle du dessous. Une panne visible en haut peut venir d'une couche plus basse.
 
 ```
 Applications
-    ↑
 Services
-    ↑
-VM / Conteneurs
-    ↑
+VM / conteneurs
 Proxmox
-    ↑
 Debian
-    ↑
 Linux
-    ↑
 Firmware
-    ↑
 Matériel
 ```
 
-## Séparation des responsabilités
+### Séparer les responsabilités
 
-Les services d'infrastructure légers ont chacun leur LXC. Les applications tournent sur K3s (ressources Kubernetes distinctes).
+Chaque service d'infrastructure léger a son propre LXC. Les applications tournent sur K3s. Ce découpage simplifie la maintenance, limite l'impact d'une panne, isole les mises à jour, et permet de supprimer ou recréer un service sans toucher aux autres.
 
-Pourquoi : maintenance plus simple, impact d'une panne limité, mises à jour isolées, possibilité de supprimer ou recréer un service sans affecter les autres.
+### Moindre privilège
 
-Exemples : LXC Cloudflare Tunnel ; Vaultwarden sur le cluster. D'autres applis : [FeuilleDeRoute.md](FeuilleDeRoute.md).
+Chaque service n'a que les droits dont il a réellement besoin. Les LXC sont non privilégiés, et aucun service applicatif n'est installé directement sur Proxmox. L'objectif est de réduire la surface d'attaque.
 
-## Moindre privilège
+### Isoler
 
-Chaque service ne possède que les droits dont il a réellement besoin.
+Les processus, la mémoire, le processeur, le stockage et la configuration de chaque service sont isolés. Une panne ou une faille dans un service ne doit pas toucher le reste.
 
-- LXC non privilégiés ;
-- aucun service applicatif installé directement sur Proxmox ;
-- chaque application n'a que les accès nécessaires.
+### Ne jamais dépendre d'un seul composant
 
-Objectif : réduire la surface d'attaque.
+- Les données sont sur un miroir de deux disques (`tank`). Le système (`rpool`), lui, reste sur un seul NVMe.
+- L'accès distant empile plusieurs couches de sécurité (voir [cloudflare.md](../exploitation/cloudflare.md)).
+- Les services sont isolés dans des conteneurs distincts.
+- Les sauvegardes sont indépendantes du stockage principal (voir [sauvegardes.md](../exploitation/sauvegardes.md)).
 
-## Isolation
+### Ne créer une ressource que pour un besoin réel
 
-Isolation des processus, de la mémoire, du processeur, du stockage et de la configuration.
+Dataset, VM, conteneur, réseau, utilisateur : rien n'est créé « au cas où ». L'architecture suit les besoins au lieu de les anticiper, ce qui limite la complexité. Pour le cas des datasets ZFS, voir [stockage-zfs.md](../exploitation/stockage-zfs.md).
 
-Une panne ou une faille dans un service ne doit pas impacter le reste de l'infrastructure.
+### Utiliser les dépôts officiels
 
-## Ne jamais dépendre d'un seul composant
+Les logiciels viennent de leur dépôt officiel quand il existe (Debian, Proxmox, Cloudflare). On obtient ainsi les correctifs de sécurité par APT, sans binaire téléchargé à la main. Tout dépôt APT ajouté vient du projet officiel ou d'une organisation de confiance, et il est signé par une clé GPG.
 
-Ce principe s'applique à plusieurs niveaux :
+### Protéger les secrets
 
-- redondance disque sur les données (`tank`, miroir IronWolf) — le système (`rpool`) reste sur un seul NVMe ;
-- plusieurs couches de sécurité (détail dans [Cloudflare.md](Cloudflare.md)) ;
-- isolation des services dans des conteneurs distincts ;
-- sauvegardes indépendantes du stockage principal ([Sauvegardes.md](Sauvegardes.md)).
+Les mots de passe, les clés SSH et les jetons ne sont jamais partagés ni versionnés. Un Secret Kubernetes n'est **pas chiffré** par défaut : il est seulement encodé en Base64. Dans Git, les secrets applicatifs sont donc des SealedSecrets (voir l'[ADR-005](../decisions/ADR-005-Sealed-Secrets.md)).
 
-## Ne créer une ressource que lorsqu'un besoin réel apparaît
+### N'exposer que le nécessaire
 
-Dataset, machine virtuelle, conteneur, réseau, utilisateur : rien n'est créé « au cas où ».
+Par défaut, un service n'est joignable que depuis le LAN, sans redirection de port. On ne l'expose que lorsqu'un besoin le justifie.
 
-L'architecture émerge des besoins plutôt que d'être anticipée sans justification. Cela limite la complexité et facilite l'évolution.
+### Défense en profondeur et refus par défaut
 
-Détail pour ZFS (dataset vs répertoire) : [Stockage.md](Stockage.md).
+Aucune couche ne protège seule l'infrastructure. Pour les services derrière Cloudflare Access, tout accès est refusé tant qu'une règle ne l'autorise pas. Le détail est dans [cloudflare.md](../exploitation/cloudflare.md).
 
-## Dépôts officiels
+## 3. Réseau
 
-Les logiciels sont installés depuis leur dépôt officiel lorsqu'il existe (Debian, Proxmox, Cloudflare).
-
-Objectifs : mises à jour de sécurité, pas de binaires téléchargés à la main, mises à jour via APT.
-
-Tout dépôt APT ajouté doit provenir du projet officiel ou d'une organisation de confiance, et être signé par une clé GPG.
-
-## Secrets
-
-Mots de passe, clés SSH et jetons Cloudflare ne sont jamais partagés ni versionnés dans ce dépôt.
-
-Un Secret Kubernetes n'est **pas chiffré par défaut** (Base64 seulement). Dans Git, les secrets applicatifs sont des **SealedSecrets**. Détail : [Vaultwarden.md](Vaultwarden.md#sealed-secrets).
-
-## Ne jamais ouvrir un service inutilement
-
-Un service n'est exposé que lorsqu'il est nécessaire.
-
-Par défaut : aucune redirection de port, accès uniquement depuis le réseau local.
-
-## Défense en profondeur
-
-Aucune couche ne protège seule l'infrastructure. Le détail des couches d'accès distant est dans [Cloudflare.md](Cloudflare.md).
-
-## Refus par défaut
-
-Pour les services derrière Access (Proxmox, Argo CD, les cinq interfaces *arr), tout accès est refusé tant qu'une règle ne l'autorise pas. Vaultwarden et Navidrome ne sont pas derrière Access. Politique : [Cloudflare.md](Cloudflare.md).
-
----
-
-# Stockage
-
-Le SSD NVMe (`rpool`) est l'**infrastructure** : Proxmox, disques système des VM/CT (dont `k3s-01`).
-
-`tank` (miroir IronWolf) est destiné aux **données** qui doivent survivre à une reconstruction de `rpool`.
-
-**Aujourd'hui** : Vaultwarden est sur `tank/vmdata/vm-101-vaultwarden-data` (zvol → ext4 → Local PV → `vaultwarden-zfs-pvc`). L'ancien PVC `local-path` est conservé figé. Pas de NFS pour SQLite, pas de CSI ZFS. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
-
-Sauvegardes quotidiennes en place (tar 03:00 → `pve` 03:15). Restore isolée OK (technique 20 oct. ; login + coffre 21 oct.). Reprise réelle (zvol) : procédure écrite, non exécutée. USB Restic manuel.
-
-Détail : [Stockage.md](Stockage.md). As-built : [Vaultwarden.md](Vaultwarden.md).
-
----
-
-# Réseau
-
-Le serveur est connecté en Ethernet à la box. Les serveurs ont une IP statique (joignabilité, reverse proxy, tunnels). Les postes utilisateurs peuvent rester en DHCP.
-
-L'administration se fait depuis le LAN. Aucun port Proxmox n'est exposé sur Internet. L'**API Kubernetes n'est pas publiée** sur Internet. Accès distant : [Cloudflare.md](Cloudflare.md) et [ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md).
+Le serveur est relié en Ethernet à la box. Les serveurs ont une adresse fixe, pour rester joignables par le reverse proxy et les tunnels. Les postes utilisateurs restent en DHCP. Le plan d'adressage est dans [adressage.md](adressage.md).
 
 ```
 Internet
-    │
- Routeur
-    │
- eno1
-    │
- vmbr0
+   │
+ Box (<ip-box>)
+   │
+ eno1  ← carte réseau physique
+   │
+ vmbr0 ← switch virtuel
  ├── Proxmox (.50)
- ├── Cloudflare (.20)
- ├── K3s (.30)
- └── ...
+ ├── cloudflare (.20)
+ ├── k3s-01 (.30)
+ └── …
 ```
 
-`vmbr0` est un switch virtuel : les VM et LXC y sont branchés, le bridge est branché sur la carte physique.
+`vmbr0` est un switch virtuel. Les VM et les LXC y sont branchés, et lui-même est branché sur la carte physique `eno1`.
 
-Plan d'adressage (source de vérité) : [Proxmox.md](Proxmox.md).
+L'administration se fait depuis le LAN. Aucun port de Proxmox n'est exposé sur Internet, et l'API Kubernetes n'est pas publiée. Voir l'[ADR-003](../decisions/ADR-003-Cloudflare-Tunnel.md).
 
----
+## 4. Où tourne quoi
 
-# Services
+| Type | Usage | Exemples |
+| --- | --- | --- |
+| LXC Debian Stable | Services d'infrastructure légers | `cloudflare`, `wireguard`, `samba`, `runner`, médiathèques |
+| K3s (VM `k3s-01`) | Applications | Vaultwarden, Argo CD, Gitea |
+| VM | Quand un noyau dédié est nécessaire | `k3s-01` |
 
-Les services d'infrastructure légers tournent dans des LXC Debian Stable.
+Les LXC consomment peu de mémoire, démarrent vite et partagent le noyau de Proxmox tout en restant isolés. Ils suivent deux conventions : un service d'infrastructure par LXC, et un nom d'hôte égal au nom du service. Le choix entre K3s, LXC et VM se fait au cas par cas, selon le besoin.
 
-Avantages : peu de mémoire, démarrage rapide, noyau partagé avec Proxmox, isolation entre services.
+Les disques **système** des LXC et des VM sont des volumes sous `rpool/data` (par exemple `vm-101-disk-1`, 64 Go, pour `k3s-01`). Les volumes de **données** sont sous `tank/vmdata`. Les ISO et les modèles sont dans `rpool/var-lib-vz`.
 
-Conventions LXC :
-
-- un service d'infra = un LXC ;
-- hostname = nom du service ;
-- exemple : `cloudflare`.
-
-Les applications actuelles (Vaultwarden) sont des ressources Kubernetes sur K3s, pas des LXC. Les suivants se choisissent selon le besoin (K3s, LXC, VM). [FeuilleDeRoute.md](FeuilleDeRoute.md).
-
-Disques **système** des LXC/VM : datasets sous `rpool/data` (k3s-01 : `vm-101-disk-1`, 64 Go). Volumes de **données** : `tank/vmdata` (`tank-vmdata`) — Vaultwarden : `vm-101-vaultwarden-data`. [ADR-008](ADR/ADR-008-Vaultwarden-tank.md). ISO, templates : `rpool/var-lib-vz`. Voir [Stockage.md](Stockage.md).
+Le chemin d'une requête publique vers une application du cluster est le suivant :
 
 ```
-Internet
-    │
-Cloudflare
-    │
-Tunnel Cloudflare
-    │
-LXC Cloudflare
-    │
-Traefik (K3s, <ip-k3s-01>:80)
-    │
-Applications (Ingress → Service → Pod)
+Internet → Cloudflare → tunnel → LXC cloudflare → Traefik (<ip-k3s-01>:80) → Ingress → Service → Pod
 ```
 
-Premier service : [Vaultwarden.md](Vaultwarden.md). UI GitOps : [ArgoCD.md](ArgoCD.md) (`argocd.labo.example`, Access). Proxmox reste une route directe du tunnel (HTTPS vers le nœud), pas via Traefik.
+Proxmox et Gitea font exception : le tunnel les joint directement, sans passer par Traefik.
 
----
+## 5. Exposition des services
 
-# Plateforme
+| Service | Adresse publique | Cloudflare Access | Origine |
+| --- | --- | --- | --- |
+| Proxmox | `proxmox.labo.example` | Oui | `https://<ip-pve>:8006` |
+| Argo CD | `argocd.labo.example` | Oui | Traefik, `<ip-k3s-01>:80` |
+| Gitea | `gitea.labo.example` | Oui | `<ip-k3s-01>:3000`, sans Traefik |
+| Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | `<outil>.labo.example` | Oui | CT 105 `servarr` |
+| Vaultwarden | `vaultwarden.labo.example` | **Non** | Traefik, `<ip-k3s-01>:80` |
+| Vaultwarden (LAN) | Aucune : `https://<ip-k3s-01>` | — | Traefik, port 443 (IngressRoute `vaultwarden-lan`, ajoutée le 10 nov. 2026) |
+| Navidrome | `navidrome.labo.example` | **Non** | `<ip-navidrome>:4533` |
+| Jellyfin | Aucune | — | LAN seulement (`<ip-jellyfin>:8096`) |
+| qBittorrent | Aucune | — | LAN seulement (`<ip-qbittorrent>:8080`) |
+| Samba | Aucune | — | LAN seulement, sans accès Internet |
 
-Kubernetes (K3s, `<ip-k3s-01>`) est la plateforme des applications. Traefik est l'Ingress Controller. GitOps : [ArgoCD.md](ArgoCD.md). Premier service : [Vaultwarden.md](Vaultwarden.md).
+Les outils d'administration sont tous derrière Access, avec MFA. Vaultwarden et Navidrome n'y sont pas, parce que ces applications authentifient déjà leurs clients elles-mêmes. Le téléphone joint aussi le LAN par WireGuard (CT 115).
 
-Les services d'infrastructure légers restent en LXC (Cloudflare aujourd'hui).
+## 6. Stockage
 
-Cours : [Kubernetes.md](Kubernetes.md).
+Le NVMe (`rpool`) porte l'**infrastructure** : Proxmox et les disques système des VM et des conteneurs. Le miroir `tank` porte les **données** qui doivent survivre à une reconstruction de `rpool`.
 
----
+Vaultwarden en est l'exemple : ses données sont sur le zvol `tank/vmdata/vm-101-vaultwarden-data`. La chaîne est la suivante : zvol → ext4 → Local PV → PVC `vaultwarden-zfs-pvc`. L'ancien PVC `local-path` est conservé figé. Il n'y a ni NFS pour SQLite, ni pilote CSI ZFS. Voir l'[ADR-008](../decisions/ADR-008-Vaultwarden-tank.md) et [stockage-zfs.md](../exploitation/stockage-zfs.md).
 
-# Décisions
+## 7. Plateforme
 
-- [ADR-001](ADR/ADR-001-Proxmox.md) — Proxmox VE
-- [ADR-002](ADR/ADR-002-ZFS.md) — ZFS
-- [ADR-003](ADR/ADR-003-Cloudflare-Tunnel.md) — Cloudflare Tunnel
-- [ADR-004](ADR/ADR-004-K3s.md) — K3s (mono-nœud)
-- [ADR-005](ADR/ADR-005-Sealed-Secrets.md) — Sealed Secrets
-- [ADR-006](ADR/ADR-006-Argo-CD.md) — Argo CD
-- [ADR-007](ADR/ADR-007-Argo-CD-exposition.md) — Exposition Argo CD
-- [ADR-008](ADR/ADR-008-Vaultwarden-tank.md) — Vaultwarden : zvol sur `tank` + Local PV
+K3s (`<ip-k3s-01>`) est la plateforme des applications, avec Traefik comme Ingress Controller. Argo CD déploie le contenu du dossier `kubernetes/` du dépôt (voir [argocd.md](../concepts/argocd.md)). Les notions de base sont dans [kubernetes.md](../concepts/kubernetes.md).
 
----
+Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` et `k3s-01`). Attention : un fichier dans Git n'est pas un fichier installé dans `/usr/local/sbin`. Les LXC d'infrastructure sont décrits en Ansible dans `infrastructure/ansible/` (voir l'[ADR-010](../decisions/ADR-010-Ansible-LXC.md)).
 
-# État (as-built)
+## 8. État des lieux
 
-Cible et phases : [FeuilleDeRoute.md](FeuilleDeRoute.md). Ici : ce qui est **en place**.
+| Domaine | Élément | État |
+| --- | --- | --- |
+| Fondations | Matériel, Proxmox, réseau | En place |
+| Fondations | Cloudflare Tunnel, Access, MFA | En place |
+| Fondations | ZFS `rpool` et `tank` (miroir 2 × 8 To) | En place |
+| Fondations | Onduleur | En place, il protège le serveur |
+| Sauvegardes | Archives Vaultwarden quotidiennes et restauration isolée | En place, restauration testée |
+| Sauvegardes | Snapshots du zvol Vaultwarden (horaires et quotidiens) | En place |
+| Sauvegardes | Disque USB avec Restic (`backup-usb`) | En place, **lancement manuel** |
+| Sauvegardes | Reprise réelle du zvol | Procédure écrite, **jamais jouée** |
+| Sauvegardes | Rétention Restic | **À faire** |
+| Supervision | Alerte ntfy | Installée ; voir l'[ADR-009](../decisions/ADR-009-Alerte-ntfy.md) |
+| Supervision | Supervision (métriques, tableaux de bord) | **À faire** |
+| Plateforme | K3s + Traefik | En place |
+| Plateforme | Argo CD (GitOps) | En place |
+| Données | Données personnelles sur `tank`, partage SMB | En place (phase 1) |
+| Données | Sauvegarde du téléphone | En place (phase 2, close) |
+| Services | Vaultwarden, sur `tank` | En place |
+| Services | Gitea et son runner (CT 107) | En place |
+| Services | Jellyfin, qBittorrent, Prowlarr, Sonarr, Radarr, Bazarr, Recyclarr, Lidarr, Navidrome | En place |
+| Automatisation | LXC d'infrastructure en Ansible | Playbooks validés sur conteneurs d'essai |
 
-Scripts d'exploitation : [`infrastructure/`](../infrastructure/) (k3s-01, pve). Git ≠ `/usr/local/sbin`. Chaîne : [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle).
+### Détail des services
 
-## Fondations
+| Service | Où | Version | Remarques |
+| --- | --- | --- | --- |
+| Vaultwarden | K3s | — | `https://vaultwarden.labo.example`. Données sur `tank` (`vaultwarden-zfs-pvc`). `ADMIN_TOKEN` stocké en hash Argon2 PHC. |
+| Jellyfin | CT 103, `<ip-jellyfin>:8096` | — | Lecture seule sur `tank/mediatheques` |
+| qBittorrent | CT 104, `<ip-qbittorrent>:8080` | — | Écrit uniquement dans `telechargements/`. Sort par Proton VPN ; la configuration Mullvad est conservée. |
+| Prowlarr | CT 105, `:9696` | 2.7.0.5723 | Compte `utilisateur` |
+| Sonarr | CT 105, `:8989` | 4.0.20.3014 | |
+| Radarr | CT 105, `:7878` | 6.4.4.10685 | |
+| Bazarr | CT 105, `:6767` | v1.6.2 | Relié à Sonarr et Radarr, profil `français`, aucun fournisseur |
+| Recyclarr | CT 105 | v8.8.1 | Binaire sans interface. Profils MULTi.VO créés, non assignés |
+| Lidarr | CT 105, `:8686` | 3.1.6.5079 | Dossier `sons/` importé, aucune recherche |
+| Navidrome | CT 106, `<ip-navidrome>:4533` | 0.64.2 | Lecture seule. Public sans Access |
+| Runner Gitea | CT 107, `<ip-runner>` | v5.2.0 | Étiquette `host`. Hors de `k3s-01`, pour ne pas voir le coffre |
 
-- ✅ Matériel
-- ✅ Proxmox
-- ✅ Réseau
-- ✅ Cloudflare Tunnel
-- ✅ Cloudflare Access
-- ✅ MFA
-- ✅ ZFS (`rpool`)
-- ✅ ZFS (`tank`, miroir 2×8 To)
-- ✅ Onduleur (protège le serveur)
-- ⚙️ Sauvegardes : tars + restore isolée OK ; snapshots zvol horaires OK — [Sauvegardes.md](Sauvegardes.md#chaîne-actuelle)
+## 9. Jalons
 
-## Infrastructure
+| Date | Jalon |
+| --- | --- |
+| 6 nov. 2026 | Rétention des snapshots du zvol vérifiée : 7 quotidiens (dernier `@auto-daily-2026-11-06`) et 24 horaires (du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h). Plus aucun snapshot horaire d'octobre. |
+| 6 nov. 2026 | Archive utile de Gitea copiée sous `/tank/backups/k3s-01/gitea/`, puis sauvegardée par Restic (snapshot `<snapshot>`). |
+| 4 nov. 2026 | Runner Gitea (CT 107) en ligne, vu « Idle ». |
+| 2 nov. 2026 | Navidrome public. Les cinq interfaces *arr sont publiées derrière Access ; la page de liens est abandonnée. |
+| 1er nov. 2026 | Recyclarr et Lidarr installés. |
+| 29 oct. 2026 | qBittorrent passe par Proton VPN. Bazarr installé. |
+| 28 oct. 2026 | Jellyfin en service : bibliothèque scannée, un film lu. qBittorrent en service : une image Debian de test téléchargée, avec les droits `0660`. Prowlarr, Sonarr et Radarr installés : la série *Cold Case* est reconnue (178,9 Gio) et le film *American History X* est téléchargé (1,9 Gio). |
+| 25 oct. 2026 | Phase 2 close : téléphone sauvegardé (snapshot Restic `<snapshot>`). La restauration du `.vcf` est réussie. Les photos et SMS sont sauvegardés, sans test de restauration. |
+| 22 oct. 2026 | Timer du snapshot quotidien en place. Le passage de 04:00 ce jour-là n'a pas été relevé. |
+| 21 oct. 2026 | Premiers snapshots horaires du zvol (12:00 et 13:00). Restauration fonctionnelle isolée de Vaultwarden réussie : connexion, 2FA et coffre. |
+| 20-21 oct. 2026 | Premières archives Vaultwarden automatiques, sur `k3s-01` puis sur `pve`. |
+| 20 oct. 2026 | Restauration technique isolée de Vaultwarden réussie : SQLite, Pod, HTTP 200. Script `backup-usb` créé. La clé de Sealed Secrets est copiée sous `/tank/backups/k3s-01/sealed-secrets/`. |
+| 17 oct. 2026 | `ADMIN_TOKEN` de Vaultwarden passé en hash Argon2 PHC. |
+| 14 oct. 2026 | Vaultwarden migré sur `tank` (ADR-008). |
+| 6 oct. 2026 | Preuve de concept `tank/vmdata` réussie, puis nettoyée. |
 
-- ✅ Snapshots zvol Vaultwarden (horaires auto ; daily timer 22 oct.)
-- ✅ USB / Restic : `backup-usb` (20 oct.) ; clé Sealed Secrets sous `/tank/backups/k3s-01/sealed-secrets/` ; archive Gitea utile sous `/tank/backups/k3s-01/gitea/`, snapshot `<snapshot>` (6 nov.)
-- ⬜ Supervision
-- ✅ Phase 1 : perso sur `tank` ; `backup-usb` élargi OK ; SMB LXC `samba` (CT 102, `.40`) — [Donnees.md](Donnees.md)
-- ✅ Phase 2 : close le 25 oct. Snapshot `<snapshot>`. Restore du `.vcf` OK. Photos et SMS gardés en sauvegarde, sans restore. — [Android.md](Android.md)
+## 10. Décisions d'architecture
 
-## Plateforme
-
-- ✅ K3s (`<ip-k3s-01>`) + Traefik
-- ✅ Argo CD (GitOps, Vaultwarden)
-
-## Services
-
-- ✅ Vaultwarden (`https://vaultwarden.labo.example`) — données sur `tank` (`vaultwarden-zfs-pvc`)
-- ✅ Jellyfin : LXC 103, `<ip-jellyfin>:8096`, lecture seule sur `tank/mediatheques`. Scan terminé, un film lu (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ qBittorrent : LXC 104, `<ip-qbittorrent>:8080`, écriture sur `telechargements/` seulement. Proton VPN pour ce compte (29 oct.). Mullvad gardé. Image Debian de test en `0660` (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ Prowlarr : LXC 105 `servarr`, `<ip-servarr>:9696`, **2.7.0.5723**, compte `utilisateur` (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ Sonarr : même CT, `<ip-servarr>:8989`, **4.0.20.3014**. *Cold Case* reconnue, 178,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ Radarr : même CT, `<ip-servarr>:7878`, **6.4.4.10685**. *American History X* **Downloaded**, 1,9 Gio (28 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ Bazarr : même CT, `<ip-servarr>:6767`, **v1.6.2**. Sonarr et Radarr reliés, profil `français`, pas de fournisseur (29 oct.). [Mediatheques.md](Mediatheques.md)
-- ✅ Recyclarr : même CT, binaire **v8.8.1**, pas d'interface. Profils MULTi.VO créés, non assignés (1er nov.). [Mediatheques.md](Mediatheques.md)
-- ✅ Lidarr : même CT, `<ip-servarr>:8686`, **3.1.6.5079**. `sons/` importé, pas de recherche (1er nov.). [Mediatheques.md](Mediatheques.md)
-- ✅ Navidrome : LXC 106, `<ip-navidrome>:4533`, lecture seule, **0.64.2**. Public `https://navidrome.labo.example`, sans Access (2 nov.). [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
-- ✅ Runner Gitea : LXC 107, `<ip-runner>`. Hors de `k3s-01` pour ne pas voir le coffre. `v5.2.0`, étiquette `host`, Idle le 4 nov. [Forge.md](Forge.md#décision)
-- ✅ Cinq noms *arr publics, Access devant (2 nov.). Page de liens abandonnée. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
-- ✅ POC `tank/vmdata` (2026-10-06 ; nettoyé)
-- ✅ Migration Vaultwarden vers `tank` (2026-10-14, [ADR-008](ADR/ADR-008-Vaultwarden-tank.md))
-- ✅ `ADMIN_TOKEN` en Argon2 PHC (2026-10-17)
-- ✅ Sauvegardes Vaultwarden : tars auto 20 et 21 oct. (k3s-01 + pve)
-- ✅ Restore technique isolée (SQLite, Pod, HTTP 200) — [Vaultwarden.md](Vaultwarden.md#test-du-20-octobre-2026-technique)
-- ✅ Restore fonctionnel isolé (login + 2FA + coffre, 2026-10-21)
-- ✅ Snapshots zvol Vaultwarden horaires (12:00 et 13:00 le 21 oct.)
-- ✅ Quotidien timer et rétention 7 (6 nov. : `@auto-daily-2026-11-06`, 7 conservés). Le 22 oct. 04:00 n'a pas été lu.
-- ✅ Rétention horaire 24 (6 nov. 15:00 : 24 snapshots, du 5 nov. 15:00 au 6 nov. 15:00, trou de 4 h). Plus aucun horaire d'octobre.
-- ⬜ Reprise réelle zvol (procédure écrite) + rétention Restic
+| ADR | Décision |
+| --- | --- |
+| [ADR-001](../decisions/ADR-001-Proxmox.md) | Hyperviseur : Proxmox VE |
+| [ADR-002](../decisions/ADR-002-ZFS.md) | Stockage : ZFS |
+| [ADR-003](../decisions/ADR-003-Cloudflare-Tunnel.md) | Accès distant : Cloudflare Tunnel |
+| [ADR-004](../decisions/ADR-004-K3s.md) | Plateforme : K3s à un nœud |
+| [ADR-005](../decisions/ADR-005-Sealed-Secrets.md) | Secrets dans Git : Sealed Secrets |
+| [ADR-006](../decisions/ADR-006-Argo-CD.md) | GitOps : Argo CD |
+| [ADR-007](../decisions/ADR-007-Argo-CD-exposition.md) | Exposition d'Argo CD |
+| [ADR-008](../decisions/ADR-008-Vaultwarden-tank.md) | Vaultwarden : zvol sur `tank` + Local PV |
+| [ADR-009](../decisions/ADR-009-Alerte-ntfy.md) | Alerte : ntfy |
+| [ADR-010](../decisions/ADR-010-Ansible-LXC.md) | LXC d'infrastructure : Ansible |
