@@ -23,11 +23,12 @@ L'hébergement visé est un pod sur `k3s-01`, une réplique, SQLite, avec un zvo
 
 ## Raisons
 
-Les deux projets ont été comparés sur six critères, relevés le 3 nov. 2026 (voir l'annexe). **Aucun critère, pris seul, ne tranchait** : sur chacun, la conclusion était « ce critère ne choisit pas, la piste reste Gitea ». Le relevé d'origine ne désigne pas de raison décisive. Les points ci-dessous sont ceux du relevé qui servent le mieux l'objectif de départ, des gestes transférables vers GitHub. Ils ont été reconstitués lors de la réécriture de la documentation et **restent à confirmer** :
+Les deux projets ont été comparés sur six critères, relevés le 3 nov. 2026 (voir l'annexe). **Aucun critère, pris seul, ne tranchait** : sur chacun, la conclusion était « ce critère ne choisit pas, la piste reste Gitea ». Le choix s'est donc fait sur deux raisons, liées à l'objectif de départ :
 
-- La CI de Gitea vise la compatibilité de syntaxe avec GitHub Actions. Forgejo dit le contraire : un workflow GitHub demande en général un ajustement. Pour pratiquer des gestes transférables vers GitHub, Gitea est plus proche.
-- Gitea 28 publie un client en ligne de commande récent (`gt`), et ajoute des fonctions utiles à un workflow d'équipe : approbation par propriétaires de code, comptes bot, journal d'audit.
-- Le code publié reste sous licence MIT, et l'offre payante vit à côté du projet.
+1. **La CI de Gitea vise la compatibilité de syntaxe avec GitHub Actions.** GitHub Actions est très répandu en entreprise, et le but du homelab est de pratiquer des gestes directement transférables. Forgejo dit au contraire que sa CI n'est pas conçue pour être compatible : un workflow GitHub y demande en général un ajustement.
+2. **Le code publié reste sous licence MIT.** C'est la licence la plus simple et la plus permissive. Forgejo, lui, est passé de MIT à GPL-3.0-or-later à la v9.
+
+Les fonctions récentes de Gitea 28 (client `gt`, approbation par propriétaires de code, comptes bot, journal d'audit) vont dans le même sens, mais n'ont pas pesé dans la décision.
 
 ## Alternatives étudiées
 
