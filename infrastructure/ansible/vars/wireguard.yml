@@ -29,6 +29,7 @@ acces_portal_port: 80
 # La mettre ici enverrait toute son interface dans le tunnel.
 acces_destinations:
   - { addr: <ip-k3s-01>, proto: tcp, port: "80" }
+  - { addr: <ip-k3s-01>, proto: tcp, port: "443" }
   - { addr: <ip-k3s-01>, proto: tcp, port: "3000" }
   - { addr: <ip-samba>, proto: tcp, port: "445" }
   - { addr: <ip-pve>, proto: tcp, port: "8006" }
