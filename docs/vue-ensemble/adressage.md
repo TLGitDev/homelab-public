@@ -26,7 +26,7 @@ Ce conteneur fait tourner `cloudflared`, qui ouvre le tunnel sortant vers Cloudf
 
 ### `wireguard` — CT 115
 
-Cette passerelle est en service depuis le 9 nov. 2026. Elle permet au téléphone de joindre le LAN hors du Wi-Fi.
+Cette passerelle est en service depuis le 9 nov. 2026. Elle permet au téléphone de joindre tous les services du LAN hors du Wi-Fi. C'est désormais le seul accès distant, à part la route publique de Vaultwarden.
 
 - Adresse du téléphone dans le tunnel : `<ip-wg-téléphone>/32`.
 - Le PC fixe n'a pas de clé WireGuard.
@@ -42,15 +42,15 @@ Ce conteneur publie les partages SMB du LAN. Il est en service dans cette config
 
 ### `jellyfin` — CT 103
 
-Jellyfin écoute sur le port 8096, sur le LAN uniquement. Il est en service depuis le 28 oct. 2026. La protection par Cloudflare Access est prévue plus tard. Voir [jellyfin.md](../exploitation/mediatheques/jellyfin.md).
+Jellyfin écoute sur le port 8096. Il est en service depuis le 28 oct. 2026, et se joint par le LAN ou par WireGuard. Il n'a pas de route publique. Voir [jellyfin.md](../exploitation/mediatheques/jellyfin.md).
 
 ### `qbittorrent` — CT 104
 
-qBittorrent écoute sur le port 8080, sur le LAN uniquement. Depuis le 29 oct. 2026, le trafic du client sort par Proton VPN. L'ancienne configuration Mullvad est conservée dans `wg0.conf.mullvad`. Voir [qbittorrent-vpn.md](../exploitation/mediatheques/qbittorrent-vpn.md).
+qBittorrent écoute sur le port 8080. Il se joint par le LAN ou par WireGuard, et n'a pas de route publique. Depuis le 29 oct. 2026, le trafic du client sort par Proton VPN. L'ancienne configuration Mullvad est conservée dans `wg0.conf.mullvad`. Voir [qbittorrent-vpn.md](../exploitation/mediatheques/qbittorrent-vpn.md).
 
 ### `servarr` — CT 105
 
-Ce conteneur regroupe les outils de gestion des médiathèques. Cinq de leurs interfaces sont publiées sur Internet derrière Cloudflare Access depuis le 2 nov. 2026, sous les noms `prowlarr`, `sonarr`, `radarr`, `lidarr` et `bazarr`. Voir [servarr.md](../exploitation/mediatheques/servarr.md).
+Ce conteneur regroupe les outils de gestion des médiathèques. Leurs interfaces se joignent par le LAN ou par WireGuard. Du 2 nov. au 10 nov. 2026 au plus tard, cinq d'entre elles étaient aussi publiées sur Internet derrière Cloudflare Access ; ces routes sont désactivées. Voir [servarr.md](../exploitation/mediatheques/servarr.md).
 
 | Outil | Port | Version | Installé le |
 | --- | --- | --- | --- |
@@ -62,7 +62,7 @@ Ce conteneur regroupe les outils de gestion des médiathèques. Cinq de leurs in
 
 ### `navidrome` — CT 106
 
-Navidrome 0.64.2 écoute sur le port 4533 et lit la musique en lecture seule. Il est publié sur `navidrome.labo.example` **sans** Cloudflare Access depuis le 2 nov. 2026. Voir [navidrome.md](../exploitation/mediatheques/navidrome.md).
+Navidrome 0.64.2 écoute sur le port 4533 et lit la musique en lecture seule. Il se joint par le LAN ou par WireGuard. Sa route publique `navidrome.labo.example`, ouverte sans Access le 2 nov. 2026, est désactivée. Voir [navidrome.md](../exploitation/mediatheques/navidrome.md).
 
 ### `runner` — CT 107
 

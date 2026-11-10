@@ -8,22 +8,19 @@ Ce document décrit les principes et l'état actuel. Il ne décrit ni les manipu
 
 ```mermaid
 flowchart LR
-    U([Internet]) --> CF["Cloudflare<br/>Access + MFA"]
+    U([Internet]) --> CF["Cloudflare"]
     T([Téléphone]) -->|"WireGuard<br/>UDP 51820, IPv6"| WG["CT 115<br/>wireguard"]
     CF -->|"tunnel sortant"| C100["CT 100<br/>cloudflare"]
+    P([Poste du LAN]) --> ALL
 
     subgraph LAN["LAN <réseau-lan>"]
-        C100 --> TR["k3s-01<br/>Traefik :80"]
-        C100 --> GI["k3s-01<br/>Gitea :3000"]
-        C100 --> SV["CT 105<br/>servarr"]
-        C100 --> ND["CT 106<br/>navidrome"]
+        C100 -->|"seule route publiée"| TR["k3s-01<br/>Traefik"]
         TR --> VW["Vaultwarden"]
-        TR --> AR["Argo CD"]
-        WG --> PVE["pve<br/>Proxmox :8006"]
+        WG --> ALL["Tous les services :<br/>Proxmox, Argo CD, Gitea,<br/>Jellyfin, qBittorrent, *arr,<br/>Navidrome, Vaultwarden…"]
     end
 ```
 
-Le serveur ouvre lui-même une connexion **sortante** vers Cloudflare. Aucun port n'est redirigé vers le LAN en IPv4. La seule ouverture sur la box est une règle IPv6 vers la passerelle WireGuard.
+Un seul service est publié sur Internet : Vaultwarden, par un tunnel Cloudflare que le serveur ouvre lui-même vers l'extérieur. Tout le reste se joint depuis le LAN, ou depuis le téléphone par WireGuard. Aucun port n'est redirigé vers le LAN en IPv4. La seule ouverture sur la box est une règle IPv6 vers la passerelle WireGuard.
 
 ## 2. Principes
 
@@ -168,30 +165,27 @@ Les LXC consomment peu de mémoire, démarrent vite et partagent le noyau de Pro
 
 Les disques **système** des LXC et des VM sont des volumes sous `rpool/data` (par exemple `vm-101-disk-1`, 64 Go, pour `k3s-01`). Les volumes de **données** sont sous `tank/vmdata`. Les ISO et les modèles sont dans `rpool/var-lib-vz`.
 
-Le chemin d'une requête publique vers une application du cluster est le suivant :
+Le chemin d'une requête publique vers Vaultwarden est le suivant :
 
 ```
 Internet → Cloudflare → tunnel → LXC cloudflare → Traefik (<ip-k3s-01>:80) → Ingress → Service → Pod
 ```
 
-Gitea fait exception : le tunnel le joint directement, sans passer par Traefik.
-
 ## 5. Exposition des services
 
-| Service | Adresse publique | Cloudflare Access | Origine |
-| --- | --- | --- | --- |
-| Proxmox | Aucune : route `proxmox.labo.example` désactivée le 10 nov. 2026 | — | LAN, ou WireGuard depuis le téléphone |
-| Argo CD | `argocd.labo.example` | Oui | Traefik, `<ip-k3s-01>:80` |
-| Gitea | `gitea.labo.example` | Oui | `<ip-k3s-01>:3000`, sans Traefik |
-| Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | `<outil>.labo.example` | Oui | CT 105 `servarr` |
-| Vaultwarden | `vaultwarden.labo.example` | **Non** | Traefik, `<ip-k3s-01>:80` |
-| Vaultwarden (LAN) | Aucune : `https://<ip-k3s-01>` | — | Traefik, port 443 (IngressRoute `vaultwarden-lan`, ajoutée le 10 nov. 2026) |
-| Navidrome | `navidrome.labo.example` | **Non** | `<ip-navidrome>:4533` |
-| Jellyfin | Aucune | — | LAN seulement (`<ip-jellyfin>:8096`) |
-| qBittorrent | Aucune | — | LAN seulement (`<ip-qbittorrent>:8080`) |
-| Samba | Aucune | — | LAN seulement, sans accès Internet |
+| Service | Sur Internet | Sur le LAN et par WireGuard |
+| --- | --- | --- |
+| Vaultwarden | `vaultwarden.labo.example`, sans Access | `https://<ip-k3s-01>` (port 443, IngressRoute `vaultwarden-lan`, ajoutée le 10 nov. 2026) |
+| Proxmox | Non | `https://<ip-pve>:8006` |
+| Argo CD | Non | Par Traefik sur `k3s-01` |
+| Gitea | Non | `http://<ip-k3s-01>:3000` |
+| Jellyfin | Non | `http://<ip-jellyfin>:8096` |
+| qBittorrent | Non | `http://<ip-qbittorrent>:8080` |
+| Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | Non | `http://<ip-servarr>:<port>` (voir [adressage.md](adressage.md)) |
+| Navidrome | Non | `http://<ip-navidrome>:4533` |
+| Samba | Non | Partages SMB sur `<ip-samba>`, sans accès Internet |
 
-Les outils d'administration publiés sont tous derrière Access, avec MFA. Proxmox n'est plus publié du tout. Vaultwarden et Navidrome n'y sont pas, parce que ces applications authentifient déjà leurs clients elles-mêmes. Le téléphone joint aussi le LAN par WireGuard (CT 115).
+Vaultwarden reste publié, sans Access, parce que l'application authentifie elle-même ses utilisateurs. Les autres routes Cloudflare ont été désactivées : voir [cloudflare.md](../exploitation/cloudflare.md) pour leur historique, et la politique Access qui s'appliquerait à toute nouvelle publication.
 
 ## 6. Stockage
 
@@ -210,7 +204,8 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 | Domaine | Élément | État |
 | --- | --- | --- |
 | Fondations | Matériel, Proxmox, réseau | En place |
-| Fondations | Cloudflare Tunnel, Access, MFA | En place |
+| Fondations | Cloudflare Tunnel | En place, une seule route (Vaultwarden) |
+| Fondations | Passerelle WireGuard du téléphone | En place |
 | Fondations | ZFS `rpool` et `tank` (miroir 2 × 8 To) | En place |
 | Fondations | Onduleur | En place, il protège le serveur |
 | Sauvegardes | Archives Vaultwarden quotidiennes et restauration isolée | En place, restauration testée |
@@ -218,7 +213,7 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 | Sauvegardes | Disque USB avec Restic (`backup-usb`) | En place, **lancement manuel** |
 | Sauvegardes | Reprise réelle du zvol | Procédure écrite, **jamais jouée** |
 | Sauvegardes | Rétention Restic | **À faire** |
-| Supervision | Alerte ntfy | Installée ; voir l'[ADR-009](../decisions/ADR-009-Alerte-ntfy.md) |
+| Supervision | Alerte ntfy | En place, validée par une vraie alerte ; voir l'[ADR-009](../decisions/ADR-009-Alerte-ntfy.md) |
 | Supervision | Supervision (métriques, tableaux de bord) | **À faire** |
 | Plateforme | K3s + Traefik | En place |
 | Plateforme | Argo CD (GitOps) | En place |
@@ -249,7 +244,7 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 
 | Date | Jalon |
 | --- | --- |
-| 10 nov. 2026 | Route Cloudflare `proxmox.labo.example` désactivée : Proxmox ne se joint plus à distance que par WireGuard. Vaultwarden devient joignable sur le LAN en HTTPS (`<ip-k3s-01>:443`). |
+| 10 nov. 2026 | Toutes les routes Cloudflare sont désactivées sauf Vaultwarden : les services se joignent par le LAN ou par WireGuard. Vaultwarden devient joignable sur le LAN en HTTPS (`<ip-k3s-01>:443`). L'alerte ntfy a prévenu d'un vrai échec de sauvegarde. |
 | 6 nov. 2026 | Rétention des snapshots du zvol vérifiée : 7 quotidiens (dernier `@auto-daily-2026-11-06`) et 24 horaires (du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h). Plus aucun snapshot horaire d'octobre. |
 | 6 nov. 2026 | Archive utile de Gitea copiée sous `/tank/backups/k3s-01/gitea/`, puis sauvegardée par Restic (snapshot `<snapshot>`). |
 | 4 nov. 2026 | Runner Gitea (CT 107) en ligne, vu « Idle ». |
