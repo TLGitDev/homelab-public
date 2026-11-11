@@ -1,91 +1,101 @@
-# Homelab — documentation
+# Documentation du homelab
 
-Index des documents. Vue d'ensemble du dépôt : [README.md](../README.md) à la racine.
+Cette documentation décrit la conception, la réalisation et l'exploitation d'un homelab personnel. Elle sert à deux choses : retrouver comment chaque élément a été construit, et pouvoir le reconstruire.
 
-## Présentation
-
-Ce projet documente la conception, la réalisation et l'exploitation d'un homelab personnel.
-
-L'objectif n'est pas uniquement de disposer d'un serveur fonctionnel, mais de comprendre l'ensemble de l'infrastructure, de documenter chaque décision technique et de développer des compétences transférables dans un contexte professionnel.
-
----
-
-## Objectifs
-
-- Comprendre chaque technologie utilisée.
-- Construire une infrastructure fiable.
-- Documenter toutes les décisions.
-- Développer des compétences en infrastructure système.
-- Produire une documentation maintenable.
-
----
-
-## Philosophie
-
-Chaque étape suit le cycle suivant :
+Chaque étape suit le même cycle :
 
 > Comprendre → Faire → Vérifier → Documenter
 
-Aucune modification importante n'est réalisée sans comprendre le problème qu'elle résout.
+Aucune modification importante n'est faite sans comprendre le problème qu'elle résout. Présentation du dépôt : [README.md](../README.md) à la racine.
 
----
+## 1. Le homelab en une minute
 
-## État actuel
+Un seul serveur physique, `pve` (`<ip-pve>`), fait tourner Proxmox VE sur ZFS :
 
-| Élément | État |
-|---------|------|
-| Matériel | Validé (Node 804, Ryzen 7 5700G, 32 Go, NVMe 2 To, 2× IronWolf 8 To) |
-| Hyperviseur | Proxmox VE sur ZFS (`rpool`), IP `<ip-pve>` |
-| Accès distant | Tunnel ; Access sur Proxmox, Argo CD et les cinq interfaces *arr ; Vaultwarden et Navidrome sans Access. Page de liens *arr abandonnée |
-| Premier service | LXC `cloudflare` (`<ip-cloudflare>`) |
-| Cluster | K3s (`<ip-k3s-01>`), Traefik |
-| Application | Vaultwarden (ns `vaultwarden`, Argo CD, `https://vaultwarden.labo.example`) |
-| Pool de données | `tank/vmdata` ; Vaultwarden sur zvol `vm-101-vaultwarden-data` ([ADR-008](ADR/ADR-008-Vaultwarden-tank.md)) |
-| Sauvegardes | Tars + restore isolée OK ; snapshots zvol horaires OK ; USB manuel |
+- le système et les disques des machines sont sur le NVMe (`rpool`) ;
+- les données sont sur un miroir de deux disques de 8 To (`tank`).
 
----
+Les services légers vivent chacun dans un conteneur LXC : un service, un LXC. Les applications tournent sur un cluster K3s à un nœud (VM `k3s-01`, `<ip-k3s-01>`), déployé en GitOps par Argo CD. Les nouvelles applications se poussent sur la forge Gitea, qui les recopie vers GitHub ; Argo CD déploie depuis GitHub.
 
-## Documentation
+Depuis Internet, seul Vaultwarden est publié, par un tunnel Cloudflare. Tout le reste se joint sur le LAN, ou depuis le téléphone par WireGuard. Les sauvegardes combinent des archives quotidiennes, des snapshots ZFS et un disque USB géré avec Restic. Une alerte arrive sur le téléphone en cas d'échec.
 
-### Par où commencer
+## 2. Par où commencer
 
-| Fichier | Rôle |
-|---------|------|
-| [Journal.md](Journal.md) | Chronologie des séances |
-| [Architecture.md](Architecture.md) | Principes, schéma actuel, as-built |
-| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Cible : phases 0–11, dans l'ordre de travail |
-| [Forge.md](Forge.md) | Phase 3 : Gitea en service sur le LAN (3 nov.), édition libre. Runner CT 107 en ligne (4 nov.) |
-| [Materiel.md](Materiel.md) | Inventaire physique |
-| [Proxmox.md](Proxmox.md) | Nœud : IP, accès, [exploitation](Proxmox.md#exploitation) |
-| [Stockage.md](Stockage.md) | ZFS : `rpool` / `tank`, `tank-vmdata`, volume Vaultwarden |
-| (document privé) | Phase 1 : inventaire perso (sync ≠ archive ≠ backup) |
-| (document privé) | Phase 2 close (25 oct.) : sauvegarde du téléphone |
-| [Mediatheques.md](Mediatheques.md) | Phase 4 : `tank/mediatheques` (28 oct., 2,1 Tio) |
-| [Cloudflare.md](Cloudflare.md) | Tunnel, Access, MFA |
-| [Sauvegardes.md](Sauvegardes.md) | RAID ≠ snapshot ≠ backup ; chaîne actuelle ; USB / Restic |
-| [Kubernetes.md](Kubernetes.md) | Fondamentaux K8s (manifestes, config, conception, Docker → K8s) |
-| [ArgoCD.md](ArgoCD.md) | GitOps, App of Apps, UI `argocd.labo.example` |
-| [Vaultwarden.md](Vaultwarden.md) | Service, stockage, [sauvegarde](Vaultwarden.md#sauvegarde) / [restore](Vaultwarden.md#restauration) |
-| [Competences.md](Competences.md) | Niveaux de maîtrise |
-| [Glossaire.md](Glossaire.md) | Définitions |
+| Pour… | Lire |
+| --- | --- |
+| Comprendre l'ensemble | [architecture.md](vue-ensemble/architecture.md) |
+| Savoir ce qui reste à faire | [FeuilleDeRoute.md](FeuilleDeRoute.md) |
+| Savoir pourquoi un choix a été fait | [Les décisions (ADR)](decisions/README.md) |
+| Retrouver ce qui s'est passé, et quand | [Le journal](projet/journal/README.md) |
+| Réparer ou reconstruire quelque chose | [restauration.md](exploitation/restauration.md) |
 
-### Décisions (ADR)
+## 3. Plan de la documentation
 
-| Fichier | Décision |
-|---------|----------|
-| [ADR-001-Proxmox.md](ADR/ADR-001-Proxmox.md) | Hyperviseur : Proxmox VE |
-| [ADR-002-ZFS.md](ADR/ADR-002-ZFS.md) | Stockage : ZFS |
-| [ADR-003-Cloudflare-Tunnel.md](ADR/ADR-003-Cloudflare-Tunnel.md) | Accès distant : Cloudflare Tunnel |
-| [ADR-004-K3s.md](ADR/ADR-004-K3s.md) | Plateforme : K3s, un nœud |
-| [ADR-005-Sealed-Secrets.md](ADR/ADR-005-Sealed-Secrets.md) | Secrets GitOps : Sealed Secrets |
-| [ADR-006-Argo-CD.md](ADR/ADR-006-Argo-CD.md) | GitOps : Argo CD |
-| [ADR-007-Argo-CD-exposition.md](ADR/ADR-007-Argo-CD-exposition.md) | Exposition Argo CD, config hors `root` |
-| [ADR-008-Vaultwarden-tank.md](ADR/ADR-008-Vaultwarden-tank.md) | Vaultwarden : zvol `tank` + Local PV (appliqué) |
-| [ADR-009-Alerte-ntfy.md](ADR/ADR-009-Alerte-ntfy.md) | Alerte : ntfy (accepté le 5 nov., pas appliqué) |
-| [ADR-010-Ansible-LXC.md](ADR/ADR-010-Ansible-LXC.md) | LXC d'infra : Ansible (accepté le 7 nov., récit sur le 107) |
+### Vue d'ensemble — `vue-ensemble/`
 
----
+Ce qui existe, et comment c'est relié.
 
-## Infrastructure cible
+| Fichier | Contenu |
+| --- | --- |
+| [architecture.md](vue-ensemble/architecture.md) | Principes, réseau, où tourne quoi, exposition des services, état des lieux |
+| [materiel.md](vue-ensemble/materiel.md) | Composants du serveur, disques, câblage, entretien |
+| [adressage.md](vue-ensemble/adressage.md) | Plan d'adresses IP, identifiants des conteneurs et des VM |
 
-Cible : [FeuilleDeRoute.md](FeuilleDeRoute.md). As-built : [Architecture.md](Architecture.md).
+### Exploitation — `exploitation/`
+
+Comment chaque élément est installé, vérifié et entretenu. Les procédures suivent le format **Prérequis → Action → Vérification**.
+
+| Fichier | Contenu |
+| --- | --- |
+| [proxmox.md](exploitation/proxmox.md) | Le nœud `pve` : accès, réseau, scripts et timers installés |
+| [stockage-zfs.md](exploitation/stockage-zfs.md) | Les pools `rpool` et `tank`, les datasets, les zvols |
+| [sauvegardes.md](exploitation/sauvegardes.md) | La chaîne de sauvegarde, Restic sur USB, l'alerte ntfy |
+| [restauration.md](exploitation/restauration.md) | Les scénarios de reprise, testés ou seulement écrits |
+| [cloudflare.md](exploitation/cloudflare.md) | Le tunnel, Access, les routes publiées et retirées |
+| [vaultwarden.md](exploitation/vaultwarden.md) | Le gestionnaire de mots de passe dans K3s |
+| [forge-gitea.md](exploitation/forge-gitea.md) | La forge Gitea, son runner et la CI |
+| [samba.md](exploitation/samba.md) | Le partage SMB du LAN |
+| [ansible.md](exploitation/ansible.md) | Les LXC décrits en Ansible, et leurs essais |
+| [mediatheques/](exploitation/mediatheques/README.md) | Films, séries et musique : [Jellyfin](exploitation/mediatheques/jellyfin.md), [qBittorrent et VPN](exploitation/mediatheques/qbittorrent-vpn.md), [les *arr](exploitation/mediatheques/servarr.md), [Navidrome](exploitation/mediatheques/navidrome.md) |
+
+### Décisions — `decisions/`
+
+Un ADR par décision d'architecture, de l'hyperviseur (ADR-001) au choix entre LXC et K3s (ADR-012). L'index et leur statut sont dans [decisions/README.md](decisions/README.md).
+
+### Concepts — `concepts/`
+
+Les notions nécessaires pour lire le reste, expliquées pour ce homelab.
+
+| Fichier | Contenu |
+| --- | --- |
+| [zfs.md](concepts/zfs.md) | Pools, datasets, zvols, snapshots, miroir |
+| [kubernetes.md](concepts/kubernetes.md) | Les objets Kubernetes, et leur usage ici |
+| [argocd.md](concepts/argocd.md) | Le GitOps, le modèle App of Apps, les procédures Argo CD |
+| [glossaire.md](concepts/glossaire.md) | Les définitions |
+
+### Projet — `projet/` et feuille de route
+
+Le suivi du travail.
+
+| Fichier | Contenu |
+| --- | --- |
+| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Les phases 0 à 11, dans l'ordre de travail, avec leurs jalons |
+| [journal/](projet/journal/README.md) | Le récit des séances, un fichier par mois |
+| [competences.md](projet/competences.md) | Les niveaux de maîtrise par domaine |
+
+### Données personnelles — `prive/`
+
+Ces pages concernent les données personnelles et le téléphone. Elles sont rangées à part pour pouvoir être exclues de la future version publique du dépôt.
+
+| Fichier | Contenu |
+| --- | --- |
+| (document privé) | L'inventaire des données personnelles, et leur place sur `tank` |
+| (document privé) | La sauvegarde du téléphone, et la remise en service d'un nouveau téléphone |
+
+## 4. Conventions d'écriture
+
+- **Une page décrit l'état actuel.** Les dates et le récit vont dans le [journal](projet/journal/README.md). Les ADR gardent leur historique dans une section « Révisions ».
+- **« As-built »** désigne ce qui est réellement en place, par opposition à la cible décrite dans la feuille de route.
+- **Les secrets n'apparaissent jamais** : ni les mots de passe, ni les clés privées, ni les jetons. Une page indique seulement où ils se trouvent.
+- **Une procédure ne se valide pas sur parole.** Chaque étape a sa vérification, et un test n'est daté que s'il a réellement été joué.
+- **Un fichier dans Git n'est pas un fichier installé.** Les sources de `infrastructure/` doivent être copiées sur la machine. Chaque page d'exploitation indique où.

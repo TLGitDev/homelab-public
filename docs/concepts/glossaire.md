@@ -1,0 +1,385 @@
+# Glossaire
+
+Les définitions des termes utilisés dans la documentation du homelab, classées par domaine. Les niveaux de maîtrise sont dans [competences.md](../projet/competences.md). Les cours détaillés sont dans [kubernetes.md](kubernetes.md) et [zfs.md](zfs.md).
+
+---
+
+## Virtualisation
+
+### Hyperviseur
+
+Logiciel qui permet d'exécuter plusieurs machines virtuelles ou conteneurs sur un même serveur physique.
+
+### LXC (Linux Containers)
+
+Technologie de virtualisation légère partageant le noyau Linux de l'hôte. Un LXC possède son propre système de fichiers, ses processus et son réseau, mais n'embarque pas son propre noyau.
+
+### RootFS (Root Filesystem)
+
+Disque système d'un conteneur Linux. Il contient Debian, les fichiers système et les applications installées.
+
+### Template
+
+Image d'un système Linux déjà installé servant de modèle pour créer rapidement de nouveaux conteneurs.
+
+### Unprivileged Container (conteneur non privilégié)
+
+Conteneur exécuté avec des privilèges réduits afin d'améliorer la sécurité de l'hôte. Ses identifiants sont décalés : l'UID 0 (root) du conteneur correspond à l'UID 100000 de l'hôte, qui n'a aucun droit particulier. Tous les LXC du homelab sont non privilégiés.
+
+### Idmap (correspondance d'identifiants)
+
+Table qui fait correspondre les UID et GID d'un conteneur non privilégié à ceux de l'hôte (lignes `lxc.idmap`). Dans le homelab, on fait correspondre un seul groupe : le GID 1000 des conteneurs de médiathèques est le GID 987 (`media`) de l'hôte. Le droit d'utiliser ce GID est accordé dans `/etc/subgid` (`root:987:1`). Exemple détaillé : [jellyfin.md](../exploitation/mediatheques/jellyfin.md), section 3.
+
+### Bind mount (montage direct)
+
+Montage d'un dossier de l'hôte à l'intérieur d'un conteneur (`pct set <id> -mp0 …`), sans copie ni partage réseau. C'est ce qui permet aux LXC de lire `tank` directement, et ce qui les distingue de la VM `k3s-01` ([ADR-012](../decisions/ADR-012-LXC-ou-K3s.md)). Peut être en lecture seule (`ro=1`).
+
+---
+
+## Kubernetes
+
+Cours : [kubernetes.md](kubernetes.md).
+
+### API Server
+
+Source de vérité du cluster. Toutes les ressources y sont enregistrées. Le YAML ne sert qu'à modifier cette source.
+
+### Réconciliation
+
+Boucle des contrôleurs : lire l'état désiré, observer l'état réel, corriger uniquement les écarts, recommencer.
+
+### Pod
+
+Unité minimale d'exécution. Un ou plusieurs conteneurs qui partagent IP, réseau, volumes et cycle de vie. Jetable : il peut être recréé à tout moment.
+
+### ReplicaSet
+
+Garantit N Pods identiques : les crée, les recrée s'ils disparaissent, en supprime s'il y en a trop. Ne gère pas les mises à jour de version.
+
+### Deployment
+
+Cycle de vie de l'application : ReplicaSet, rolling update, rollback, nombre de réplicas. Ne crée jamais les Pods directement.
+
+### OwnerReference
+
+Lien de propriété réel entre objets (`metadata.ownerReferences`). Kubernetes ne relie pas les ressources par leur nom.
+
+### Ingress
+
+Règle de routage HTTP (hostname, chemin) vers un Service. Prise en charge par un Ingress Controller (`ingressClassName`, ex. Traefik). Exemple réel : [vaultwarden.md](../exploitation/vaultwarden.md).
+
+### Service
+
+Identité réseau stable (ClusterIP) devant des Pods à IP éphémère. Ne lance pas les Pods. Sélection par labels.
+
+### Selector
+
+Règle qui sélectionne les ressources portant certains labels (ex. `app: nginx`).
+
+### EndpointSlice
+
+Liste des Pods actuellement joignables pour un Service. Maintenue par le EndpointSlice Controller, pas par le Service lui-même.
+
+### DNS Kubernetes
+
+Nom stable d'un Service dans le cluster : `<service>.<namespace>.svc.cluster.local` (ex. `nginx.default.svc.cluster.local`).
+
+### Taint / Toleration
+
+Un taint sur un Node interdit d'y planifier des Pods, sauf ceux qui ont une toleration correspondante.
+
+### apiVersion / kind / metadata / spec
+
+Structure commune d'un manifeste. `spec` = état désiré. `metadata` = identité (nom, labels, ownerReferences…), pas le comportement.
+
+### Pod template
+
+`spec.template` n'est pas un Pod : c'est le modèle dont le ReplicaSet se sert pour en créer. Un hash de ce template entre dans le nom du ReplicaSet.
+
+### containerPort
+
+Décrit le port d'écoute. N'ouvre pas le port. Un nom (`http`) permet au Service d'utiliser `targetPort: http` sans coller au numéro.
+
+### Garbage collection
+
+Supprimer un propriétaire (`kubectl delete deployment …`) supprime ses enfants via les ownerReferences.
+
+### Label
+
+Métadonnée qui relie les ressources (ex. `app: vaultwarden`) sans les coupler fortement.
+
+### Sidecar
+
+Conteneur d'assistance dans le même Pod que l'application (logs, proxy, sync).
+
+### ConfigMap
+
+Configuration non sensible (hôte, port, niveau de logs…). Injectée dans le Pod par le kubelet (variables d'environnement ou fichiers). Ne lance aucune application.
+
+### Secret
+
+Données sensibles. Encodé en Base64, **pas chiffré** par défaut. Le Pod référence le Secret ; le kubelet injecte **au démarrage** du conteneur (une mise à jour du Secret ne change pas une variable d'environnement déjà lancée).
+
+### SOPS / age
+
+A servi à chiffrer `secret.yaml` dans Git (sprint 17). Remplacé pour Vaultwarden par Sealed Secrets.
+
+### SealedSecret
+
+Représentation chiffrée d'un Secret, versionnable. Le controller crée le Secret dans le cluster. Lié au namespace et au nom : un changement impose de resealer. Exemple réel : [vaultwarden.md](../exploitation/vaultwarden.md), section 4.
+
+### Namespace
+
+Frontière logique pour les ressources namespacées. Un PVC ne change pas de namespace : nouveau volume + restauration.
+
+### Argo CD
+
+Outil de GitOps : il compare Git (état désiré) et le cluster. `Synced` = conforme à Git ; `Healthy` = application saine. Voir [argocd.md](argocd.md).
+
+### GitOps
+
+Méthode où Git est la source de vérité de l'infrastructure : on modifie Git, et un contrôleur (ici Argo CD) applique et surveille l'état du cluster. Une dérive entre Git et le cluster devient visible.
+
+### App of Apps
+
+Modèle Argo CD où une application racine (`root`) ne déploie rien elle-même : elle découvre les autres applications, chacune déployant un service ([ADR-006](../decisions/ADR-006-Argo-CD.md)).
+
+### NetworkPolicy
+
+Règle Kubernetes qui limite les communications réseau entre pods. Sans NetworkPolicy, tous les pods d'un cluster peuvent se joindre. Prévue pour isoler les futures applications exposées ([ADR-012](../decisions/ADR-012-LXC-ou-K3s.md)).
+
+### Pod Security Admission
+
+Mécanisme Kubernetes qui refuse les pods trop permissifs selon un niveau (`privileged`, `baseline`, `restricted`). Le niveau `restricted` interdit notamment les conteneurs root, privilégiés ou avec un montage `hostPath`.
+
+### data / stringData
+
+Deux façons de remplir un Secret. `data` attend du Base64. `stringData` accepte le clair ; l'API Server encode.
+
+### Cycle de vie des données
+
+Critère pour partager un volume : ensembles créés, sauvegardés, restaurés et supprimés ensemble → un PVC. Sinon, volumes (et souvent déploiements) séparés.
+
+### PersistentVolumeClaim (PVC)
+
+Besoin de stockage exprimé par l'application (capacité, mode d'accès, StorageClass). Ne crée pas le volume.
+
+### StorageClass
+
+Politique de provisionnement : comment Kubernetes crée un volume (ZFS, NFS, Ceph, cloud…). `WaitForFirstConsumer` : le PV n'est créé que lorsqu'un Pod consomme le PVC (`local-path` K3s).
+
+### PersistentVolume (PV)
+
+Volume réellement disponible, associé à un PVC. Peut représenter un chemin local, du NFS, etc.
+
+### Local PV
+
+PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Vaultwarden : `vaultwarden-zfs-pv` → `/var/lib/k3s-storage/vaultwarden`. [stockage-zfs.md](../exploitation/stockage-zfs.md), [ADR-008](../decisions/ADR-008-Vaultwarden-tank.md).
+
+---
+
+## Réseau
+
+### Bridge Linux (`vmbr0`)
+
+Commutateur (switch) virtuel permettant aux VM et LXC de communiquer avec le réseau physique.
+
+### Gateway (Passerelle)
+
+Machine vers laquelle un ordinateur envoie les paquets destinés à un autre réseau (généralement la box Internet).
+
+### MAC Address
+
+Identifiant matériel unique d'une interface réseau. Il est utilisé au niveau du réseau local.
+
+### CIDR (`/24`)
+
+Notation indiquant la taille du réseau IP.
+
+Exemple : `<ip-cloudflare>/24` signifie que le réseau est `<réseau-lan>` avec un masque `255.255.255.0`.
+
+### Plan d'adressage
+
+Organisation des adresses IP d'une infrastructure afin que chaque service possède une adresse fixe et facilement identifiable.
+
+Le plan actuel est dans [adressage.md](../vue-ensemble/adressage.md).
+
+### WireGuard
+
+Protocole de VPN simple et rapide, fondé sur des paires de clés. Il sert deux fois dans le homelab : la passerelle du téléphone (CT 115), qui donne accès au LAN depuis l'extérieur, et le tunnel de qBittorrent vers Proton VPN (CT 104).
+
+### Kill switch
+
+Mécanisme qui coupe tout trafic quand le VPN tombe, au lieu de le laisser repartir par la connexion normale. Dans le CT 104, c'est nftables qui joue ce rôle pour le seul compte `qbittorrent` ([qbittorrent-vpn.md](../exploitation/mediatheques/qbittorrent-vpn.md)).
+
+### nftables
+
+Pare-feu du noyau Linux, successeur d'iptables. Il peut filtrer selon l'utilisateur qui émet le paquet (`meta skuid`), ce qui permet un kill switch par compte.
+
+### NAT-PMP
+
+Protocole qui permet de demander une ouverture de port à une passerelle. Proton VPN l'utilise pour ouvrir un port entrant, sous forme de bail de 60 secondes à renouveler.
+
+### Reverse proxy
+
+Serveur qui reçoit les requêtes et les transmet au bon service selon le nom demandé. Ici, Traefik joue ce rôle dans K3s.
+
+---
+
+## Stockage
+
+### ZFS
+
+Système de fichiers et gestionnaire de volumes. Il regroupe disques, redondance, checksums, snapshots et compression.
+
+Cours : [zfs.md](zfs.md). État du homelab : [stockage-zfs.md](../exploitation/stockage-zfs.md).
+
+### VDEV (Virtual Device)
+
+Groupe de disques. C'est l'unité de protection des données dans ZFS (disque unique, miroir, RAIDZ…).
+
+### Pool
+
+Espace de stockage ZFS constitué d'un ou plusieurs VDEV. Il contient des datasets. Si un VDEV entier est perdu, le pool devient inutilisable.
+
+### Dataset
+
+Système de fichiers indépendant à l'intérieur d'un pool, avec ses propres propriétés (compression, quotas, snapshots, montage). L'espace est pris dynamiquement dans le pool : pas de taille fixée à l'avance comme une partition. On ne crée un dataset que s'il y a un besoin distinct (sinon un répertoire suffit).
+
+### zvol
+
+Volume **bloc** ZFS (pas un filesystem ZFS monté). Proxmox s'en sert pour les disques de VM (`tank/vmdata` via `tank-vmdata`). Dans la VM, il apparaît comme un disque (`/dev/sdX`).
+
+### Checksum
+
+Empreinte calculée pour chaque bloc. ZFS la recalcule à la lecture pour détecter une corruption silencieuse.
+
+### Self-Healing
+
+Sur un VDEV miroir, ZFS remplace automatiquement un bloc corrompu par la copie saine.
+
+### Scrub
+
+Lecture complète du pool pour vérifier tous les checksums et réparer les blocs corrompus lorsqu'une copie saine existe.
+
+### Snapshot
+
+Photo d'un dataset à un instant T, stockée sur le même pool. Utile pour revenir en arrière, ce n'est pas une sauvegarde.
+
+### Lien physique (hardlink)
+
+Second nom pour un même fichier, sans copie et sans espace en plus. Sonarr, Radarr et Lidarr s'en servent pour ranger un téléchargement dans la bibliothèque. Un lien physique ne peut pas traverser deux datasets : d'où un seul dataset `tank/mediatheques`.
+
+### setgid (sur un dossier)
+
+Bit de droits (`2770`) qui fait hériter aux nouveaux fichiers le groupe du dossier. Les dossiers de `tank/mediatheques` l'ont : tout fichier créé dedans appartient au groupe `media`.
+
+### umask
+
+Masque qui retire des droits aux fichiers créés par un processus. Avec `UMask=0007`, un fichier sort en `0660` et un dossier en `0770` : aucun droit pour les « autres ».
+
+---
+
+## Système
+
+### Scheduler
+
+Le mot désigne deux choses. Sous Linux, c'est le composant du noyau qui décide quel processus utilise le processeur à chaque instant. Dans Kubernetes, c'est le composant qui choisit sur quel nœud placer un pod.
+
+### Idempotence
+
+Propriété d'une opération qui donne le même résultat qu'on la lance une ou plusieurs fois. Un playbook Ansible idempotent ne change rien à sa deuxième passe (`changed=0`) : c'est le critère de validation de l'[ADR-010](../decisions/ADR-010-Ansible-LXC.md).
+
+### Timer systemd
+
+Équivalent moderne de cron : une unit `.timer` déclenche une unit `.service` à heure fixe. `Persistent=true` rattrape un passage manqué. `OnFailure=` lance une autre unit en cas d'échec (ici, l'alerte ntfy).
+
+### Oversubscription (CPU)
+
+Technique consistant à attribuer plus de cœurs virtuels que le nombre de cœurs physiques disponibles, en s'appuyant sur le fait que tous les services n'utilisent pas le processeur en permanence.
+
+### Swap
+
+Espace disque utilisé lorsque la mémoire RAM vient à manquer. Il ne remplace pas la RAM mais sert de mémoire d'urgence.
+
+### Thrashing
+
+Situation où le système passe son temps à déplacer des données entre la RAM et le swap au lieu d'exécuter les applications. Le serveur reste fonctionnel mais devient extrêmement lent.
+
+### OOM Killer (Out Of Memory Killer)
+
+Mécanisme du noyau Linux qui termine automatiquement un ou plusieurs processus lorsqu'il n'y a plus suffisamment de mémoire disponible.
+
+---
+
+## Sécurité et accès
+
+### Cloudflare Tunnel
+
+Connexion sortante permanente du serveur vers Cloudflare. Permet d'exposer un service sans ouvrir de port sur le routeur.
+
+Détail : [cloudflare.md](../exploitation/cloudflare.md).
+
+### Cloudflare Access
+
+Contrôle d'accès devant l'application : l'utilisateur s'authentifie chez Cloudflare avant que la requête n'atteigne le homelab.
+
+### Principle of Least Privilege (Principe du moindre privilège)
+
+Un service ne doit disposer que des droits strictement nécessaires à son fonctionnement.
+
+### Separation of Concerns (Séparation des responsabilités)
+
+Principe consistant à attribuer une seule responsabilité à chaque composant afin de simplifier la maintenance et d'améliorer la sécurité.
+
+### Defense in Depth (Défense en profondeur)
+
+Plusieurs couches de sécurité indépendantes. La défaillance d'une couche ne suffit pas à compromettre l'ensemble.
+
+### Default Deny (Refus par défaut)
+
+Tout accès est refusé tant qu'une règle ne l'autorise pas explicitement.
+
+---
+
+## Sauvegardes
+
+### RTO (Recovery Time Objective)
+
+Durée maximale acceptable pour remettre le service en état. Objectif actuel du homelab : 1 journée.
+
+### RPO (Recovery Point Objective)
+
+Quantité maximale de données que l'on accepte de perdre. Objectif actuel : 24 heures.
+
+### RAID / Miroir
+
+Protège contre la panne d'un disque. Ne protège pas contre une suppression, un ransomware ou une erreur humaine. Ce n'est pas une sauvegarde.
+
+### Restic
+
+Logiciel de sauvegarde par snapshots, chiffrée et dédupliquée. Il sauvegarde `/tank/backups` et les dossiers personnels sur le disque USB ([sauvegardes.md](../exploitation/sauvegardes.md)).
+
+### Rétention
+
+Règle qui décide combien de copies garder. Exemples : 24 snapshots horaires et 7 quotidiens pour le zvol de Vaultwarden, 14 jours pour Restic.
+
+### Crash-consistent
+
+Se dit d'une copie prise sans arrêter l'application : elle ressemble à l'état d'un disque après une coupure de courant. Les snapshots du zvol de Vaultwarden le sont ; l'archive de 03:00, prise service arrêté, est cohérente.
+
+---
+
+## Méthode
+
+### ADR (Architecture Decision Record)
+
+Document court qui consigne une décision d'architecture : contexte, décision, raisons, alternatives écartées, conséquences. Quand la réalité change, on ajoute une révision au lieu de réécrire. Voir [les décisions](../decisions/).
+
+### As-built
+
+État réellement installé, par opposition à la cible prévue. La cible est dans la [feuille de route](../FeuilleDeRoute.md), l'as-built dans [architecture.md](../vue-ensemble/architecture.md).
+
+### Infrastructure as Code (IaC)
+
+Décrire l'infrastructure dans des fichiers versionnés plutôt que de la construire à la main. Ici : Ansible pour les LXC, les manifestes Kubernetes pour le cluster.
