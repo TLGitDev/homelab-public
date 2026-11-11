@@ -15,7 +15,7 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 
 | Phase | Sujet | État |
 | --- | --- | --- |
-| 0 | Fiabiliser l'existant | ✅ Jouée. Deux reprises sur la production restent à jouer, reprises en phase 12 |
+| 0 | Fiabiliser l'existant | ✅ Jouée. Deux reprises sur la production restent à jouer, reprises en phase 11 |
 | 1 | Organiser les données personnelles | ✅ Jouée (24 oct.) |
 | 2 | Sauvegarde Android | ✅ Close (25 oct.) |
 | 3 | Forge Git et CI/CD | ✅ Jouée (4 nov.) |
@@ -25,38 +25,42 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 | 7 | Un LXC se reconstruit | ✅ Jouée (7 nov.) |
 | 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
 | 9 | Accès distant | 🟡 En cours |
-| 10 | Dépôt public allégé | ⬜ À faire, **à commencer tôt** |
-| 11 | Site CV public | ⬜ À faire |
-| 12 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
-| 13 | Une copie hors du domicile | ⬜ À faire |
-| 14 | Exploitation courante et sécurité | ⬜ À faire |
-| 15 | Observabilité | ⬜ À faire |
-| 16 | La production sort du code | ⬜ À faire |
-| 17 | Une application maison, livrée de bout en bout | ⬜ À faire |
+| 10 | Dépôt public allégé | ⬜ À faire, **à commencer tout de suite**, puis mis à jour à chaque phase |
+| 11 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
+| 12 | Une copie hors du domicile | ⬜ À faire |
+| 13 | Exploitation courante et sécurité | ⬜ À faire |
+| 14 | Observabilité | ⬜ À faire |
+| 15 | La production sort du code | ⬜ À faire |
+| 16 | Une application maison, livrée de bout en bout | ⬜ À faire |
+| 17 | Site CV public | ⬜ À faire |
 
 ```mermaid
 flowchart LR
     P0["0–8<br/>Fondations<br/>jouées"] --> P9["9<br/>Accès distant"]
     P0 --> P10["10<br/>Dépôt public"]
-    P0 --> P12["12<br/>Reprise jouée"]
-    P12 --> P13["13<br/>Hors domicile"]
-    P9 --> P14["14<br/>Exploitation<br/>et sécurité"]
-    P14 --> P15["15<br/>Observabilité"]
-    P0 --> P16["16<br/>Production<br/>depuis le code"]
-    P14 --> P17["17<br/>Application<br/>maison"]
-    P15 --> P17
-    P10 --> P11["11<br/>Site CV"]
-    P17 -.->|"première application candidate"| P11
+    P9 --> P11["11<br/>Reprise jouée"]
+    P11 --> P12["12<br/>Hors domicile"]
+    P12 --> P13["13<br/>Exploitation<br/>et sécurité"]
+    P13 --> P14["14<br/>Observabilité"]
+    P14 --> P15["15<br/>Production<br/>depuis le code"]
+    P15 --> P16["16<br/>Application<br/>maison"]
+    P16 --> P17["17<br/>Site CV"]
+    P10 -.->|"contenu"| P17
 ```
 
-### Ordre conseillé
+### La logique de l'ordre
 
-Les phases 0 à 8 ont posé les fondations. La suite vise deux choses : rendre le homelab **défendable** en entretien, et le **montrer**.
+Les phases 0 à 8 ont posé les fondations. Les phases restantes suivent une progression simple : **protéger, puis exploiter, puis industrialiser, puis livrer et montrer.**
 
-1. **Phase 10 tout de suite, en parallèle du reste.** Le dépôt public est ce qu'un recruteur verra en premier. Il vaut mieux une première version publiée maintenant, puis mise à jour, qu'une version parfaite dans trois mois.
-2. **Phases 9, 12 et 13.** Finir l'accès distant, jouer les reprises qui ne sont qu'écrites, et sortir une copie du domicile. Ce sont les questions qu'on pose à quelqu'un qui dit avoir « des sauvegardes ».
-3. **Phases 14 et 15.** Mises à jour, durcissement, supervision : le quotidien d'un administrateur.
-4. **Phases 16 et 17.** Faire converger la production vers le code, puis livrer une vraie application par un pipeline complet. Le site CV (phase 11) est le candidat naturel pour cette première application.
+| Étape | Phases | Pourquoi à ce moment-là |
+| --- | --- | --- |
+| Finir l'existant | 9 | Clore la phase en cours avant d'en ouvrir d'autres |
+| Montrer tôt | 10 | Le dépôt public est ce qu'un recruteur verra en premier. Une première version maintenant, mise à jour à chaque phase, vaut mieux qu'une version parfaite dans trois mois. Elle avance **en parallèle** de tout le reste |
+| Protéger | 11, 12 | Avant d'ajouter quoi que ce soit, prouver qu'on sait tout récupérer (11), y compris après un sinistre au domicile (12). La reprise jouée dit aussi quoi copier hors du domicile |
+| Exploiter | 13, 14 | Une fois les données à l'abri : mises à jour, redémarrages, durcissement (13), puis la supervision (14), qui surveille un système déjà stabilisé et durci |
+| Industrialiser | 15 | La production sort du code. Elle s'appuie sur la reprise (11) pour revenir en arrière, et sur la supervision (14) pour voir qu'une bascule s'est bien passée |
+| Livrer | 16 | Une application exposée sur Internet arrive en dernier, sur une base protégée, durcie, supervisée et reproductible |
+| Montrer | 17 | Le site CV est la première application livrée par le pipeline de la phase 16, et il raconte le homelab à partir du dépôt public de la phase 10 |
 
 ---
 
@@ -78,16 +82,16 @@ Un snapshot ZFS **n'est pas** une sauvegarde : il faut une copie distincte, idé
 
 ### Jalons
 
-La phase a été jugée assez solide pour démarrer la phase 1. Le rollback par snapshot et la reprise sur le zvol de production sont écrits, mais volontairement **pas joués** : ils passent en phase 12.
+La phase a été jugée assez solide pour démarrer la phase 1. Le rollback par snapshot et la reprise sur le zvol de production sont écrits, mais volontairement **pas joués** : ils passent en phase 11.
 
 - ✅ Snapshots horaires du zvol Vaultwarden : script et timers, rétention de 24. Premiers passages automatiques à 12:00 et 13:00 le 21 oct.
 - ✅ Snapshots quotidiens, rétention de 7. Le 6 nov. à 04:00, `@auto-daily-2026-11-06` a été créé, `@auto-daily-2026-10-26` détruit, 7 conservés. Le passage du 22 oct. n'a pas été relu, et il est déjà sorti de la fenêtre. Celui du 21 oct. était manuel.
 - ✅ Rétention horaire de 24 vérifiée le 6 nov. à 15:00 : 24 snapshots `auto-hourly`, du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h. À 13:00, 14:00 et 15:00, le journal détruit l'heure en trop et affiche `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
-- ⬜ Restauration par rollback d'un snapshot, sur la production. **Reprise en phase 12.**
+- ⬜ Restauration par rollback d'un snapshot, sur la production. **Reprise en phase 11.**
 - ✅ Sauvegarde USB avec Restic : `backup-usb` (20 oct.), restauration d'une archive testée.
 - ✅ Rétention des snapshots Restic : 14 jours, appliquée le 5 nov. (passage `<snapshot>`).
 - ✅ Restauration isolée de Vaultwarden : technique le 20 oct., connexion le 21 oct. Voir [vaultwarden.md](exploitation/vaultwarden.md).
-- ⬜ Reprise réelle sur le zvol de production : [écrite](exploitation/restauration.md), jamais exécutée. **Reprise en phase 12.**
+- ⬜ Reprise réelle sur le zvol de production : [écrite](exploitation/restauration.md), jamais exécutée. **Reprise en phase 11.**
 - ✅ Clé Sealed Secrets copiée sous `/tank/backups`, donc dans le périmètre USB.
 - ✅ État du stockage documenté : voir [stockage-zfs.md](exploitation/stockage-zfs.md).
 - ✅ Opérations déjà faites documentées : sauvegarde, restauration isolée, USB.
@@ -308,7 +312,7 @@ Tous joués le 8 nov., du plus simple au plus risqué. Chaque conteneur d'essai 
 - ✅ qBittorrent : CT 113 `qbittorrent-essai`, sortie du compte coupée (`000`), sans la clé Proton.
 - ✅ Cloudflare : CT 114 `cloudflare-essai`, `cloudflared` 2026.10.7 arrêté, sans le jeton. Le 100 en service a encore 2026.10.4.
 
-> **Limite** : les conteneurs **en service** restent ceux créés à la main. Les playbooks sont prouvés, mais la production n'en sort pas encore, et des écarts existent déjà (versions de `jellyfin-ffmpeg` et de `cloudflared`). C'est l'objet de la phase 16.
+> **Limite** : les conteneurs **en service** restent ceux créés à la main. Les playbooks sont prouvés, mais la production n'en sort pas encore, et des écarts existent déjà (versions de `jellyfin-ffmpeg` et de `cloudflared`). C'est l'objet de la phase 15.
 
 ---
 
@@ -365,38 +369,11 @@ La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime 
 
 ---
 
-## Phase 11 — Site CV public
-
-**Objectif** : un site qui présente le profil, les projets et le homelab. Le homelab y est raconté à partir du dépôt public, jamais à partir du labo.
-
-**Dépendances** : phase 10 pour le contenu. Phase 17 pour le pipeline, si le site est la première application maison, ce qui est recommandé.
-
-- Dépôt versionné, contenus publics seulement.
-- Génération et validation automatiques, puis déploiement. Exposition minimale, HTTPS.
-- Trois récits, chacun avec sa limite :
-  1. **Une donnée survit à la machine.** Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe, et certaines reprises restent écrites, pas jouées (voir la phase 12).
-  2. **Un changement a un chemin et un retour arrière.** Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : seuls les manifestes se reconstruisent par GitOps ; les LXC suivent leur playbook, mais la production n'en sort pas encore (voir la phase 16).
-  3. **L'accès distant est refusé par défaut.** Pas de redirection de port, tunnel sortant, WireGuard pour l'administration. Limite : le coffre s'authentifie dans l'application.
-- Une correspondance homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
-- Un lien vers le dépôt public. Aucun lien vers une interface d'administration, ni vers le dépôt privé.
-
-**Critère** : le site raconte le homelab, un commit le redéploie, et aucune donnée du labo privé n'y figure.
-
-### Jalons
-
-- ⬜ Les trois récits, leurs limites et la correspondance cloud sont sur le site.
-- ⬜ Le site pointe vers le dépôt public de la phase 10, et seulement vers lui.
-- ⬜ Première version en ligne, en HTTPS.
-- ⬜ Un commit validé déclenche le déploiement.
-- ⬜ Relecture : rien n'a été copié à la main depuis le labo.
-
----
-
-## Phase 12 — La reprise se joue, pas seulement s'écrit
+## Phase 11 — La reprise se joue, pas seulement s'écrit
 
 **Objectif** : chaque scénario de [restauration.md](exploitation/restauration.md) est **joué** au moins une fois, ou explicitement accepté comme non joué, avec la raison. Le temps de reprise est mesuré.
 
-**Dépendances** : phases 0 et 6. À jouer avant d'ajouter de nouvelles données importantes.
+**Dépendances** : phases 0 et 6, phase 9 jouée. À jouer avant d'ajouter de nouvelles données importantes.
 
 Aujourd'hui, le tableau de restauration compte plusieurs « jamais joué » : la restauration du coffre sur la production, la reconstruction de `k3s-01`, la perte de `tank`, le remplacement d'un disque, et la perte du NVMe, qui n'est même pas écrite en détail. En entretien, c'est la première question qui suit « j'ai des sauvegardes ».
 
@@ -417,11 +394,11 @@ Règle de prudence : on joue d'abord **à côté** de la production (clone d'un 
 
 ---
 
-## Phase 13 — Une copie hors du domicile
+## Phase 12 — Une copie hors du domicile
 
 **Objectif** : la règle **3-2-1** est respectée pour les données irremplaçables : trois copies, sur deux supports, dont une hors du domicile. Un incendie, un vol ou un dégât des eaux ne fait perdre ni le coffre, ni les documents, ni les photos.
 
-**Dépendance** : phase 12 commencée, pour savoir ce qu'on protège et en combien de temps on le récupère.
+**Dépendance** : phase 11 commencée, pour savoir ce qu'on protège et en combien de temps on le récupère.
 
 Aujourd'hui, toutes les copies sont dans la même pièce : `tank`, ses snapshots et le disque USB. Le tableau de [sauvegardes.md](exploitation/sauvegardes.md) marque la « copie chiffrée hors site » comme **prévue**.
 
@@ -446,11 +423,11 @@ Deux familles de solutions, à trancher dans un ADR :
 
 ---
 
-## Phase 14 — Exploitation courante et sécurité
+## Phase 13 — Exploitation courante et sécurité
 
 **Objectif** : le homelab se met à jour, redémarre et se défend sans improvisation. Les routines sont écrites et ont été jouées.
 
-**Dépendance** : phase 9 jouée.
+**Dépendances** : phase 9 jouée, phases 11 et 12 jouées (les données sont à l'abri avant de toucher aux mises à jour).
 
 **Critère** : chaque composant a une politique de mise à jour écrite et appliquée ; un redémarrage complet de `pve` ne demande aucune intervention ; un audit des accès a été fait et ses écarts corrigés.
 
@@ -480,11 +457,11 @@ Deux familles de solutions, à trancher dans un ADR :
 
 ---
 
-## Phase 15 — Observabilité
+## Phase 14 — Observabilité
 
 **Objectif** : voir l'état du homelab d'un coup d'œil, et être prévenu quand un **service** tombe, pas seulement une sauvegarde.
 
-**Dépendance** : phase 14 commencée. ntfy reste le canal d'alerte.
+**Dépendance** : phase 13 commencée. ntfy reste le canal d'alerte.
 
 Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne prévient si Jellyfin, Gitea ou le tunnel ne répondent plus, et aucune métrique n'est conservée.
 
@@ -504,11 +481,11 @@ Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne
 
 ---
 
-## Phase 16 — La production sort du code
+## Phase 15 — La production sort du code
 
 **Objectif** : chaque conteneur **en service** a été recréé par son playbook. Ce qui tourne est ce qui est décrit dans Git, et un écart se détecte.
 
-**Dépendances** : phase 8 jouée, phase 12 commencée (savoir revenir en arrière).
+**Dépendances** : phase 8 jouée, phase 11 jouée (savoir revenir en arrière), phase 14 en place (voir qu'une bascule s'est bien passée).
 
 Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai. Mais les conteneurs en service ont été créés à la main, et ils dérivent déjà : `jellyfin-ffmpeg7` sur le 103 au lieu de 8, `cloudflared` 2026.10.4 sur le 100 au lieu de 2026.10.7. De même, les scripts de `pve` sont dans Git, mais leur installation reste manuelle. Tant que la production n'est pas sortie du code, « l'infrastructure est en code » n'est vrai qu'à moitié.
 
@@ -519,21 +496,21 @@ Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai. Mais les
 - ⬜ Chaque playbook peut viser le conteneur en service, en mode vérification, sans rien modifier. Les écarts sont relevés.
 - ⬜ Bascule de chaque conteneur en service vers sa version créée par le playbook, un à la fois, du moins risqué au plus risqué (même ordre qu'en phase 8, runner en premier). Pour chacun : sauvegarde de la configuration, bascule, vérification, retour arrière prêt.
 - ⬜ Les scripts et timers de `pve` installés par un playbook, au lieu de copies à la main. Révision de l'ADR-010 sur ce point.
-- ⬜ La VM `k3s-01` décrite en code : création (cloud-init ou playbook) et installation de K3s. Ce jalon rend aussi le scénario 3.2 de la phase 12 plus rapide.
+- ⬜ La VM `k3s-01` décrite en code : création (cloud-init ou playbook) et installation de K3s. Ce jalon rend aussi le scénario 3.2 de la phase 11 plus rapide.
 - ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, en plus de `kubeconform`.
 - ⬜ Un passage de vérification planifié (par exemple chaque semaine), qui signale un écart par ntfy.
 
 ---
 
-## Phase 17 — Une application maison, livrée de bout en bout
+## Phase 16 — Une application maison, livrée de bout en bout
 
 **Objectif** : une application développée ici passe d'un commit à la production par un pipeline complet (tests, image, analyse, déploiement GitOps, retour arrière) et elle est exposée sur Internet **sans** mettre en danger le reste du homelab.
 
-**Dépendances** : phases 14 et 15. L'**ADR-013** est écrit et appliqué **avant** toute exposition.
+**Dépendances** : phases 13, 14 et 15. L'**ADR-013** est écrit et appliqué **avant** toute exposition.
 
 Un conteneur seul n'isole pas assez une application publique : une faille dans l'application, ou dans le noyau partagé, peut donner accès au nœud, donc à Vaultwarden et à Gitea. L'ADR-013 doit trancher les protections. Voir l'[ADR-012](decisions/ADR-012-LXC-ou-K3s.md).
 
-Le site CV (phase 11) est le candidat recommandé pour cette première application : peu de données, peu de risque, et il montre le pipeline à ceux qui le lisent.
+Le site CV (phase 17) est le candidat recommandé pour cette première application : peu de données, peu de risque, et il montre le pipeline à ceux qui le lisent.
 
 **Critère** : un commit sur l'application arrive en production sans geste manuel autre que la validation de la demande de fusion ; l'image déployée a été analysée ; un retour arrière se fait en une opération ; l'application ne peut joindre ni Vaultwarden, ni Gitea, ni l'API Kubernetes.
 
@@ -545,7 +522,34 @@ Le site CV (phase 11) est le candidat recommandé pour cette première applicati
 - ⬜ Déploiement GitOps : le pipeline propose la nouvelle version de l'image dans les manifestes, Argo CD la déploie après fusion.
 - ⬜ Retour arrière joué : revenir à la version précédente, mesurer le temps.
 - ⬜ Exposition par le tunnel Cloudflare, avec limitation de débit et règles de pare-feu applicatif.
-- ⬜ Supervision de l'application (phase 15) et sauvegarde de ses données, si elle en a.
+- ⬜ Supervision de l'application (phase 14) et sauvegarde de ses données, si elle en a.
+
+---
+
+## Phase 17 — Site CV public
+
+**Objectif** : un site qui présente le profil, les projets et le homelab. Le homelab y est raconté à partir du dépôt public, jamais à partir du labo.
+
+**Dépendances** : phase 10 pour le contenu. Phase 16 pour le pipeline, si le site est la première application maison, ce qui est recommandé.
+
+- Dépôt versionné, contenus publics seulement.
+- Génération et validation automatiques, puis déploiement. Exposition minimale, HTTPS.
+- Trois récits, chacun avec sa limite :
+  1. **Une donnée survit à la machine.** Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe, et certaines reprises restent écrites, pas jouées (voir la phase 11).
+  2. **Un changement a un chemin et un retour arrière.** Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : seuls les manifestes se reconstruisent par GitOps ; les LXC suivent leur playbook, mais la production n'en sort pas encore (voir la phase 15).
+  3. **L'accès distant est refusé par défaut.** Pas de redirection de port, tunnel sortant, WireGuard pour l'administration. Limite : le coffre s'authentifie dans l'application.
+- Une correspondance homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
+- Un lien vers le dépôt public. Aucun lien vers une interface d'administration, ni vers le dépôt privé.
+
+**Critère** : le site raconte le homelab, un commit le redéploie, et aucune donnée du labo privé n'y figure.
+
+### Jalons
+
+- ⬜ Les trois récits, leurs limites et la correspondance cloud sont sur le site.
+- ⬜ Le site pointe vers le dépôt public de la phase 10, et seulement vers lui.
+- ⬜ Première version en ligne, en HTTPS.
+- ⬜ Un commit validé déclenche le déploiement.
+- ⬜ Relecture : rien n'a été copié à la main depuis le labo.
 
 ---
 
@@ -555,11 +559,11 @@ Le site CV (phase 11) est le candidat recommandé pour cette première applicati
 | --- | --- | --- |
 | Adresse de référence de Gitea | `ROOT_URL` pointe vers une route coupée. Adresse LAN, ou nom interne en HTTPS | Phase 9 |
 | Noms et certificats internes | DNS interne et certificats DNS-01 : outil et emplacement à choisir | Phase 9 |
-| Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 13, dans un ADR |
-| Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 15, dans un ADR |
-| Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 16 |
-| Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 17 |
-| Hébergement du site CV | Dans le homelab (phase 17), ou chez un hébergeur de sites statiques | Phase 11 |
+| Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 12, dans un ADR |
+| Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 14, dans un ADR |
+| Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 15 |
+| Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 16 |
+| Hébergement du site CV | Dans le homelab (phase 16), ou chez un hébergeur de sites statiques | Phase 17 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
 
@@ -589,7 +593,7 @@ Idées **gardées**, mais pas planifiées :
 - Un second NVMe en miroir pour `rpool`, pour que la perte d'un disque système ne coupe plus tout. C'est la principale limite matérielle du homelab.
 - **Page agent** sur le téléphone, une fois la forge prête (idée du 3 nov.). Un pod sur `k3s-01` avec le programme `agent`, et une page maison : la conversation, et des diffs plus lisibles qu'en terminal. Le téléphone ouvre cette page. Le pod ne voit que son volume : ni le disque de la machine, ni le cluster. La clé du compte Cursor reste dans le pod, et le modèle tourne chez Cursor. Le nom n'est pas choisi. Comme toute application exposée, elle attendrait l'ADR-013. Absente du récit d'entretien tant que le pod n'existe pas.
 
-L'onduleur n'est plus un chantier matériel : il est en place et protège le serveur (voir [materiel.md](vue-ensemble/materiel.md)). Son intégration logicielle est un jalon de la phase 14.
+L'onduleur n'est plus un chantier matériel : il est en place et protège le serveur (voir [materiel.md](vue-ensemble/materiel.md)). Son intégration logicielle est un jalon de la phase 13.
 
 ---
 
