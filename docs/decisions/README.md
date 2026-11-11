@@ -15,14 +15,9 @@ Chaque ADR (*Architecture Decision Record*) consigne une décision : son context
 | [ADR-009](ADR-009-Alerte-ntfy.md) | Alerte : ntfy | Appliqué le 5 nov. 2026, validé en conditions réelles |
 | [ADR-010](ADR-010-Ansible-LXC.md) | LXC d'infrastructure : Ansible | Appliqué les 7, 8 et 9 nov. 2026 |
 | [ADR-011](ADR-011-Gitea.md) | Forge Git : Gitea | Appliqué le 3 nov. 2026 |
+| [ADR-012](ADR-012-LXC-ou-K3s.md) | Où héberger un service : LXC ou K3s | Accepté le 11 nov. 2026, formalise les choix du 28 oct. au 4 nov. |
+| ADR-013 *(à écrire)* | Isolement des applications maison exposées sur Internet | À rédiger avant la première application publique |
 
-## Décisions prises sans ADR
+## Le critère d'hébergement
 
-Certaines décisions d'hébergement ont été tranchées service par service, sans ADR, parce que le critère général (VM, LXC ou K3s selon le service) reste ouvert. Elles sont justifiées dans la doc de chaque service :
-
-- Jellyfin en LXC ([jellyfin.md](../exploitation/mediatheques/jellyfin.md)) ;
-- qBittorrent derrière un VPN, en LXC ([qbittorrent-vpn.md](../exploitation/mediatheques/qbittorrent-vpn.md)) ;
-- les outils *arr dans un LXC commun ([servarr.md](../exploitation/mediatheques/servarr.md)) ;
-- Navidrome en LXC, et préféré à Jellyfin pour la musique ([navidrome.md](../exploitation/mediatheques/navidrome.md)).
-
-Formaliser ce critère général dans un ADR serait une suite logique.
+Jusqu'au 11 nov. 2026, les choix d'hébergement de Jellyfin, qBittorrent, des *arr et de Navidrome étaient faits service par service, chacun justifié dans sa propre doc, avec la mention « critère général encore ouvert ». L'[ADR-012](ADR-012-LXC-ou-K3s.md) formalise ce critère : **un service qui doit lire ou écrire un dataset de fichiers sur `tank` va en LXC ; un service dont les données tiennent dans un volume dédié va dans K3s.**
