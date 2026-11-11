@@ -1,16 +1,10 @@
 # Compétences
 
-> Ce document recense les compétences acquises au cours du projet Homelab.
->
-> Une compétence est considérée comme acquise lorsque je suis capable :
->
-> - d'expliquer le concept ;
-> - de le mettre en œuvre ;
-> - de diagnostiquer un problème courant.
+Ce document mesure ce que le projet m'a appris, domaine par domaine. Il sert à suivre la progression, et à préparer les entretiens : chaque ligne doit pouvoir être expliquée et démontrée.
 
-> Une compétence n'est pas validée parce qu'une manipulation a été réalisée une fois. Elle est validée lorsque je suis capable de reproduire la démarche, d'expliquer le fonctionnement et de diagnostiquer un problème courant sans suivre un tutoriel.
+**Une compétence est acquise** quand je sais l'expliquer, la mettre en œuvre et diagnostiquer un problème courant, sans tutoriel. L'avoir faite une fois ne suffit pas.
 
-Relevé au **5 nov. 2026**, après les phases 0 à 5. Les niveaux du tableau n'ont pas été revus pour l'alerte : elle est en place, pas encore notée comme compétence acquise. Le détail des jalons est dans [FeuilleDeRoute.md](FeuilleDeRoute.md). L'état installé est dans [Architecture.md](Architecture.md).
+Relevé au **5 nov. 2026**, après les phases 0 à 5. Les niveaux n'ont pas été revus depuis : voir la section « Points à réévaluer » en fin de document. Les jalons sont dans la [feuille de route](../FeuilleDeRoute.md), l'état installé dans [architecture.md](../vue-ensemble/architecture.md).
 
 ---
 
@@ -129,7 +123,7 @@ Relevé au **5 nov. 2026**, après les phases 0 à 5. Les niveaux du tableau n'o
 | Droits de fichiers (groupe, mode) | 🟢 |
 | Vérification d'une copie (SHA-256) | 🟢 |
 
-Phase 2 (téléphone) close le 25 oct. [Android.md](Android.md).
+Phase 2 (téléphone) close le 25 oct. (document privé).
 
 | Compétence | Niveau |
 |------------|--------|
@@ -155,7 +149,7 @@ Les applications du cluster consomment des images. Le moteur Docker n'est pas le
 
 # Kubernetes
 
-Cours : [Kubernetes.md](Kubernetes.md). En service : K3s, Traefik, Argo CD, Vaultwarden, Gitea.
+Cours : [kubernetes.md](../concepts/kubernetes.md). En service : K3s, Traefik, Argo CD, Vaultwarden, Gitea.
 
 | Compétence | Niveau |
 |------------|--------|
@@ -193,7 +187,7 @@ Cours : [Kubernetes.md](Kubernetes.md). En service : K3s, Traefik, Argo CD, Vaul
 
 # Git et forge
 
-Décision et as-built : [Forge.md](Forge.md). Argo CD lit GitHub. `homelab` n'a pas de copie de travail sur Gitea.
+Décision et as-built : [forge-gitea.md](../exploitation/forge-gitea.md). Argo CD lit GitHub. `homelab` n'a pas de copie de travail sur Gitea.
 
 | Compétence | Niveau |
 |------------|--------|
@@ -211,7 +205,7 @@ Décision et as-built : [Forge.md](Forge.md). Argo CD lit GitHub. `homelab` n'a 
 
 # Médiathèques
 
-As-built : [Mediatheques.md](Mediatheques.md). Jellyfin, qBittorrent, la pile *arr et Navidrome sont en service.
+As-built : [médiathèques](../exploitation/mediatheques/README.md). Jellyfin, qBittorrent, la pile *arr et Navidrome sont en service.
 
 | Compétence | Niveau |
 |------------|--------|
@@ -308,26 +302,53 @@ Hors phases. Pas commencé.
 
 # Objectif du projet
 
-À la fin du projet, l'objectif est d'être capable de :
+À la fin du projet, je veux être capable de :
 
-- Concevoir une infrastructure complète.
-- Installer et administrer Proxmox.
-- Comprendre le stockage ZFS.
-- Déployer et maintenir plusieurs services.
-- Sécuriser l'accès distant.
-- Diagnostiquer les incidents courants.
-- Documenter l'ensemble de l'infrastructure.
-- Expliquer chaque décision technique prise.
+- concevoir une infrastructure complète ;
+- installer et administrer Proxmox ;
+- comprendre le stockage ZFS ;
+- déployer et maintenir plusieurs services ;
+- sécuriser l'accès distant ;
+- diagnostiquer les incidents courants ;
+- documenter l'ensemble de l'infrastructure ;
+- expliquer chaque décision technique prise.
 
-Déjà en place : Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, téléphone, médiathèques, forge d'essai, forge tenable (phase 6, 6 nov.), alerte de sauvegarde (phase 5, 5 nov.), runner reconstruit par Ansible (phase 7, 7 nov.), Navidrome d'essai (phase 8, 8 nov., récit sur le 106), Jellyfin d'essai (phase 8, 8 nov., récit sur le 103), Samba d'essai (phase 8, 8 nov., récit sur le 102), servarr d'essai (phase 8, 8 nov., récit sur le 105), qBittorrent d'essai (phase 8, 8 nov., récit sur le 104), Cloudflare d'essai (phase 8, 8 nov., récit sur le 100). Passerelle WireGuard en service (phase 9, 9 nov., CT 115, téléphone seul, Proxmox hors Wi-Fi). Encore ouverts : le reste de l'exploitation (phase 9), dépôt public (phase 10), site (phase 11), remplacement de disque, rollback snapshot sur la prod, reprise réelle du coffre sur son zvol.
+## Ce qui est en place
 
-Les définitions (hyperviseur, LXC, ZFS, CIDR, etc.) sont dans [Glossaire.md](Glossaire.md).
+| Phase | Réalisation | Date |
+| --- | --- | --- |
+| 0 à 2 | Proxmox, ZFS, K3s, Argo CD, coffre, données personnelles, sauvegarde du téléphone | Jusqu'au 25 oct. 2026 |
+| 3 | Forge Gitea, runner isolé, miroir GitHub | 3 et 4 nov. 2026 |
+| 4 | Médiathèques : Jellyfin, qBittorrent, *arr, Navidrome | 28 oct. au 2 nov. 2026 |
+| 5 | Alerte de sauvegarde (ntfy) | 5 nov. 2026 |
+| 6 | Forge tenable (sauvegarde, CI des manifestes) | 6 nov. 2026 |
+| 7 | Runner reconstruit par Ansible (essai sur le CT 108) | 7 nov. 2026 |
+| 8 | Navidrome, Jellyfin, Samba, servarr, qBittorrent et Cloudflare recréés par Ansible sur des conteneurs d'essai (CT 109 à 114) ; les conteneurs en service (100 à 106) restent ceux créés à la main | 8 nov. 2026 |
+| 9 (en partie) | Passerelle WireGuard (CT 115) : le téléphone ouvre les services hors Wi-Fi. Routes Cloudflare réduites à Vaultwarden | 9 et 10 nov. 2026 |
+
+## Ce qui reste ouvert
+
+- Le reste de l'exploitation (phase 9) : mises à jour, fenêtres de redémarrage, routines écrites.
+- Le dépôt public allégé (phase 10) et le site CV (phase 11).
+- Le remplacement d'un disque, le retour arrière d'un snapshot sur la production, et la reprise réelle du coffre sur son zvol (voir [restauration.md](../exploitation/restauration.md)).
+
+## Points à réévaluer
+
+Ces lignes semblent en retard sur ce qui a été fait depuis le 5 nov. Le niveau reste à fixer par moi :
+
+| Compétence | Niveau noté | Ce qui a changé |
+| --- | --- | --- |
+| Alertes (Administration) | 🔲 | ntfy en place le 5 nov., et validé par une vraie alerte |
+| VPN de sortie (WireGuard), WireGuard pour l'accès privé distant | 🟡 | Passerelle du téléphone en service le 9 nov. ; passage de Mullvad à Proton, avec port NAT-PMP, le 29 oct. |
+| Workflow Actions (Git et forge) | 🟡 | CI des manifestes (kubeconform) en place et testée en échec volontaire le 6 nov. |
+| *(absente)* Ansible, infrastructure as code | — | Huit playbooks validés sur des conteneurs d'essai, deuxième passe sans changement (ADR-010). Une ligne mérite d'être ajoutée |
+| *(absente)* Kill switch par compte (nftables) | — | Validé sur le CT 104, et revérifié le 11 nov. |
+
+Les définitions (hyperviseur, LXC, ZFS, CIDR…) sont dans le [glossaire](../concepts/glossaire.md).
 
 # Évolution
 
-Ce document est mis à jour à la fin de chaque grande étape du projet.
-
-Le niveau d'une compétence peut évoluer :
+Ce document est mis à jour à la fin de chaque grande étape du projet. Le niveau d'une compétence peut évoluer ainsi :
 
 🔲 → 🟡 → 🟢 → 🔵
 
