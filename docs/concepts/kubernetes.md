@@ -805,7 +805,7 @@ Le Deployment ne contient idéalement aucune donnée métier.
 
 ## Exemple : Vaultwarden
 
-Les exemples de cette section (`DATABASE_HOST: postgres`, `JWT_SECRET`…) sont **pédagogiques**. La configuration réelle de Vaultwarden est plus simple : une base SQLite, trois clés dans le ConfigMap (`DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`) et une seule clé secrète, `ADMIN_TOKEN`. Voir [vaultwarden.md](../exploitation/vaultwarden.md), section 3.
+Les exemples de cette section (`DATABASE_HOST: postgres`, `JWT_SECRET`…) sont **pédagogiques**. La configuration réelle de Vaultwarden est plus simple : une base SQLite, six clés dans le ConfigMap (`DOMAIN`, `DATABASE_URL`, et quatre réglages fermés : `SIGNUPS_ALLOWED`, `INVITATIONS_ALLOWED`, `PASSWORD_HINTS_ALLOWED`, `SHOW_PASSWORD_HINT`) et une seule clé secrète, `ADMIN_TOKEN`. Voir [vaultwarden.md](../exploitation/vaultwarden.md), section 3.
 
 | Ressource | Contenu |
 |-----------|---------|
