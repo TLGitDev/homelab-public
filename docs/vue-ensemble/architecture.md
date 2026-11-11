@@ -161,7 +161,7 @@ L'administration se fait depuis le LAN. Aucun port de Proxmox n'est exposé sur 
 | K3s (VM `k3s-01`) | Applications | Vaultwarden, Argo CD, Gitea |
 | VM | Quand un noyau dédié est nécessaire | `k3s-01` |
 
-Les LXC consomment peu de mémoire, démarrent vite et partagent le noyau de Proxmox tout en restant isolés. Ils suivent deux conventions : un service d'infrastructure par LXC, et un nom d'hôte égal au nom du service. Le choix entre K3s, LXC et VM se fait au cas par cas, selon le besoin.
+Les LXC consomment peu de mémoire, démarrent vite et partagent le noyau de Proxmox tout en restant isolés. Ils suivent deux conventions : un service d'infrastructure par LXC, et un nom d'hôte égal au nom du service. Le choix entre LXC et K3s suit une règle, posée dans l'[ADR-012](../decisions/ADR-012-LXC-ou-K3s.md) : un service qui lit ou écrit un dataset de fichiers sur `tank` va en LXC ; un service dont les données tiennent dans un volume dédié va dans K3s. Une VM n'est retenue que si un noyau dédié est nécessaire.
 
 Les disques **système** des LXC et des VM sont des volumes sous `rpool/data` (par exemple `vm-101-disk-1`, 64 Go, pour `k3s-01`). Les volumes de **données** sont sous `tank/vmdata`. Les ISO et les modèles sont dans `rpool/var-lib-vz`.
 
@@ -183,7 +183,7 @@ Internet → Cloudflare → tunnel → LXC cloudflare → Traefik (<ip-k3s-01>:8
 | qBittorrent | Non | `http://<ip-qbittorrent>:8080` |
 | Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | Non | `http://<ip-servarr>:<port>` (voir [adressage.md](adressage.md)) |
 | Navidrome | Non | `http://<ip-navidrome>:4533` |
-| Samba | Non | Partages SMB sur `<ip-samba>`, sans accès Internet |
+| Samba | Non | Partages SMB sur `<ip-samba>`, LAN seulement. Pas encore joignable par WireGuard (voir [samba.md](../exploitation/samba.md)) |
 
 Vaultwarden reste publié, sans Access, parce que l'application authentifie elle-même ses utilisateurs. Les autres routes Cloudflare ont été désactivées : voir [cloudflare.md](../exploitation/cloudflare.md) pour leur historique, et la politique Access qui s'appliquerait à toute nouvelle publication.
 
@@ -237,7 +237,7 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 | Bazarr | CT 105, `:6767` | v1.6.2 | Relié à Sonarr et Radarr, profil `français`, aucun fournisseur |
 | Recyclarr | CT 105 | v8.8.1 | Binaire sans interface. Profils MULTi.VO créés, non assignés |
 | Lidarr | CT 105, `:8686` | 3.1.6.5079 | Dossier `sons/` importé, aucune recherche |
-| Navidrome | CT 106, `<ip-navidrome>:4533` | 0.64.2 | Lecture seule. Public sans Access |
+| Navidrome | CT 106, `<ip-navidrome>:4533` | 0.64.2 | Lecture seule. Plus de route publique depuis le 10 nov. 2026 |
 | Runner Gitea | CT 107, `<ip-runner>` | v5.2.0 | Étiquette `host`. Hors de `k3s-01`, pour ne pas voir le coffre |
 
 ## 9. Jalons
