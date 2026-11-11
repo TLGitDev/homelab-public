@@ -39,7 +39,7 @@ Cette VM porte le cluster K3s. Traefik y reçoit le trafic HTTP sur le port 80. 
 
 ### `samba` — CT 102
 
-Ce conteneur publie les partages SMB du LAN. Il est en service dans cette configuration depuis le 24 oct. 2026. Voir (document privé).
+Ce conteneur publie les partages SMB du LAN. Il est en service dans cette configuration depuis le 24 oct. 2026. Voir [samba.md](../exploitation/samba.md).
 
 ### `jellyfin` — CT 103
 
