@@ -266,7 +266,7 @@ Décisions du 4 nov. : Argo CD continue de lire GitHub, et `homelab` n'a pas de 
 - ✅ Archive de référence recopiée sur `pve` (6 nov.) : `/tank/backups/k3s-01/gitea/gitea-2026-11-04_150155.tar`, empreinte identique, snapshot USB `<snapshot>`.
 - ✅ Contrôle GitHub des manifestes (6 nov.) : `kubeconform` v0.8.0, schéma Kubernetes 1.36.4, mode strict. Première exécution verte (`0a70da8`). Voir [argocd.md](concepts/argocd.md).
 - ✅ Un manifeste volontairement invalide rend le contrôle rouge (`66f4880`), puis il est retiré (`193e6cd`, vert).
-- ✅ `ROOT_URL` de Gitea passé à `https://gitea.labo.example/` (`e2a1837`). À revoir depuis que la route est coupée : voir la phase 9.
+- ✅ `ROOT_URL` de Gitea passé à `https://gitea.labo.example/` (`e2a1837`). Remplacé le 11 nov. par l'adresse LAN : voir la phase 9.
 - ✅ `essai-deploiement` retiré du cluster et du dépôt (`60a930e`). `root` est `Synced` et `Healthy`.
 
 ---
@@ -329,7 +329,8 @@ Tous joués le 8 nov., du plus simple au plus risqué. Chaque conteneur d'essai 
 - ✅ Passerelle WireGuard (9 nov.) : CT 115 `wireguard`, `<ip-wireguard>/24`, créé par `playbooks/wireguard.yml`. Réseau `<réseau-wg>`, seul le téléphone (`<ip-wg-téléphone>/32`) a une clé. UDP 51820 en IPv6, la box étant en CGNAT. Deuxième passe sans changement. Détail : [ansible.md](exploitation/ansible.md) et le [journal](projet/journal/2026-11.md).
 - ✅ Chaque service ouvert depuis le téléphone, Wi-Fi coupé (10 nov.) : Proxmox, Gitea, Jellyfin, Navidrome, qBittorrent, Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, Argo CD (`http://<ip-k3s-01>/`). Page d'accueil `https://<ip-wireguard>/` servie par le 115.
 - ✅ Services publics et interfaces d'administration séparés (10 nov.) : seul Vaultwarden reste publié sur Cloudflare. Voir [cloudflare.md](exploitation/cloudflare.md).
-- ⬜ Vérifier le `ROOT_URL` de Gitea. Il vaut `https://gitea.labo.example/` depuis le 6 nov., mais la route est coupée depuis le 10 nov. : les URL de clonage et les liens des courriels pointent peut-être vers une adresse injoignable. Choisir l'adresse LAN (`http://<ip-k3s-01>:3000/`), joignable aussi par WireGuard, puis vérifier un clone depuis le PC et depuis le téléphone.
+- ✅ `ROOT_URL` de Gitea sur l'adresse LAN (11 nov.) : `http://<ip-k3s-01>:3000/`, joignable aussi par WireGuard, commit `db425e1`. Vérifié : synchronisé dans Argo CD, clone réussi depuis le PC et depuis le téléphone en 4G (Termux). Voir [forge-gitea.md](exploitation/forge-gitea.md).
+- ✅ Transfert du 115 rendu durable (11 nov.) : `ip_forward` était retombé à `0` au redémarrage de `pve` du 10 nov., car Debian 13 ne lit plus `/etc/sysctl.conf`. Réglage écrit dans `/etc/sysctl.d/99-wireguard.conf`, commit `0a083e7`. Vérifié : après `pct reboot 115`, `ip_forward` vaut `1`, et le téléphone rejoint Proxmox et Gitea. Voir [ansible.md](exploitation/ansible.md).
 - ⬜ Ouvrir le partage SMB (`\\<ip-samba>`, CT 102) à travers WireGuard. Aujourd'hui, le téléphone n'y accède pas hors du Wi-Fi. Deux points : ajouter TCP 445 vers `<ip-samba>` aux services autorisés par le filtre du 115, et vérifier l'adresse source vue par Samba. `smb.conf` n'accepte que `<réseau-lan>` : si le 115 ne masque pas les clients derrière sa propre adresse, il faut aussi accepter `<réseau-wg>`. Vérifier ensuite depuis Material Files, Wi-Fi coupé. Voir [samba.md](exploitation/samba.md).
 - ✅ `/admin` de Vaultwarden fermé depuis Internet (11 nov.) : route Traefik `vaultwarden-admin-public` et middleware `refuser-tout`, commit `cfebb18`. Vérifié : sur le nom public, `/admin` et `/admin/` répondent `403`, `/` répond `200` ; sur le LAN, `https://<ip-k3s-01>/admin` répond `200`. En 4G, le téléphone affiche « Forbidden » sur `/admin` et le coffre s'ouvre. Voir [vaultwarden.md](exploitation/vaultwarden.md), section 3.
 - ✅ Configuration exposée de Vaultwarden relue (11 nov.) : pas de `/data/config.json`, donc le ConfigMap fait foi. Inscriptions déjà fermées. Invitations et indices de mot de passe fermés, commit `14e7ade` : `INVITATIONS_ALLOWED`, `PASSWORD_HINTS_ALLOWED` et `SHOW_PASSWORD_HINT` à `false`. Vérifié : les quatre variables valent `false` dans le Pod. Voir [vaultwarden.md](exploitation/vaultwarden.md), section 3.
@@ -558,7 +559,7 @@ Le site CV (phase 17) est le candidat recommandé pour cette première applicati
 
 | Sujet | Où en est la décision | Quand |
 | --- | --- | --- |
-| Adresse de référence de Gitea | `ROOT_URL` pointe vers une route coupée. Adresse LAN, ou nom interne en HTTPS | Phase 9 |
+| Adresse de référence de Gitea | Tranché le 11 nov. : adresse LAN. Un nom interne en HTTPS la remplacera avec le jalon des noms sur le LAN | Phase 9 |
 | Noms et certificats internes | DNS interne et certificats DNS-01 : outil et emplacement à choisir | Phase 9 |
 | Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 12, dans un ADR |
 | Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 14, dans un ADR |
