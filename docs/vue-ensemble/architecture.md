@@ -251,7 +251,7 @@ Les scripts d'exploitation sont versionnés dans `infrastructure/` (pour `pve` e
 | 2 nov. 2026 | Navidrome public. Les cinq interfaces *arr sont publiées derrière Access ; la page de liens est abandonnée. |
 | 1er nov. 2026 | Recyclarr et Lidarr installés. |
 | 29 oct. 2026 | qBittorrent passe par Proton VPN. Bazarr installé. |
-| 28 oct. 2026 | Jellyfin en service : bibliothèque scannée, un film lu. qBittorrent en service : une image Debian de test téléchargée, avec les droits `0660`. Prowlarr, Sonarr et Radarr installés : la série *Cold Case* est reconnue (178,9 Gio) et le film *American History X* est téléchargé (1,9 Gio). |
+| 28 oct. 2026 | Jellyfin en service : bibliothèque scannée, un film lu. qBittorrent en service : une image Debian de test téléchargée, avec les droits `0660`. Prowlarr, Sonarr et Radarr installés : une série est reconnue (178,9 Gio) et un film est téléchargé (1,9 Gio). |
 | 25 oct. 2026 | Phase 2 close : téléphone sauvegardé (snapshot Restic `<snapshot>`). La restauration du `.vcf` est réussie. Les photos et SMS sont sauvegardés, sans test de restauration. |
 | 22 oct. 2026 | Timer du snapshot quotidien en place. Le passage de 04:00 ce jour-là n'a pas été relevé. |
 | 21 oct. 2026 | Premiers snapshots horaires du zvol (12:00 et 13:00). Restauration fonctionnelle isolée de Vaultwarden réussie : connexion, 2FA et coffre. |

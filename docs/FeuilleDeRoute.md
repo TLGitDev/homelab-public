@@ -211,7 +211,7 @@ Les médias récupérables n'ont pas besoin de la même sauvegarde que les docum
 - ✅ Copie depuis le PC : 2,1 Tio (28 oct.), originaux conservés.
 - ✅ Jellyfin, CT 103 (`<ip-jellyfin>`), 12.4+deb13 : scan terminé, un film lu (28 oct.). Voir [jellyfin.md](exploitation/mediatheques/jellyfin.md).
 - ✅ qBittorrent, CT 104 (`<ip-qbittorrent>`) : fichier de test en `0660`, groupe `media` (28 oct.).
-- ✅ Prowlarr 2.7.0.5723, Sonarr 4.0.20.3014, Radarr 6.4.4.10685 sur le CT 105 (28 oct.). *Cold Case* reconnue dans Sonarr, *American History X* téléchargé par Radarr. Voir [servarr.md](exploitation/mediatheques/servarr.md).
+- ✅ Prowlarr 2.7.0.5723, Sonarr 4.0.20.3014, Radarr 6.4.4.10685 sur le CT 105 (28 oct.). Une série reconnue dans Sonarr, un film téléchargé par Radarr. Voir [servarr.md](exploitation/mediatheques/servarr.md).
 - ✅ Bazarr v1.6.2, profil `français`, aucun fournisseur (29 oct.).
 - ✅ Indexeur Knaben validé (29 oct.). EZTV retiré : `eztvx.to` ne se résout pas.
 - ✅ Proton VPN sur le CT 104 (29 oct.), avec redirection de port et coupure vérifiée (`000`). La configuration Mullvad est conservée. Voir [qbittorrent-vpn.md](exploitation/mediatheques/qbittorrent-vpn.md).
