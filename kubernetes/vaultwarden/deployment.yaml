@@ -34,6 +34,21 @@ spec:
                 configMapKeyRef:
                   name: vaultwarden-config
                   key: SIGNUPS_ALLOWED
+            - name: INVITATIONS_ALLOWED
+              valueFrom:
+                configMapKeyRef:
+                  name: vaultwarden-config
+                  key: INVITATIONS_ALLOWED
+            - name: PASSWORD_HINTS_ALLOWED
+              valueFrom:
+                configMapKeyRef:
+                  name: vaultwarden-config
+                  key: PASSWORD_HINTS_ALLOWED
+            - name: SHOW_PASSWORD_HINT
+              valueFrom:
+                configMapKeyRef:
+                  name: vaultwarden-config
+                  key: SHOW_PASSWORD_HINT
             - name: ADMIN_TOKEN
               valueFrom:
                 secretKeyRef:
