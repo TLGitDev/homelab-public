@@ -1,504 +1,608 @@
 # Feuille de route
 
-> Cible et ordre de travail. Ce n'est **pas** l'as-built.
->
-> As-built : [Architecture.md](Architecture.md). Stockage : [Stockage.md](Stockage.md). Sauvegardes : [Sauvegardes.md](Sauvegardes.md). Vaultwarden : [Vaultwarden.md](Vaultwarden.md).
+Cette page décrit la **cible** et l'**ordre de travail**. Elle ne décrit pas ce qui est en place : c'est le rôle de [architecture.md](vue-ensemble/architecture.md). Le récit détaillé de chaque séance est dans le [journal](projet/journal/README.md).
 
----
+Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. Un jalon est coché ✅ seulement quand il a réellement été joué et vérifié.
 
-# Principe
+## Principes
 
-Avancer par étapes **réversibles**, avec une base fiable, sans multiplier les services avant de maîtriser le stockage, les sauvegardes et le déploiement.
+- **Avancer par étapes réversibles.** On construit sur une base fiable, sans multiplier les services avant de maîtriser le stockage, les sauvegardes et le déploiement.
+- **Respecter l'existant.** Proxmox, ZFS, K3s, Argo CD et Vaultwarden restent. On ne repart pas de zéro, et on ne migre pas un composant qui fonctionne juste pour uniformiser les outils.
+- **Étudier en parallèle, exposer dans l'ordre.** On peut étudier un sujet en avance. En revanche, un service qui **expose** quelque chose ou **stocke** des données importantes attend que ses dépendances soient solides.
+- **Ce sont des idées d'ordre, pas un règlement.**
 
-On respecte l'existant : Proxmox, ZFS, K3s, Argo CD, Vaultwarden. On ne repart pas de zéro. On ne migre pas toute l'infra pour uniformiser les outils.
+## Vue d'ensemble
 
-Les phases ne sont pas une prison. On peut **étudier** en parallèle (comparer Gitea et Forgejo pendant la phase 0 ou 1). En revanche, un service qui **expose** quelque chose ou **stocke** des données importantes doit attendre que ses dépendances soient assez solides.
+| Phase | Sujet | État |
+| --- | --- | --- |
+| 0 | Fiabiliser l'existant | ✅ Jouée. Deux reprises sur la production restent à jouer, reprises en phase 12 |
+| 1 | Organiser les données personnelles | ✅ Jouée (24 oct.) |
+| 2 | Sauvegarde Android | ✅ Close (25 oct.) |
+| 3 | Forge Git et CI/CD | ✅ Jouée (4 nov.) |
+| 4 | Médiathèques | ✅ Jouée (2 nov.) |
+| 5 | Une panne de sauvegarde se voit | ✅ Jouée (5 nov.) |
+| 6 | Forge et GitOps tenables | ✅ Jouée (6 nov.) |
+| 7 | Un LXC se reconstruit | ✅ Jouée (7 nov.) |
+| 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
+| 9 | Accès distant | 🟡 En cours |
+| 10 | Dépôt public allégé | ⬜ À faire, **à commencer tôt** |
+| 11 | Site CV public | ⬜ À faire |
+| 12 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
+| 13 | Une copie hors du domicile | ⬜ À faire |
+| 14 | Exploitation courante et sécurité | ⬜ À faire |
+| 15 | Observabilité | ⬜ À faire |
+| 16 | La production sort du code | ⬜ À faire |
+| 17 | Une application maison, livrée de bout en bout | ⬜ À faire |
 
-Ce sont des **idées d'ordre**, pas un règlement.
-
----
-
-# Vue d'ensemble
-
+```mermaid
+flowchart LR
+    P0["0–8<br/>Fondations<br/>jouées"] --> P9["9<br/>Accès distant"]
+    P0 --> P10["10<br/>Dépôt public"]
+    P0 --> P12["12<br/>Reprise jouée"]
+    P12 --> P13["13<br/>Hors domicile"]
+    P9 --> P14["14<br/>Exploitation<br/>et sécurité"]
+    P14 --> P15["15<br/>Observabilité"]
+    P0 --> P16["16<br/>Production<br/>depuis le code"]
+    P14 --> P17["17<br/>Application<br/>maison"]
+    P15 --> P17
+    P10 --> P11["11<br/>Site CV"]
+    P17 -.->|"première application candidate"| P11
 ```
-Phase 0   Fiabiliser l'existant
-Phase 1   Organiser les données personnelles
-Phase 2   Sauvegarde Android
-Phase 3   Forge Git et CI/CD
-Phase 4   Mediatheques
 
-Phase 5   Une panne de sauvegarde se voit
-Phase 6   Forge et GitOps tenables
-Phase 7   Un LXC se reconstruit
-    ├── Phase 8   Le même moule, un LXC à la fois
-    ├── Phase 9   Accès distant et exploitation
-    └── Phase 10  Dépôt public allégé
-            └── Phase 11  Site CV public
-```
+### Ordre conseillé
 
-Les phases 0 à 8 sont jouées. La suite se lit dans l'ordre des numéros. La phase 0 garde des cases ouvertes : rollback snapshot, reprise réelle du coffre.
+Les phases 0 à 8 ont posé les fondations. La suite vise deux choses : rendre le homelab **défendable** en entretien, et le **montrer**.
 
-La phase 6 est jouée (6 nov.). L'archive utile est sur `pve` et dans le snapshot USB `<snapshot>`. Le contrôle des manifestes a été vert (`0a70da8`), rouge sur un ConfigMap invalide (`66f4880`), puis vert après retrait (`193e6cd`). `ROOT_URL` est `https://gitea.labo.example/` (`e2a1837`). `essai-deploiement` est sorti du dépôt (`60a930e`) et du cluster : application et namespace `essai` absents, `root` `Synced` et `Healthy` sur `60a930e`. La phase 7 est jouée (7 nov.). Le playbook est dans le dépôt (`c1a1e07`) et l'[ADR-010](ADR/ADR-010-Ansible-LXC.md) est accepté. Le CT 108 a servi de preuve (Essai n° 3, `4ce9657`, verte en 2 s, deuxième passe sans changement), puis il a été retiré. Le récit reste sur le 107, en service. Relancer le playbook recréerait le 108. La phase 8 est jouée (8 nov.) : le CT 109 `navidrome-essai` a servi de preuve, la deuxième passe n'a rien changé, puis il a été retiré. Le récit reste sur le 106, en service. Relancer le playbook recréerait le 109. Jellyfin : le CT 110 `jellyfin-essai` a servi de preuve (`/health` à `Healthy`, deuxième passe sans changement), puis il a été retiré. Le récit reste sur le 103, en service. Relancer le playbook recréerait le 110. Samba : le CT 111 `samba-essai` a servi de preuve (`smbd` actif, écriture refusée, deuxième passe sans changement), puis il a été retiré. Le récit reste sur le 102, en service. Relancer le playbook recréerait le 111. servarr : le CT 112 `servarr-essai` a servi de preuve (pages locales, écriture refusée, deuxième passe sans changement), puis il a été retiré. Le récit reste sur le 105, en service. Relancer le playbook recréerait le 112. qBittorrent : le CT 113 `qbittorrent-essai` a servi de preuve (page locale, écriture refusée, sortie du compte coupée, deuxième passe sans changement). Le récit reste sur le 104, en service. Puis il a été retiré. Relancer le playbook recréerait le 113. Cloudflare : le CT 114 `cloudflare-essai` a servi de preuve (cloudflared 2026.10.7 arrêté, sans le jeton du 100, deuxième passe sans changement). Le récit reste sur le 100, en service, encore en 2026.10.4. Puis il a été retiré. Relancer le playbook recréerait le 114. Les six essais de la phase 8 sont joués. Les récits restent sur les CT en service. La phase 9 est commencée (9 nov.) : le CT 115 `wireguard` `<ip-wireguard>/24` reste en service. Le téléphone ouvre Proxmox hors du Wi-Fi. Le PC fixe n'a pas de clé. Le 10 nov., hors Wi-Fi, le téléphone ouvre les services de la liste. Seul Vaultwarden reste publié sur Cloudflare.
-
-Les phases 8, 9 et 10 partent de la phase 7. La 8 et la 9 avancent ensemble. La 10 publie dès la phase 7, puis se remet à jour à chaque LXC de la phase 8. La phase 11 s'y branche. La page agent reste hors de cette suite tant qu'elle n'existe pas.
+1. **Phase 10 tout de suite, en parallèle du reste.** Le dépôt public est ce qu'un recruteur verra en premier. Il vaut mieux une première version publiée maintenant, puis mise à jour, qu'une version parfaite dans trois mois.
+2. **Phases 9, 12 et 13.** Finir l'accès distant, jouer les reprises qui ne sont qu'écrites, et sortir une copie du domicile. Ce sont les questions qu'on pose à quelqu'un qui dit avoir « des sauvegardes ».
+3. **Phases 14 et 15.** Mises à jour, durcissement, supervision : le quotidien d'un administrateur.
+4. **Phases 16 et 17.** Faire converger la production vers le code, puis livrer une vraie application par un pipeline complet. Le site CV (phase 11) est le candidat naturel pour cette première application.
 
 ---
 
-# Phase 0 — Fiabiliser l'existant
+## Phase 0 — Fiabiliser l'existant
 
-**Objectif** : récupérer données et services après une erreur, une panne disque ou une mauvaise manipulation.
+**Objectif** : récupérer les données et les services après une erreur, une panne de disque ou une mauvaise manipulation.
 
-**Dépendances** : aucune. Prérequis pour les données personnelles et les nouveaux services.
+**Dépendances** : aucune. C'est le prérequis des données personnelles et des nouveaux services.
 
 | Chantier | Actions | Critère |
-|----------|---------|---------|
-| Snapshots ZFS | Automatiser, rétention définie | Créés tout seuls ; restauration testée |
-| Sauvegarde USB | Copie externe, idéalement déconnectée hors job | Restauration depuis l'USB OK |
-| Vaultwarden | Restauration complète : données, config, secrets | Service récupérable sans l'ancienne instance |
-| État du stockage | Pool, erreurs, espace, disques | Contrôles documentés, anomalies visibles |
+| --- | --- | --- |
+| Snapshots ZFS | Les automatiser, avec une rétention définie | Ils se créent seuls ; une restauration est testée |
+| Sauvegarde USB | Une copie externe, déconnectée hors des sauvegardes | Une restauration depuis l'USB réussit |
+| Vaultwarden | Une restauration complète : données, configuration, secrets | Le service se récupère sans l'ancienne instance |
+| État du stockage | Pool, erreurs, espace, disques | Les contrôles sont écrits, les anomalies visibles |
 | Documentation | Sauvegarde, restauration, dépannage | Les opérations essentielles se font à partir de la doc |
 
-Un snapshot ZFS **n'est pas** une sauvegarde. Il faut une copie distincte, idéalement hors ligne. [Sauvegardes.md](Sauvegardes.md).
+Un snapshot ZFS **n'est pas** une sauvegarde : il faut une copie distincte, idéalement hors ligne. Voir [sauvegardes.md](exploitation/sauvegardes.md).
 
-## Jalons
+### Jalons
 
-Assez **solide** pour démarrer la phase 1. Rollback snapshot et reprise zvol : écrits, **non joués** sur la prod (volontaire).
+La phase a été jugée assez solide pour démarrer la phase 1. Le rollback par snapshot et la reprise sur le zvol de production sont écrits, mais volontairement **pas joués** : ils passent en phase 12.
 
-- ✅ Snapshots zvol Vaultwarden : script + timers horaires (rétention 24) ; runs auto `_1200` / `_1300` — [Sauvegardes.md](Sauvegardes.md#snapshots-zfs)
-- ✅ Quotidien timer et rétention 7 (6 nov. 04:00 : `@auto-daily-2026-11-06` créé, `@auto-daily-2026-10-26` détruit, 7 conservés). Le 22 oct. 04:00 n'a pas été lu ; ce snapshot est déjà sorti de la fenêtre. Le 21 oct. était un run manuel.
-- ✅ Rétention horaire 24 (6 nov. 15:00 : 24 `auto-hourly`, du 5 nov. 15:00 au 6 nov. 15:00, trou de 4 h). À 13:00, 14:00 et 15:00 le journal détruit l'heure qui dépasse et dit `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
-- ⬜ Restauration par rollback snapshot (prod)
-- ✅ USB / Restic : `backup-usb` (20 oct.) ; restore d'une archive testée
-- ✅ Rétention des snapshots Restic (14 j, appliquée le 5 nov., run `<snapshot>`)
-- ✅ Restore isolée Vaultwarden (technique 20 oct. + login 21 oct.) — [Vaultwarden.md](Vaultwarden.md)
-- ⬜ Reprise réelle sur le zvol de prod ([écrite](Vaultwarden.md#reprise-réelle--non-testée), non exécutée)
-- ✅ Clé Sealed Secrets sous `/tank/backups` (périmètre USB)
-- ✅ État du stockage documenté — [Stockage.md](Stockage.md)
-- ✅ Documentation des opérations déjà faites (sauvegarde, restore isolée, USB)
+- ✅ Snapshots horaires du zvol Vaultwarden : script et timers, rétention de 24. Premiers passages automatiques à 12:00 et 13:00 le 21 oct.
+- ✅ Snapshots quotidiens, rétention de 7. Le 6 nov. à 04:00, `@auto-daily-2026-11-06` a été créé, `@auto-daily-2026-10-26` détruit, 7 conservés. Le passage du 22 oct. n'a pas été relu, et il est déjà sorti de la fenêtre. Celui du 21 oct. était manuel.
+- ✅ Rétention horaire de 24 vérifiée le 6 nov. à 15:00 : 24 snapshots `auto-hourly`, du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h. À 13:00, 14:00 et 15:00, le journal détruit l'heure en trop et affiche `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
+- ⬜ Restauration par rollback d'un snapshot, sur la production. **Reprise en phase 12.**
+- ✅ Sauvegarde USB avec Restic : `backup-usb` (20 oct.), restauration d'une archive testée.
+- ✅ Rétention des snapshots Restic : 14 jours, appliquée le 5 nov. (passage `<snapshot>`).
+- ✅ Restauration isolée de Vaultwarden : technique le 20 oct., connexion le 21 oct. Voir [vaultwarden.md](exploitation/vaultwarden.md).
+- ⬜ Reprise réelle sur le zvol de production : [écrite](exploitation/restauration.md), jamais exécutée. **Reprise en phase 12.**
+- ✅ Clé Sealed Secrets copiée sous `/tank/backups`, donc dans le périmètre USB.
+- ✅ État du stockage documenté : voir [stockage-zfs.md](exploitation/stockage-zfs.md).
+- ✅ Opérations déjà faites documentées : sauvegarde, restauration isolée, USB.
 
 ---
 
-# Phase 1 — Organiser les données personnelles
+## Phase 1 — Organiser les données personnelles
 
-**Objectif** : savoir où vivent les données, qui y accède, comment elles sont protégées, **avant** d'installer un portail de fichiers.
+**Objectif** : savoir où vivent les données, qui y accède et comment elles sont protégées, **avant** d'installer un portail de fichiers.
 
 **Dépendance** : phase 0 suffisamment validée.
 
-- Catégories : documents, photos, vidéos, archives, projets, données applicatives, Mediatheques.
-- Distinguer : synchroniser / archiver / sauvegarder.
-- Datasets ZFS, montages, permissions, quotas si besoin.
-- Stratégie de sauvegarde par catégorie (surtout l'irremplaçable).
-- Besoin « NAS » : partages, plusieurs appareils, utilisateurs, protocoles.
-
-**Décision** : Nextcloud / Syncthing **pas pris**. Accès Windows = **SMB** (LAN, LXC `samba` CT 102, `\\<ip-samba>`, user `utilisateur`). Copies PC → `tank` = faits (23 oct.). `backup-usb` élargi joué (24 oct.). Samba retiré de `pve`.
+Le travail a porté sur les catégories de données, la distinction entre synchroniser, archiver et sauvegarder, les datasets et les droits, la sauvegarde par catégorie, et le besoin de type « NAS ».
 
 | Solution | Rôle | Limite |
-|----------|------|--------|
-| Partages réseau | Accès direct aux fichiers | Peu de sync mobile intégrée |
-| Nextcloud | Portail, partage ; contacts / calendrier selon les apps | Plus à maintenir et à sauvegarder |
-| Syncthing | Sync de dossiers entre appareils | Ni sauvegarde, ni portail documentaire |
-| ZFS seul | Protection locale et organisation | Pas une UX complète |
+| --- | --- | --- |
+| Partages réseau | Accès direct aux fichiers | Peu de synchronisation mobile intégrée |
+| Nextcloud | Portail, partage ; contacts et calendrier selon les applications | Plus à maintenir et à sauvegarder |
+| Syncthing | Synchronisation de dossiers entre appareils | Ni sauvegarde, ni portail documentaire |
+| ZFS seul | Protection locale et organisation | Pas une expérience complète |
 
-**Critère** : organisation documentée, permissions testées, une première restauration de fichiers OK.
+**Décision** : ni Nextcloud ni Syncthing. L'accès depuis Windows passe par **SMB**, sur le LAN, dans le LXC `samba` (CT 102, `\\<ip-samba>`, utilisateur `utilisateur`). Voir (document privé) et [samba.md](exploitation/samba.md).
 
-## Jalons
+**Critère** : organisation documentée, droits testés, une première restauration de fichiers réussie.
 
-- ✅ Inventaire — (document privé)
-- ✅ Datasets + copies PC (23 oct., originaux conservés) : `documents`, `images`, `musique`, `projets`, `videos`
-- ✅ Décision : pas Nextcloud / Syncthing ; SMB = LXC `samba` ; pas de doublon sous `/tank/backups`
-- ✅ `backup-usb` élargi : run 24 oct. snapshot `<snapshot>` (dossiers live + `/tank/backups`)
-- ✅ SMB LAN : LXC `samba` CT 102, `\\<ip-samba>`, cinq partages, user `utilisateur` — (document privé)
-- ✅ Permissions : lecture + écriture depuis Windows (24 oct.)
-- ✅ Première restauration de fichiers perso : `<snapshot>` → `/tmp`, SHA-256 identique (24 oct.)
+### Jalons
+
+- ✅ Inventaire des données : voir (document privé).
+- ✅ Datasets et copies depuis le PC (23 oct., originaux conservés) : `documents`, `images`, `musique`, `projets`, `videos`.
+- ✅ Décisions : pas de Nextcloud ni de Syncthing ; SMB dans un LXC ; pas de doublon sous `/tank/backups`.
+- ✅ `backup-usb` élargi aux dossiers personnels : passage du 24 oct., snapshot `<snapshot>`.
+- ✅ Partage SMB sur le LAN : CT 102, cinq partages. Samba retiré de `pve`. Voir [samba.md](exploitation/samba.md).
+- ✅ Droits : lecture et écriture depuis Windows (24 oct.).
+- ✅ Première restauration d'un fichier personnel : depuis `<snapshot>` vers `/tmp`, SHA-256 identique (24 oct.).
 
 ---
 
-# Phase 2 — Sauvegarde Android
+## Phase 2 — Sauvegarde Android
 
-**Close le 25 oct.** Photos : la copie sur `tank` et le snapshot suffisent, pas de restore du dossier. SMS : pas restaurés, pas de besoin pour l'instant ; le JSON reste dans `<snapshot>`.
+**Objectif** : une procédure reproductible pour changer de téléphone, ou récupérer après une perte.
 
-**Objectif** : procédure reproductible pour changer de téléphone ou récupérer après une perte.
+**Dépendances** : phase 0 pour la protection, phase 1 pour le stockage cible.
 
-**Dépendances** : phase 0 (protection) et phase 1 (stockage cible). Les deux sont assez solides (24 oct.).
-
-Travail : (document privé).
-
-Aucune solution unique ne copie tout un Android. On sépare par type, et on **écrit les exceptions** plutôt que de promettre une image complète du téléphone.
+Aucune solution ne copie tout un téléphone Android. On sépare donc par type de données, et on **écrit les exceptions** plutôt que de promettre une image complète.
 
 | Données | Approche | Limite |
-|---------|----------|--------|
-| Photos / vidéos | Sync vers le serveur, puis backup indépendant | Vérifier les originaux |
-| Documents / téléchargements | Sync ou transfert planifié | Répertoires exclus selon l'app |
-| Contacts / calendrier | Export ou sync compatible | Restauration et doublons |
-| SMS / appels | Outil dédié, export récupérable | OS, droits, version Android |
-| WhatsApp | Sauvegarde officielle et/ou médias locaux | Les fichiers ≠ restauration officielle des conversations |
-| Signal | Sauvegardes / transfert de la version installée | Données chiffrées et clés de restauration |
-| Données d'apps | Inventaire + exports disponibles | Android bloque souvent les données privées |
-| APK | Inventaire ; extraction si permise | Un APK n'embarque pas les données ni tous les extraits |
-| Réglages du téléphone | Sauvegarde constructeur + procédure écrite | Dépend du fabricant et des protections |
+| --- | --- | --- |
+| Photos et vidéos | Copie vers le serveur, puis sauvegarde indépendante | Vérifier les originaux |
+| Documents et téléchargements | Copie ou transfert planifié | Certains dossiers sont exclus selon l'application |
+| Contacts et calendrier | Export ou synchronisation compatible | Restauration et doublons |
+| SMS et appels | Outil dédié, export récupérable | Système, droits, version d'Android |
+| WhatsApp | Sauvegarde officielle, ou transfert | Copier les fichiers ne restaure pas les conversations |
+| Signal | Sauvegarde ou transfert de l'application | Données chiffrées, clé de restauration |
+| Données d'applications | Inventaire et exports disponibles | Android bloque souvent les données privées |
+| APK | Inventaire | Un APK n'embarque pas les données |
+| Réglages | Procédure écrite | Dépend du fabricant |
 
-Ordre utile :
+**Critère** : une matrice par type de données (méthode, fréquence, lieu, limites, dernier test de restauration). Elle est dans (document privé).
 
-1. Inventaire du téléphone, version Android, données à garder.
-2. Automatiser photos / vidéos / documents ; vérifier l'arrivée sur le serveur.
-3. Exports contacts, calendrier, SMS.
-4. WhatsApp, Signal, apps prioritaires, chacun de leur côté.
-5. Secrets, clés, codes de récupération dans un endroit sûr (pas dans Git).
-6. Tester une restauration **sans** effacer l'original.
+### Jalons
 
-**Critère** : une matrice (méthode, fréquence, lieu, limites, dernier test de restauration) par type de donnée.
+Phase **close le 25 oct.** Périmètre retenu : photos, contacts, SMS si possible. Calendrier et secrets hors périmètre. La procédure vise LineageOS et GrapheneOS.
 
-## Jalons
-
-Périmètre de ce téléphone (24 oct.) : photos, contacts, SMS si possible. Calendrier et secrets : hors périmètre. La procédure vise LineageOS **et** GrapheneOS. (document privé).
-
-- ✅ Inventaire (LineageOS 22.2 / Android 15, pas de sauvegarde constructeur)
-- ✅ Liste des apps : déclarée. Obtainium si l'éditeur publie une source. LineageOS : Aurora + microG. Ce GrapheneOS : Play Services + Aurora, compte Google à part. Liste Play installée le 25 oct. une application : Play Store, les autres : Aurora. Mullvad en place. Export JSON Obtainium sur `tank` (nom non relevé), dans le snapshot `<snapshot>`.
-- ✅ Photos : pellicule déclarée dans `/tank/images/telephone` (24 oct., via le PC). SHA-256 sur une photo. Snapshots `<snapshot>` et `<snapshot>`. Restore du dossier non exigé (25 oct.).
-- ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches identiques au carnet d'origine (24 oct.). Restore `<snapshot>` → `/tmp`, SHA-256 identique, live conservé. Import sur le nouveau téléphone le 24 oct., sans Fossify Contacts, déclaré complet.
-- ✅ SMS : Fossify Messages, `Messages_20261024_151932.json`, un message reconnu sur `pve` (24 oct.). Appli pas figée. Dans `<snapshot>`. Pas restauré : pas de besoin (25 oct.). Le fichier reste.
-- ✅ Signal : `/tank/documents/telephone/SignalBackups` (24 oct. 20:47). Restore sur le nouveau téléphone, 24 oct. Clé hors dossier. Dans le snapshot `<snapshot>` (25 oct.).
-- ✅ WhatsApp : transfert de téléphone à téléphone via l'appli (24 oct.). Pas de fichier sur `tank`.
+- ✅ Inventaire : LineageOS 22.2, Android 15, aucune sauvegarde du constructeur.
+- ✅ Applications : Obtainium quand l'éditeur publie une source ; Aurora Store pour le Play Store (avec microG sous LineageOS, avec les services Play et un compte Google à part sous GrapheneOS). Liste installée le 25 oct. ; une application depuis le Play Store. Export Obtainium sur `tank`, dans le snapshot `<snapshot>`.
+- ✅ Photos : pellicule copiée dans `/tank/images/telephone` (24 oct., par le PC), SHA-256 vérifié sur une photo. Snapshots `<snapshot>` et `<snapshot>`. Restauration du dossier non exigée.
+- ✅ Contacts : `contacts_20261024_151331.vcf`, 52 fiches. Restauration depuis `<snapshot>`, SHA-256 identique. Importé sur le nouveau téléphone le 24 oct.
+- ✅ SMS : export Fossify Messages, un message reconnu sur `pve`. Pas restauré, faute de besoin. Dans `<snapshot>`.
+- ✅ Signal : sauvegarde du 24 oct. 20:47, restaurée sur le nouveau téléphone le même jour. Clé hors du dossier. Dans `<snapshot>`.
+- ✅ WhatsApp : transfert d'un téléphone à l'autre (24 oct.). Aucun fichier sur `tank`.
 
 ---
 
-# Phase 3 — Forge Git et CI/CD
+## Phase 3 — Forge Git et CI/CD
 
-**Objectif** : Gitea, édition libre, et un workflow professionnel. Un push lance le build, les tests, puis un déploiement repris par Argo CD.
+**Objectif** : Gitea en édition libre, et un flux de travail professionnel : un push lance les contrôles, puis un déploiement repris par Argo CD, avec un retour arrière.
 
-**Dépendance** : phase 0. La comparaison peut commencer plus tôt. La forge retenue doit être sauvegardée **avant** d'y mettre des éléments essentiels.
+**Dépendance** : phase 0. La forge doit être sauvegardée **avant** d'y mettre des éléments essentiels.
 
-On **garde** K3s et Argo CD pour ce qui y tourne déjà. On ne bascule pas automatiquement tout le futur sur Kubernetes : le mode de déploiement se choisit par besoin (VM, LXC, conteneurs, K3s).
+K3s et Argo CD restent en place pour ce qui y tourne déjà. Le mode d'hébergement des nouveaux services suit l'[ADR-012](decisions/ADR-012-LXC-ou-K3s.md).
 
-## 3.1 Comparer Gitea et Forgejo
+### Comparaison de Gitea et Forgejo
 
-Décision **prise le 3 nov.** : Gitea, édition libre. Le but est un workflow professionnel, sur le modèle des gestes GitHub. Pod en service sur le LAN. [Forge.md](Forge.md#décision).
+Décision du 3 nov. : **Gitea, édition libre**. Les six critères ont été examinés le même jour : maintenance et gouvernance, fonctions Git, CI/CD, déploiement, écosystème, coût dans ce homelab. Voir l'[ADR-011](decisions/ADR-011-Gitea.md) et [forge-gitea.md](exploitation/forge-gitea.md).
 
-- [x] Maintenance et gouvernance (3 nov.) — [Forge.md](Forge.md#maintenance-et-gouvernance)
-- [x] Fonctions Git (issues, PR, releases, registre, intégrations) (3 nov.) — [Forge.md](Forge.md#fonctions-git)
-- [x] CI/CD (workflows, runners, secrets, déclencheurs) (3 nov.) — [Forge.md](Forge.md#ci)
-- [x] Déploiement (hébergement, MAJ, migration, sauvegarde) (3 nov.) — [Forge.md](Forge.md#déploiement)
-- [x] Écosystème (doc, plugins, communauté) (3 nov.) — [Forge.md](Forge.md#écosystème)
-- [x] Coût opérationnel dans ce homelab (3 nov.) — [Forge.md](Forge.md#coût-opérationnel)
+**Critère** : un changement versionné passe les contrôles et se déploie, avec un retour arrière.
 
-6 / 6 examinés. Gitea retenu. Pod en service sur le LAN.
+### Jalons
 
-## Jalons Gitea
-
-Le choix est joué. Le pod est en service. La sauvegarde du dossier a été lue. La demande de fusion d'essai est fusionnée. Le miroir d'essai est joué. Le runner est en ligne. Le workflow d'essai est vert. Le déploiement d'essai a été synchronisé puis ramené en arrière. La forge est publiée derrière Access. L'essai `admin/homelab` est retiré. La forge et le runner ont été restaurés une fois. Décision du 4 nov. : Argo CD lit GitHub, et `homelab` n'a pas de copie de travail sur Gitea. Les jalons Gitea sont joués. [Forge.md](Forge.md#décision).
-
-**Critère** : un changement versionné passe les tests et se déploie, avec un retour arrière.
-
-- ✅ Gitea, édition libre (3 nov.). Enterprise non retenu. Gestes visés : dépôt, demande de fusion, branche protégée, Actions, runner à part, Argo CD.
-- ✅ RAM libre de `k3s-01` (3 nov.) : 7,5 Gio au total, 5,5 Gio disponibles, 4 cœurs, échange 3,3 Gio inutilisé. Disque système 51 Go libres. Vaultwarden 14 Mio, Argo CD jusqu'à 206 Mio.
-- ✅ Pod sur `k3s-01` (3 nov.), une réplique, SQLite. Zvol `tank/vmdata/vm-101-gitea-data`, ni le disque système ni le zvol Vaultwarden. Manifests dans `git@github.com:TLGitDev/homelab.git`. Compte `admin`. Aucun dépôt.
-- ✅ Sauvegarde du dossier de données (3 nov.), Gitea arrêté. Archive `gitea-2026-11-03_180902.tar` sur `k3s-01`, SHA-256 `<empreinte-vérifiée>`. Relue ailleurs : base `ok`, `SECRET_KEY` de 64 caractères, compte `admin`, zéro dépôt. Pas encore copiée sur `pve`. Ce n'est pas l'archive citée.
-- ✅ Dépôt d'essai `admin/homelab` poussé depuis le PC (3 nov.). `master` protégée : le push direct est refusé. Demande de fusion n° 1 fusionnée, commit `ad9faf2`. Argo lit toujours GitHub.
-- ✅ Miroir d'essai (4 nov.) : `admin/essai-miroir` vers `TLGitDev/essai-miroir`, déjà créé et vide. Même commit `e2e0eb6a` des deux côtés. Pas `homelab`. Commits seulement. Le jeton reste dans le coffre.
-- ✅ Runner hors de `k3s-01` (4 nov.). LXC 107 `runner`, `<ip-runner>`, non privilégié, sans montage de `tank` ni droit sur le cluster. `gitea-runner` `v5.2.0`, étiquette `host`, service `active`. Page : id 1, global, Idle. `.runner` en 600. [Forge.md](Forge.md#décision)
-- ✅ Workflow (4 nov.) : push sur `admin/essai-miroir`, pas sur `homelab`. Actions du dépôt activées. CI n° 1, commit `0813dcc290`, branche `main`, vert en 2 s. Étiquette `host`, seul runner qui la porte. [Forge.md](Forge.md#décision)
-- ✅ Déploiement repris par Argo CD depuis GitHub, avec un retour arrière (4 nov.). Application `essai-deploiement`, sync manuel. Commit `a6c4965` : ConfigMap `version` `1`. Commit `31fcdee` : `2`, vérifié dans le cluster. Rollback Argo vers `a6c4965` : le cluster relit `1`, statut `OutOfSync`. Git reste sur `31fcdee`. Pas le coffre, pas la forge. L'application et le dossier sont retirés le 6 nov. (`60a930e`). Ce récit reste.
-- ✅ Depuis l'extérieur (4 nov.) : `https://gitea.labo.example`, tunnel `homelab`, origine `http://<ip-k3s-01>:3000`, Access devant. Page de connexion Gitea vue. Essai `admin/homelab` retiré. Remote local `gitea` retiré. `ROOT_URL` est alors l'adresse du LAN. `admin/essai-miroir` reste. [Cloudflare.md](Cloudflare.md)
-- ✅ Restauration de la forge et du runner, jouée une fois (4 nov.). Forge : `gitea-2026-11-04_150155.tar`, mode 600, propriétaire `utilisateur`, SHA-256 `<empreinte-vérifiée>`. Ouverte à côté, puis le dossier effacé. `integrity ok`, un dépôt `admin/essai-miroir`, `SECRET_KEY` 64, `INTERNAL_TOKEN` 105. Pod revenu `1/1`, disque en service intact. Pas l'archive du 3 nov. Recopiée le 6 nov. sur `pve`, empreinte identique, puis snapshot USB `<snapshot>`. C'est l'archive citée. Runner : copie `/var/backups/gitea-runner-2026-11-04.tar`, mode 600. Fichier `.runner` retiré puis remis, identique. Service `active`, `declare successfully`, `v5.2.0`, libellés `[host]`. Pas un second enregistrement.
-
-## Page agent (plus tard)
-
-Idée du 3 nov., à mettre en place une fois la forge prête. Pas un jalon de la phase 3.
-
-Un pod sur `k3s-01` avec le programme `agent`. Une page maison : conversation, et les diffs plus lisibles qu'en terminal. Le téléphone ouvre cette page. Dehors, Access devant. Le nom n'est pas choisi.
-
-Le pod ne voit que son volume. Pas le disque de la machine, pas de droit sur le cluster. La clé du compte Cursor reste dans le pod. Le modèle tourne chez Cursor.
+- ✅ Gitea, édition libre (3 nov.). Enterprise non retenu.
+- ✅ Ressources de `k3s-01` relevées (3 nov.) : 7,5 Gio de RAM dont 5,5 Gio disponibles, 4 cœurs, 3,3 Gio d'échange inutilisé, 51 Go libres sur le disque système. Vaultwarden utilise 14 Mio, Argo CD jusqu'à 206 Mio.
+- ✅ Pod Gitea sur `k3s-01` (3 nov.) : une réplique, SQLite, zvol dédié `tank/vmdata/vm-101-gitea-data`.
+- ✅ Sauvegarde du dossier de données, Gitea arrêté (3 nov.) : `gitea-2026-11-03_180902.tar`, SHA-256 `<empreinte-vérifiée>`, relue ailleurs. Ce n'est pas l'archive de référence.
+- ✅ Dépôt d'essai, branche `master` protégée : le push direct est refusé, la demande de fusion n° 1 est fusionnée (`ad9faf2`).
+- ✅ Miroir d'essai vers GitHub (4 nov.) : `admin/essai-miroir` vers `TLGitDev/essai-miroir`, même commit `e2e0eb6a` des deux côtés. Le jeton reste dans le coffre.
+- ✅ Runner hors de `k3s-01` (4 nov.) : CT 107, `<ip-runner>`, sans montage de `tank` ni droit sur le cluster. `gitea-runner` v5.2.0, étiquette `host`.
+- ✅ Premier workflow vert (4 nov.) : CI n° 1, commit `0813dcc290`, en 2 s.
+- ✅ Déploiement repris par Argo CD depuis GitHub, puis retour arrière (4 nov.) : application `essai-deploiement`, commits `a6c4965` puis `31fcdee`, rollback Argo vers `a6c4965`. Application retirée le 6 nov. (`60a930e`).
+- ✅ Accès depuis l'extérieur (4 nov.), derrière Access. Route désactivée depuis le 10 nov. : voir la phase 9.
+- ✅ Restauration de la forge et du runner, jouée une fois (4 nov.) : archive `gitea-2026-11-04_150155.tar`, SHA-256 `<empreinte-vérifiée>`. C'est l'archive de référence.
 
 ---
 
-# Phase 4 — Mediatheques
+## Phase 4 — Médiathèques
 
-**Objectif** : bibliothèque organisée, accessible, maintenable.
+**Objectif** : une bibliothèque de films, de séries et de musique organisée, accessible et maintenable.
 
-**Dépendances** : phases 0 et 1 (volumes et permissions **avant** les applis).
+**Dépendances** : phases 0 et 1. Les volumes et les droits passent **avant** les applications.
 
-Services **visés**, pas déployés :
+Les médias récupérables n'ont pas besoin de la même sauvegarde que les documents irremplaçables. Leurs **configurations** et leurs métadonnées, si.
 
-| Service | Rôle |
-|---------|------|
-| Jellyfin | Lecture / bibliothèque vidéo et musique |
-| qBittorrent | Téléchargements ; isolation réseau ; chemins cohérents |
-| Prowlarr | Indexeurs |
-| Sonarr | Séries |
-| Radarr | Films |
-| Lidarr | Musique |
-| Bazarr | Sous-titres |
-| Recyclarr | Config Radarr / Sonarr |
-| Navidrome | Lecteur musique, en service (2 nov.) |
+**Critère** : un fichier de test suit le parcours prévu, et les configurations se restaurent. Voir [médiathèques](exploitation/mediatheques/README.md).
 
-Ordre utile : datasets et droits → Jellyfin (fichiers déjà là) → qBittorrent isolé → Prowlarr puis Sonarr / Radarr → Bazarr / Recyclarr → Lidarr → Navidrome → backups des **configs**.
+### Jalons
 
-Les médias récupérables n'ont pas le même besoin de backup que les photos ou documents irremplaçables. Les configurations et métadonnées, si.
-
-**Critère** : un fichier de test suit le parcours prévu ; les configs se restaurent.
-
-Travail : [Mediatheques.md](Mediatheques.md).
-
-## Jalons
-
-Layout retenu : **un** dataset `tank/mediatheques` (films, séries, sons, téléchargements dedans — liens physiques Sonarr/Radarr). Pas dans `backup-usb`. Jellyfin : **LXC** CT 103, en service le 28 oct. qBittorrent : **LXC** CT 104, `<ip-qbittorrent>`, Proton VPN pour le seul compte du client (29 oct., Mullvad gardé dans `wg0.conf.mullvad`). Prowlarr, Sonarr, Radarr et Bazarr : **un** LXC CT 105, `<ip-servarr>`. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685** en service le 28 oct. Bazarr **v1.6.2** (6767) en service le 29 oct., profil `français`, pas de fournisseur. Knaben : test Prowlarr réussi le 29 oct., visible dans Sonarr et Radarr. Grab *Preacher* S03E01 sans seed. EZTV non gardé (`eztvx.to` introuvable). Recyclarr **v8.8.1** sur le CT 105 (1er nov.) : profils MULTi.VO créés, non assignés. Lidarr **3.1.6.5079** sur le même CT (1er nov.), port 8686, `sons/` importé sans recherche. Navidrome retenu le 1er nov. (lecteur téléphone). Hébergement tranché le 2 nov. : LXC 106, `<ip-navidrome>`, lecture seule, paquet **0.64.2**, port 4533. Public : `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée le 2 nov. Tempus pas testé. Interfaces *arr hors LAN (2 nov.) : un nom chacune, Access devant, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas.
-
-- ✅ Dataset `tank/mediatheques` + groupe `media` (GID 987) + dossiers `2770` (27 oct.) — [Mediatheques.md](Mediatheques.md)
-- ✅ Copie PC sur `tank/mediatheques` : 2,1 Tio (28 oct.). Détail par dossier non relevé. Originaux PC conservés.
-- ✅ Jellyfin LXC 103 (`<ip-jellyfin>`), 12.4+deb13. Scan terminé, un film lu (28 oct.) — [Mediatheques.md](Mediatheques.md#jellyfin--décision-28-oct)
-- ✅ qBittorrent : LXC 104, `.70`, Mullvad. Fichier de test en `0660` `media` (28 oct.) — [Mediatheques.md](Mediatheques.md#qbittorrent--décision-28-oct)
-- ✅ Prowlarr 2.7.0.5723, CT 105, compte `utilisateur`, Forms activé (28 oct.) — [Mediatheques.md](Mediatheques.md#prowlarr--décision-28-oct)
-- ✅ Sonarr 4.0.20.3014 : *Cold Case* reconnue, `/mnt/mediatheques/series/Cold Case`, saisons 4 à 7 complètes (28 oct.) — [Mediatheques.md](Mediatheques.md)
-- ✅ Radarr 6.4.4.10685 : *American History X* **Downloaded**, `/mnt/mediatheques/films/American History X (1998)`, 1,9 Gio (28 oct.) — [Mediatheques.md](Mediatheques.md)
-- ✅ Bazarr v1.6.2, CT 105, port 6767. Sonarr et Radarr testés. Profil `français`. Pas de fournisseur (29 oct.) — [Mediatheques.md](Mediatheques.md#bazarr--décision-28-oct)
-- ✅ Indexeur Knaben : test Prowlarr réussi, visible dans Sonarr et Radarr (29 oct.). EZTV retiré : `eztvx.to` ne se résout pas. — [Mediatheques.md](Mediatheques.md#indexeur--knaben-29-oct)
-- ✅ Proton VPN sur le CT 104 (29 oct.) : tunnel `FR#506`, `proton-port`, coupure `000`, port `64509` joignable. Clé Mullvad gardée dans `wg0.conf.mullvad`. — [Mediatheques.md](Mediatheques.md#proton--décision-29-oct)
-- ✅ Recyclarr v8.8.1, CT 105, binaire (1er nov.). Profil MULTi.VO créé dans Sonarr et Radarr, non assigné. **Any** inchangé — [Mediatheques.md](Mediatheques.md#recyclarr--décision-29-oct)
-- ✅ Lidarr 3.1.6.5079, CT 105, port 8686 (1er nov.). `sons/` importé, client qBittorrent et Prowlarr testés. Pas de recherche — [Mediatheques.md](Mediatheques.md#lidarr--décision-1er-nov)
-- ✅ Navidrome en service (2 nov.), CT 106 `.90:4533` et `https://navidrome.labo.example`, sans Access. Symfonium **15.1.0** : lecture validée. Tempus pas testé — [Mediatheques.md](Mediatheques.md#navidrome--décision-2-nov)
-- ✅ Interfaces *arr hors LAN (2 nov.) : cinq noms, Access, login vérifié. Page de liens abandonnée. qBittorrent hors de ce pas — [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov)
-- ✅ Configs médiathèques (2 nov.) : `/tank/backups/mediatheques`, restauration lue (`ok`), USB `<snapshot>` — [Sauvegardes.md](Sauvegardes.md#configs-médiathèques-2-nov)
+- ✅ Dataset `tank/mediatheques`, groupe `media` (GID 987), dossiers en `2770` (27 oct.).
+- ✅ Copie depuis le PC : 2,1 Tio (28 oct.), originaux conservés.
+- ✅ Jellyfin, CT 103 (`<ip-jellyfin>`), 12.4+deb13 : scan terminé, un film lu (28 oct.). Voir [jellyfin.md](exploitation/mediatheques/jellyfin.md).
+- ✅ qBittorrent, CT 104 (`<ip-qbittorrent>`) : fichier de test en `0660`, groupe `media` (28 oct.).
+- ✅ Prowlarr 2.7.0.5723, Sonarr 4.0.20.3014, Radarr 6.4.4.10685 sur le CT 105 (28 oct.). *Cold Case* reconnue dans Sonarr, *American History X* téléchargé par Radarr. Voir [servarr.md](exploitation/mediatheques/servarr.md).
+- ✅ Bazarr v1.6.2, profil `français`, aucun fournisseur (29 oct.).
+- ✅ Indexeur Knaben validé (29 oct.). EZTV retiré : `eztvx.to` ne se résout pas.
+- ✅ Proton VPN sur le CT 104 (29 oct.), avec redirection de port et coupure vérifiée (`000`). La configuration Mullvad est conservée. Voir [qbittorrent-vpn.md](exploitation/mediatheques/qbittorrent-vpn.md).
+- ✅ Recyclarr v8.8.1 (1er nov.) : profils MULTi.VO créés, non assignés.
+- ✅ Lidarr 3.1.6.5079 (1er nov.) : `sons/` importé, sans recherche.
+- ✅ Navidrome 0.64.2, CT 106 (2 nov.), lecture validée avec Symfonium 15.1.0. Voir [navidrome.md](exploitation/mediatheques/navidrome.md).
+- ✅ Interfaces publiées derrière Access (2 nov.), puis retirées d'Internet le 10 nov. : voir la phase 9.
+- ✅ Configurations sauvegardées dans `/tank/backups/mediatheques`, restauration relue, snapshot USB `<snapshot>` (2 nov.).
 
 ---
 
-# Phase 5 — Une panne de sauvegarde se voit
+## Phase 5 — Une panne de sauvegarde se voit
 
-**Objectif** : savoir, sans ouvrir de session, qu'une sauvegarde n'a pas tourné, qu'un pool n'est plus sain, ou qu'un disque se remplit.
+**Objectif** : savoir, sans ouvrir de session, qu'une sauvegarde n'a pas tourné, qu'un pool n'est plus sain ou qu'un disque se remplit.
 
-**Dépendance** : les jobs déjà en place (phase 0). Pas une stack de tableaux : un canal.
+**Dépendance** : les sauvegardes de la phase 0. Pas une pile de tableaux de bord : un seul canal.
 
-Le canal se choisit au début. Contrainte : le message arrive sans SSH. Pistes : ntfy, courriel, healthchecks. Une seule.
+Décision du 5 nov. : **ntfy**, instance publique, sujet hors du dépôt. Le courriel est écarté (secret SMTP, message qui peut rester bloqué), Healthchecks aussi (il lui faut encore un canal). Limite connue : si `pve` est arrêté, le contrôle quotidien ne part pas. Voir l'[ADR-009](decisions/ADR-009-Alerte-ntfy.md) et [sauvegardes.md](exploitation/sauvegardes.md).
 
-Décision du 5 nov. : **ntfy**. Appli sur le téléphone, instance publique, sujet hors du dépôt. Pas d'instance ici. Courriel écarté (secret SMTP, boîte qui peut retenir le message). Healthchecks écarté (il lui faut encore un canal). Limite : si `pve` ne tourne pas, le contrôle quotidien ne part pas. Rétention Restic et âge USB : **14 jours**. Espace : sous **10 %** libres, `tank` et `rpool`. [ADR-009](ADR/ADR-009-Alerte-ntfy.md). Les cinq contrôles sont branchés (5 nov.). Le scrub de `tank` est planifié le 6 déc. 05:00. La rétention Restic de 14 jours est appliquée le 5 nov., run `<snapshot>`, 6 snapshots gardés. [Sauvegardes.md](Sauvegardes.md#alerte).
+Le canal couvre cinq cas :
 
-Ce que le canal couvre :
-
-- échec du timer d'archive Vaultwarden ;
-- échec du timer de snapshots zvol ;
-- dernière copie USB plus vieille que le seuil écrit ;
-- `tank` autre que `ONLINE`, ou scrub en erreur ;
-- espace sous un seuil écrit.
-
-La rétention Restic, encore ouverte en phase 0, se ferme ici : durée choisie, appliquée, notée dans [Sauvegardes.md](Sauvegardes.md). Le seuil d'ancienneté USB s'aligne sur cette durée.
-
-## Jalons
-
-- ✅ Canal choisi et noté (5 nov.) : ntfy — [ADR-009](ADR/ADR-009-Alerte-ntfy.md)
-- ✅ Rétention Restic appliquée (5 nov., `<snapshot>`, 6 snapshots gardés, 7 retirés, `prune` 3,999 Kio) — [Sauvegardes.md](Sauvegardes.md#usb--restic)
-- ✅ Les cinq contrôles ci-dessus branchés sur ce canal (5 nov.)
-- ✅ Scrub de `tank` planifié (5 nov., prochain passage le 6 déc. 05:00) ; un état mauvais passe par le contrôle de 08:15. Pas de scrub lancé ce jour-là
-- ✅ Essai : un job fait échouer exprès, le message arrive, le job d'essai est retiré (5 nov. 10:14, `échec alerte-essai`, unit absente ensuite)
+- l'échec du timer d'archive Vaultwarden ;
+- l'échec du timer de snapshots du zvol ;
+- une copie USB plus vieille que 14 jours ;
+- `tank` dans un autre état que `ONLINE`, ou un scrub en erreur ;
+- moins de 10 % d'espace libre sur `tank` ou `rpool`.
 
 **Critère** : un échec volontaire a prévenu, sans qu'il ait fallu aller voir le timer.
 
+### Jalons
+
+- ✅ Canal choisi et noté (5 nov.) : ntfy.
+- ✅ Rétention Restic appliquée (5 nov., passage `<snapshot>`) : 6 snapshots gardés, 7 retirés.
+- ✅ Les cinq contrôles branchés sur le canal (5 nov.).
+- ✅ Scrub mensuel de `tank` planifié, premier passage le 6 déc. à 05:00.
+- ✅ Échec volontaire, message reçu, job d'essai retiré (5 nov. 10:14). Depuis, une vraie alerte est arrivée lors d'une sauvegarde en échec.
+
 ---
 
-# Phase 6 — Forge et GitOps tenables
+## Phase 6 — Forge et GitOps tenables
 
 **Objectif** : la forge se restaure depuis une copie qui n'est pas sur son nœud, et un manifeste cassé se voit avant Argo CD.
 
-**Dépendance** : phase 5 jouée. La forge elle-même est en place depuis la phase 3.
+**Dépendance** : phase 5 jouée.
 
-Décisions du 4 nov., pour cette phase :
+Décisions du 4 nov. : Argo CD continue de lire GitHub, et `homelab` n'a pas de copie de travail sur Gitea. Le contrôle des manifestes tourne sur GitHub et ne déploie rien.
 
-- Argo CD continue de lire GitHub. `homelab` ne gagne pas de copie de travail sur Gitea.
-- Le contrôle des manifestes tourne sur ce dépôt GitHub. Il ne déploie rien.
-- `essai-deploiement` sort du cluster et du dépôt une fois ce contrôle vert. Le rollback du 4 nov. reste écrit en phase 3.
+**Critère** : la forge se restaure depuis une copie hors de `k3s-01` ; le dépôt lu par Argo CD refuse un manifeste cassé ; il ne reste aucune application d'essai `OutOfSync`.
 
-## Jalons
+### Jalons
 
-Dans cet ordre.
-
-- ✅ Archive utile recopiée hors de `k3s-01` (6 nov.). `pve` : `/tank/backups/k3s-01/gitea/gitea-2026-11-04_150155.tar`, mode `600`, `root`, SHA-256 `<empreinte-vérifiée>`, identique à la source, archive lisible. Snapshot USB `<snapshot>`. C'est l'archive citée. Celle du 3 nov. reste sur `k3s-01` et ne l'est plus. — [Sauvegardes.md](Sauvegardes.md#usb--restic)
-- ✅ Contrôle GitHub (6 nov.). `kubeconform` v0.8.0, schéma Kubernetes 1.36.4, strict. Exécution Manifestes n° 1, commit `0a70da8`, verte en 11 s. Ne déploie pas. `Application`, `SealedSecret` et `IngressRoute` ignorés. Argo CD ne bloque pas le Sync : on ne le clique pas si le contrôle est rouge. — [ArgoCD.md](ArgoCD.md#contrôle-des-manifestes)
-- ✅ Un manifeste volontairement invalide rend le contrôle rouge, puis il est retiré (6 nov.). Commit `66f4880` : ConfigMap `controle-schema-invalide` avec un champ `spec`, échec en 10 s, code de sortie 1. Retiré dans `193e6cd`. Exécution suivante verte en 8 s. Ce dossier n'est suivi par aucune application Argo. — [ArgoCD.md](ArgoCD.md#contrôle-des-manifestes)
-- ✅ `ROOT_URL` = `https://gitea.labo.example/` (6 nov.). Commit `e2a1837`, contrôle Manifestes n° 6 vert en 9 s, Sync de l'application `gitea`. `app.ini` : `ROOT_URL` publique, `LOCAL_ROOT_URL` = `http://<ip-k3s-01>:3000/`. `SSH_DOMAIN` reste `localhost`. Connexion via Access aboutie. Clone HTTPS affiché : `https://gitea.labo.example/admin/essai-miroir.git`. Depuis `k3s-01`, `http://<ip-k3s-01>:3000/` répond `200`. — [Forge.md](Forge.md#décision)
-- ✅ `essai-deploiement` retiré du cluster et du dépôt (6 nov.). Commit `60a930e` : les deux manifestes absents. `root` a vu `60a930e`, encore `OutOfSync`. Dans `essai` : ConfigMap `essai-deploiement` (`version` `1`, 2 j 4 h) et `kube-root-ca.crt`. Application supprimée, namespace `essai` supprimé. Ensuite : application absente, namespace absent, `root` `Synced` et `Healthy` sur `60a930e`. Le récit du rollback reste en phase 3.
-
-**Critère** : la forge se restaure depuis une copie qui n'est pas sur `k3s-01` ; le dépôt que lit Argo CD refuse un manifeste cassé ; il ne reste pas d'application d'essai `OutOfSync`.
+- ✅ Archive de référence recopiée sur `pve` (6 nov.) : `/tank/backups/k3s-01/gitea/gitea-2026-11-04_150155.tar`, empreinte identique, snapshot USB `<snapshot>`.
+- ✅ Contrôle GitHub des manifestes (6 nov.) : `kubeconform` v0.8.0, schéma Kubernetes 1.36.4, mode strict. Première exécution verte (`0a70da8`). Voir [argocd.md](concepts/argocd.md).
+- ✅ Un manifeste volontairement invalide rend le contrôle rouge (`66f4880`), puis il est retiré (`193e6cd`, vert).
+- ✅ `ROOT_URL` de Gitea passé à `https://gitea.labo.example/` (`e2a1837`). À revoir depuis que la route est coupée : voir la phase 9.
+- ✅ `essai-deploiement` retiré du cluster et du dépôt (`60a930e`). `root` est `Synced` et `Healthy`.
 
 ---
 
-# Phase 7 — Un LXC se reconstruit
+## Phase 7 — Un LXC se reconstruit
 
-**Objectif** : à partir du modèle Debian déjà sur `pve`, une commande refait le runner. Une deuxième passe ne change rien.
+**Objectif** : à partir du modèle Debian déjà présent sur `pve`, une commande recrée le runner. Une deuxième passe ne change rien.
 
-**Dépendance** : phase 6 jouée (`ROOT_URL` posé, archive hors du nœud). Le runner actuel, CT 107, sert de référence.
+**Dépendance** : phase 6 jouée.
 
-Décision du 4 nov. : Ansible, lancé depuis le PC. Pas un second outil pour un seul conteneur. Le playbook ne tourne pas sur le runner : il n'a pas à pouvoir recréer l'hyperviseur. Jeton d'API Proxmox et jeton d'enregistrement Gitea hors du dépôt, fichier ignoré par Git.
+Décision du 4 nov. : **Ansible**, lancé depuis le PC, et pas depuis le runner, qui n'a pas à pouvoir recréer l'hyperviseur. Le jeton d'API Proxmox et le jeton d'enregistrement Gitea restent hors du dépôt. Voir l'[ADR-010](decisions/ADR-010-Ansible-LXC.md) et [ansible.md](exploitation/ansible.md).
 
-Deux rôles. Le premier parle à Proxmox : CT non privilégié, `nesting`, 2 Gio, 2 cœurs, 16 Go, adresse, démarrage automatique, aucun montage de `tank`. Le second parle dedans : compte `gitea-runner`, binaire `v5.2.0` vérifié par empreinte, unité systemd, config en `600`. L'enregistrement auprès de Gitea est une tâche à part. Git ne stocke pas le fichier `.runner`.
+**Critère** : le runner d'essai existe parce que le playbook l'a créé, et relancer le playbook est sans effet.
 
-La preuve s'est faite sur un CT d'essai (108, autre adresse), sans détruire 107. 108 a pris un workflow vert, puis il a été retiré. Le récit reste sur 107.
+### Jalons
 
-## Jalons
-
-- ✅ Rôles et playbook dans `infrastructure/ansible/` (7 nov.). Commit `c1a1e07`. `secrets.yml` ignoré. Le playbook vise le CT 108 `runner-essai` `<ip-runner-ct108>/24` et refuse le 107.
-- ✅ ADR (7 nov.) : les LXC d'infra se décrivent en Ansible ; les applications déjà en manifestes restent dans Argo CD ; Proxmox lui-même reste un mode opératoire. — [ADR-010](ADR/ADR-010-Ansible-LXC.md)
-- ✅ CT 108 créé par le playbook, runner enregistré, CI d'essai verte (7 nov.). `runner-essai`, `<ip-runner-ct108>/24`. Compte `gitea-runner` uid 999 gid 991, maison `/var/lib/gitea-runner`. Binaire `v5.2.0`, empreinte `2eb05e7c09701ba194c6a43b8669db7eadf0d5c69b6f59f5710426fd68f82f98`. `.runner` en 600. Service `active`. Enregistré auprès de `http://<ip-k3s-01>:3000/`, nom `runner-essai`, étiquette `essai`. Workflow sur `admin/essai-miroir` : `.gitea/workflows/essai.yaml`, commit `4ce9657`, Essai n° 3, branche `main`, verte en 2 s. Le 107 a pris l'ancienne CI (n° 2, étiquette `host`), verte en 2 s.
-- ✅ Deuxième passe : aucun changement (7 nov.). `localhost` et `runner-essai`, `changed=0`. L'enregistrement n'est pas rejoué. Corrections du playbook : création puis démarrage, commandes dans un shell, maison et verrou.
-- ✅ 108 retiré, récit gardé sur 107 (7 nov.). `pct destroy 108 --purge`. `pct list` : 100, 102 à 107. 107 `running`. `<ip-runner-ct108>` ne répond plus. Workflow `essai` retiré de `admin/essai-miroir`, commit `c8cee20`. CI n° 4 partie sur le 107, étiquette `host`. Le runner `runner-essai` (id 2) a été retiré de la page Runners. Relancer le playbook recréerait le 108.
-
-**Critère** : le runner d'essai existe parce que le playbook l'a créé, et le relancer est sans effet.
-
-Les phases 8 et 9 partent d'ici, ensemble. La phase 10 publie cette même base, puis suit la phase 8.
+- ✅ Rôles et playbook dans `infrastructure/ansible/` (7 nov., `c1a1e07`). Le playbook vise le CT 108 et refuse le 107.
+- ✅ ADR-010 accepté (7 nov.) : les LXC d'infrastructure se décrivent en Ansible, les applications restent dans Argo CD, Proxmox reste un mode opératoire.
+- ✅ CT 108 créé par le playbook, runner enregistré, CI d'essai verte en 2 s (Essai n° 3, `4ce9657`). Binaire v5.2.0 vérifié par son empreinte (`2eb05e7c09701ba194c6a43b8669db7eadf0d5c69b6f59f5710426fd68f82f98`).
+- ✅ Deuxième passe sans changement (`changed=0`).
+- ✅ CT 108 retiré, le 107 reste en service (`c8cee20`). Relancer le playbook recréerait le 108.
 
 ---
 
-# Phase 8 — Le même moule, un LXC à la fois
+## Phase 8 — Le même moule, un LXC à la fois
 
-**Objectif** : chaque LXC encore posé à la main suit le moule de la phase 7. Un seul à la fois.
+**Objectif** : chaque LXC posé à la main suit le moule de la phase 7, un seul à la fois.
 
-**Dépendance** : phase 7 jouée. Avance en même temps que la phase 9.
+**Dépendance** : phase 7 jouée.
 
-Même critère à chaque fois : CT d'essai d'abord, commande unique, deuxième passe sans changement, secrets hors de Git. Le CT en service ne bouge qu'après l'essai.
+Même critère à chaque fois : conteneur d'essai d'abord, commande unique, deuxième passe sans changement, secrets hors de Git. Le conteneur en service ne bouge pas. Le détail des essais est dans [ansible.md](exploitation/ansible.md).
 
-Ordre, du plus simple au plus risqué :
+**Critère** : chaque LXC a son playbook, validé sur un conteneur d'essai.
 
-| Ordre | LXC | Pourquoi dans cet ordre |
-|-------|-----|-------------------------|
-| 1 | Navidrome, CT 106 | Lecture seule, peu d'état |
-| 2 | Jellyfin, CT 103 | Lecture seule sur les médias |
-| 3 | Samba, CT 102 | `smb.conf` est déjà dans Git ; les montages et les droits sont le sujet |
-| 4 | `servarr`, CT 105 | Plusieurs applications, un conteneur |
-| 5 | qBittorrent, CT 104 | VPN, clés hors de Git |
-| 6 | Cloudflare, CT 100 | En dernier : un échec coupe l'accès distant |
+### Jalons
 
-## Jalons
+Tous joués le 8 nov., du plus simple au plus risqué. Chaque conteneur d'essai a été détruit après l'essai ; relancer le playbook le recréerait.
 
-- ✅ Navidrome (8 nov.). Playbook `playbooks/navidrome.yml`. CT 109 `navidrome-essai` `<ip-navidrome-ct109>/24`, créé par le playbook, qui refuse 106, 107 et 108. Montage `/tank/mediatheques` en lecture seule, idmap du groupe `media`, pare-feu du 106. Navidrome **0.64.2**, réponse locale HTTP 200 ou 302. Pas de compte web. Deuxième passe : `changed=0` sur `localhost` et `navidrome-essai`. Puis retiré (`pct stop 109`, `pct destroy 109 --purge`). `pct list` : 100, 102 à 107. 106 `running`. `<ip-navidrome-ct109>` ne répond plus. Le récit reste sur le 106. Relancer le playbook recréerait le 109.
-- ✅ Jellyfin (8 nov.). Playbook `playbooks/jellyfin.yml`. CT 110 `jellyfin-essai` `<ip-jellyfin-ct110>/24`, créé par le playbook, qui refuse 100 à 109. Montage `/tank/mediatheques` en lecture seule, idmap du groupe `media`, pare-feu du 103 (TCP 8096). Jellyfin **12.4+deb13**, `jellyfin-ffmpeg8` **8.1.3-2-trixie**. Le 103 a encore `jellyfin-ffmpeg7`, posé le 28 oct. Compte uid 102 gid 105 dans `media`. `/health` répond `Healthy`. Pas de compte web, pas de copie de la bibliothèque. Deuxième passe : `changed=0` sur `localhost` et `jellyfin-essai`. Puis retiré (`pct stop 110`, `pct destroy 110 --purge`). `pct list` : 100, 102 à 107. 103 `running`. `<ip-jellyfin-ct110>` ne répond plus. Le récit reste sur le 103. Relancer le playbook recréerait le 110.
-- ✅ Samba (8 nov.). Playbook `playbooks/samba.yml`. CT 111 `samba-essai` `<ip-samba-ct111>/24`, créé par le playbook, qui refuse 100 à 110. Cinq montages de `tank` en lecture seule (le 102 les garde en écriture), idmap de `utilisateur` et `perso`. Pas de fichier de pare-feu, comme le 102. Samba **2:4.22.11+dfsg-0+deb13u1**. `smbd` actif, `nmbd` arrêté. `utilisateur` lit les cinq dossiers, l'écriture est refusée. Pas de mot de passe Samba. Deuxième passe : `changed=0` sur `localhost` et `samba-essai`. Le 102 est resté en service. Puis retiré (`pct stop 111`, `pct destroy 111 --purge`). `pct list` : 100, 102 à 107. 102 `running`. `<ip-samba-ct111>` ne répond plus. Le récit reste sur le 102. Relancer le playbook recréerait le 111.
-- ✅ `servarr` (8 nov.). Playbook `playbooks/servarr.yml`. CT 112 `servarr-essai` `<ip-servarr-ct112>/24`, créé par le playbook, qui refuse 100 à 111. Montage `/tank/mediatheques` en lecture seule (le 105 l'écrit), idmap du groupe `media`, pare-feu du 105 : TCP 9696, 8989, 7878, 6767. Lidarr écoute en local sur 8686, sans règle. Prowlarr **2.7.0.5723**, Sonarr **4.0.20.3014**, Radarr **6.4.4.10685**, Lidarr **3.1.6.5079**, Bazarr **1.6.2**, Recyclarr **v8.8.1** sans unité. Pages locales HTTP 200 ou 302. `sonarr` lit `films`, `series` et `sons`, l'écriture est refusée. Pas de compte web, pas de clé d'API, pas de `recyclarr sync`. Les archives passent par l'API GitHub : `/releases/download` répondait 504. Deuxième passe : `changed=0` sur `localhost` et `servarr-essai`. Le 105 est resté en service. Puis retiré (`pct stop 112`, `pct destroy 112 --purge`). `pct list` : 100, 102 à 107. 105 `running`. `<ip-servarr-ct112>` ne répond plus. Le récit reste sur le 105. Relancer le playbook recréerait le 112.
-- ✅ qBittorrent (8 nov.). Playbook `playbooks/qbittorrent.yml`. CT 113 `qbittorrent-essai` `<ip-qbittorrent-ct113>/24`, créé par le playbook, qui refuse 100 à 112. Montage `/tank/mediatheques/telechargements` en lecture seule (le 104 l'écrit), idmap du groupe `media`, `/dev/net/tun`, pare-feu du 104 (TCP 8080). qBittorrent **5.1.0-2**, wireguard-tools **1.0.20210914-3**, nftables **1.1.3-1**, natpmpc **20230423-1.2+b3**. Compte uid 102 dans `media`. Page locale HTTP 200 ou 302. Le compte lit `complets` et `incomplets`, l'écriture est refusée. Sans tunnel utile, sa sortie vers `1.1.1.1` est `000` ; root obtient `301`. Pas de clé Proton, pas de mot de passe web. La clé WireGuard de l'essai est créée dans le CT, le pair est `192.0.2.1`. `proton-port` est installé et laissé arrêté. Le résolveur de l'essai est `<ip-box>` : sur le 104, Proxmox dit `10.64.0.1` et `resolv.conf` dit `10.2.0.1`. Deuxième passe : `changed=0` sur `localhost` et `qbittorrent-essai`. Le 104 est resté en service. Puis retiré (`pct stop 113`, `pct destroy 113 --purge`). `pct list` : 100, 102 à 107. 104 `running`. `<ip-qbittorrent-ct113>` ne répond plus. Le récit reste sur le 104. Relancer le playbook recréerait le 113.
-- ✅ Cloudflare (8 nov.). Playbook `playbooks/cloudflare.yml`. CT 114 `cloudflare-essai` `<ip-cloudflare-ct114>/24`, créé par le playbook, qui refuse 100 à 113. Un cœur, 512 Mo, 8 Go, non privilégié, sans nesting, sans idmap, sans fichier de pare-feu, démarrage `order=1,up=30`, comme le 100. cloudflared **2026.10.7**. Le 100 a encore **2026.10.4** : le dépôt bookworm ne publie plus que 2026.10.7. Pas de jeton du 100. Le fichier de l'essai contient le mot `essai`, mode 0600. Le service est arrêté et désactivé. Le 100 est resté en service, tunnel compris. Résolveur `<ip-box>`. Le premier démarrage a échoué : la liste du cluster n'avait pas encore le nom. La tâche le donne. Deuxième passe : `changed=0` sur `localhost` et `cloudflare-essai`. Le 100 est resté en service. Puis retiré (`pct stop 114`, `pct destroy 114 --purge`). `pct list` : 100, 102 à 107. 100 `running`. `<ip-cloudflare-ct114>` ne répond plus. Le récit reste sur le 100. Relancer le playbook recréerait le 114.
+- ✅ Navidrome : CT 109 `navidrome-essai`, réponse HTTP locale.
+- ✅ Jellyfin : CT 110 `jellyfin-essai`, `/health` à `Healthy`. L'essai a `jellyfin-ffmpeg8`, le 103 en service a encore `jellyfin-ffmpeg7`.
+- ✅ Samba : CT 111 `samba-essai`, `smbd` actif, écriture refusée (montages en lecture seule).
+- ✅ servarr : CT 112 `servarr-essai`, pages locales, écriture refusée.
+- ✅ qBittorrent : CT 113 `qbittorrent-essai`, sortie du compte coupée (`000`), sans la clé Proton.
+- ✅ Cloudflare : CT 114 `cloudflare-essai`, `cloudflared` 2026.10.7 arrêté, sans le jeton. Le 100 en service a encore 2026.10.4.
 
-**Critère** : la liste ci-dessus est cochée, chaque fois après un CT d'essai. La phase 10 est remise à jour à chaque ligne cochée.
+> **Limite** : les conteneurs **en service** restent ceux créés à la main. Les playbooks sont prouvés, mais la production n'en sort pas encore, et des écarts existent déjà (versions de `jellyfin-ffmpeg` et de `cloudflared`). C'est l'objet de la phase 16.
 
 ---
 
-# Phase 9 — Accès distant et exploitation
+## Phase 9 — Accès distant
 
-**Objectif** : plus simple à administrer, plus sûr au quotidien.
+**Objectif** : l'administration reste privée, joignable depuis le téléphone sans exposer d'interface sur Internet.
 
-**Dépendance** : phase 7 jouée. Avance en même temps que la phase 8. Les alertes de sauvegarde sont déjà la phase 5.
+**Dépendance** : phase 7 jouée.
 
-- Rôles de Traefik, du tunnel Cloudflare, des accès LAN. [Cloudflare.md](Cloudflare.md), [ArgoCD.md](ArgoCD.md).
-- Interfaces *arr : cinq noms en service, Access (2 nov.). Page de liens abandonnée. Navidrome en service, sans Access. [Mediatheques.md](Mediatheques.md#navidrome-et-portail--choix-1er-nov).
-- Séparer services publics et interfaces d'admin.
-- Mises à jour, redémarrages.
-- Comptes, permissions, secrets, certificats, reprise : documentés. La reprise s'écrit sur un service qu'on sait reconstruire.
+**Critère** : aucune interface d'administration n'est joignable depuis Internet ; chaque service s'ouvre par le LAN ou par WireGuard, sous un nom stable.
 
-## Jalons
+### Jalons
 
-- ✅ Passerelle WireGuard (9 nov.). Playbook `playbooks/wireguard.yml`. CT 115 `wireguard` `<ip-wireguard>/24`, créé par le playbook, qui refuse 100 à 114. Un cœur, 512 Mo, 8 Go, non privilégié, sans nesting, sans idmap, sans montage de `tank`. Le 115 reste en service. Réseau `<réseau-wg>`, serveur `<ip-wg-serveur>/24`, téléphone `<ip-wg-téléphone>/32`. Les clés naissent dans le CT. Le fichier du téléphone est `/root/telephone.conf`, mode 0600. Une clé pour le PC (`<ip-wg-pc>`) a été créée puis retirée le jour même : le PC est fixe, en Ethernet, et ne sort pas. UDP 51820 depuis le LAN et en IPv6. La box est en CGNAT : aucune redirection IPv4. `pve` ignorait les annonces tant que `vmbr0` transmet et que `accept_ra` vaut 1. `net.ipv6.conf.vmbr0.accept_ra=2` est dans `/etc/sysctl.d/99-accept-ra.conf`. Le 115 a une adresse globale par annonce. L'endpoint du téléphone est cette adresse, port 51820. Elle n'est pas écrite ici. La box a une règle UDP 51820 vers elle. Le pare-feu du 115 accepte ce port depuis `<réseau-lan>` et depuis `::/0`. Le filtre ne laisse sortir du tunnel que vers les services listés. `<ip-box>` n'y est pas : l'y mettre coupe la page de la box. Preuve : téléphone, Wi-Fi coupé, `https://<ip-pve>:8006` affiche Proxmox. Deuxième passe : `changed=0` sur `localhost` (`ok=8`, `skipped=2`) et `wireguard` (`ok=26`, `skipped=3`). Les CT 100 et 102 à 107, et la VM 101, n'ont pas été modifiés. Les noms Cloudflare restent. Relancer le playbook laisse le 115 en place.
-- ✅ Chaque service de la liste ouvert depuis le téléphone, hors Wi-Fi (10 nov.). Proxmox `https://<ip-pve>:8006`, Gitea `:3000`, Jellyfin `:8096`, Navidrome `:4533`, qBittorrent `:8080`, Prowlarr `:9696`, Sonarr `:8989`, Radarr `:7878`, Lidarr `:8686`, Bazarr `:6767`. Argo CD sur `http://<ip-k3s-01>/` : Traefik reconnaît cette adresse en plus du nom. Vaultwarden reste `https://vaultwarden.labo.example`. Les autres noms Cloudflare ne sont plus publiés. La page `https://<ip-wireguard>/` est servie par le 115, certificat local. Elle ouvre chaque service dans un nouvel onglet.
-- ⬜ Mises à jour et fenêtres de redémarrage.
-- ⬜ Routines écrites : comptes, permissions, secrets, certificats, reprise.
-
-**Critère** : l'admin reste privé ; les routines sont écrites.
+- ✅ Passerelle WireGuard (9 nov.) : CT 115 `wireguard`, `<ip-wireguard>/24`, créé par `playbooks/wireguard.yml`. Réseau `<réseau-wg>`, seul le téléphone (`<ip-wg-téléphone>/32`) a une clé. UDP 51820 en IPv6, la box étant en CGNAT. Deuxième passe sans changement. Détail : [ansible.md](exploitation/ansible.md) et le [journal](projet/journal/2026-11.md).
+- ✅ Chaque service ouvert depuis le téléphone, Wi-Fi coupé (10 nov.) : Proxmox, Gitea, Jellyfin, Navidrome, qBittorrent, Prowlarr, Sonarr, Radarr, Lidarr, Bazarr, Argo CD (`http://<ip-k3s-01>/`). Page d'accueil `https://<ip-wireguard>/` servie par le 115.
+- ✅ Services publics et interfaces d'administration séparés (10 nov.) : seul Vaultwarden reste publié sur Cloudflare. Voir [cloudflare.md](exploitation/cloudflare.md).
+- ⬜ Vérifier le `ROOT_URL` de Gitea. Il vaut `https://gitea.labo.example/` depuis le 6 nov., mais la route est coupée depuis le 10 nov. : les URL de clonage et les liens des courriels pointent peut-être vers une adresse injoignable. Choisir l'adresse LAN (`http://<ip-k3s-01>:3000/`), joignable aussi par WireGuard, puis vérifier un clone depuis le PC et depuis le téléphone.
+- ⬜ Ouvrir le partage SMB (`\\<ip-samba>`, CT 102) à travers WireGuard. Aujourd'hui, le téléphone n'y accède pas hors du Wi-Fi. Deux points : ajouter TCP 445 vers `<ip-samba>` aux services autorisés par le filtre du 115, et vérifier l'adresse source vue par Samba. `smb.conf` n'accepte que `<réseau-lan>` : si le 115 ne masque pas les clients derrière sa propre adresse, il faut aussi accepter `<réseau-wg>`. Vérifier ensuite depuis Material Files, Wi-Fi coupé. Voir [samba.md](exploitation/samba.md).
+- ⬜ **Fermer `/admin` de Vaultwarden depuis Internet.** Vaultwarden est publié, et sa page `/admin` l'est donc aussi, protégée par le seul `ADMIN_TOKEN`. La bloquer côté public (règle Cloudflare, ou route Traefik qui ne la sert que sur le LAN), puis vérifier : `/admin` répond depuis le LAN, et pas depuis Internet. Relire au passage la configuration exposée (inscriptions fermées, invitations).
+- ⬜ **Des noms et du HTTPS sur le LAN.** Aujourd'hui, les services se joignent par `IP:port`, en HTTP pour la plupart. Viser un nom par service (par exemple `jellyfin.lan.<domaine>`), résolu par un DNS interne, et un certificat valide obtenu par défi DNS-01 auprès de Cloudflare, sans rien publier. Le reverse proxy existant (Traefik) ou un petit LXC dédié porte les certificats. Vérifier : chaque service s'ouvre par son nom, en HTTPS, sans alerte de certificat, depuis le LAN et par WireGuard. Ce jalon simplifie aussi le `ROOT_URL` de Gitea.
 
 ---
 
-# Phase 10 — Dépôt public allégé
+## Phase 10 — Dépôt public allégé
 
 **Objectif** : une copie publique de ce dépôt, sur GitHub, qui montre le travail (décisions, manifestes, scripts, journal) sans donner la carte du réseau ni un secret.
 
-**Dépendance** : phase 7 jouée. Pas besoin d'attendre la fin des phases 8 et 9. La copie se remet à jour à chaque LXC de la phase 8.
+**Dépendance** : phase 7 jouée. Il n'est pas nécessaire d'attendre les autres phases : la copie se remet à jour à chaque phase. **C'est la phase à commencer en premier**, puisqu'elle est ce qu'un recruteur verra.
 
-Décision du 4 nov. Ce dépôt-ci reste privé et reste la seule source. La copie publique ne s'édite pas à la main : une projection, rejouée depuis le PC, produit l'arbre puis le pousse. Le récit est sur le site (phase 11), qui lie cette copie.
+Décision du 4 nov. : ce dépôt reste privé et reste la seule source. La copie publique ne s'édite jamais à la main. Une **projection**, rejouée depuis le PC, produit l'arbre public, puis le pousse.
 
-La projection garde le plus possible. Elle remplace, plutôt que de supprimer des pages entières :
+La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime des pages entières :
 
-| Sort | Reste, récrit |
-|------|----------------|
+| Ce qui sort | Ce qui reste, réécrit |
+| --- | --- |
 | Jetons, mots de passe, clés, SealedSecrets | Le manifeste, sans l'objet secret |
-| Adresses LAN, plan d'adressage, origines et UUID de tunnel | Le nom du rôle (`pve`, `k3s-01`, `samba`…) |
-| Noms DNS du labo | Un nom d'exemple. Coller le vrai nom à l'architecture donne la carte ; ces noms sont déjà résolvables |
+| Adresses LAN, plan d'adressage, origines et UUID du tunnel | Le nom du rôle (`pve`, `k3s-01`, `samba`…) |
+| Noms DNS du labo | Un nom d'exemple : associer le vrai nom à l'architecture donnerait la carte |
 | Chemins d'archives, empreintes de sauvegarde, comptes | Le fait qu'une archive a été relue et qu'une empreinte a été vérifiée |
+| Le dossier `docs/prive/` | Rien : il ne sort pas |
+| Adresses de courriel personnelles (politique Access) | Une adresse d'exemple |
 
-`docs/Competences.md` est relu avant la publication : une ligne n'est publique que si un jalon a été joué. Les cases phase 0 encore ouvertes restent ouvertes dans la copie, elles aussi.
+**Critère** : un lecteur du dépôt public suit les ADR, les manifestes et le journal, sans en tirer une adresse privée, un secret, ni le nom DNS qui joint le service.
 
-## Jalons
+### Jalons
 
-- ⬜ Règle ci-dessus écrite à côté du script, avec un exemple avant / après
-- ⬜ Projection rejouable. Deuxième passe : la copie publique ne change que si le labo a changé
-- ⬜ Relecture de l'arbre produit : plus d'adresse LAN, plus de secret, plus de SealedSecret, plus de nom DNS du labo
-- ⬜ `docs/Competences.md` relu après les phases 5 à 7
-- ⬜ Dépôt GitHub public créé et alimenté par la projection
-
-**Critère** : un lecteur du dépôt public suit les ADR, les manifestes et le journal ; il n'en tire ni une adresse privée, ni un secret, ni le nom DNS qui joint le service.
+- ⬜ La règle ci-dessus écrite à côté du script, avec un exemple avant et après.
+- ⬜ Une projection rejouable. Une deuxième passe ne change la copie publique que si le labo a changé.
+- ⬜ Un contrôle automatique sur l'arbre produit, en plus de la relecture : recherche d'adresses `192.168.`, `10.`, d'empreintes, de noms DNS du labo, de mots-clés de secret, et un outil de détection de secrets (par exemple Gitleaks). Le push est refusé si le contrôle trouve quelque chose.
+- ⬜ Relecture humaine de l'arbre produit.
+- ⬜ `competences.md` relu : une ligne n'est publique que si un jalon a été joué.
+- ⬜ Un `README` public pensé pour un lecteur pressé : ce que fait le homelab, un schéma, les choix et leurs raisons, ce qui reste à faire. Il assume les limites (un seul nœud, un seul NVMe).
+- ⬜ Le dépôt GitHub public, créé et alimenté par la projection.
 
 ---
 
-# Phase 11 — Site CV public
+## Phase 11 — Site CV public
 
-**Objectif** : profil, projets, homelab. Le homelab y est raconté à partir du dépôt public, pas à partir du labo.
+**Objectif** : un site qui présente le profil, les projets et le homelab. Le homelab y est raconté à partir du dépôt public, jamais à partir du labo.
 
-**Dépendance** : phase 3 pour le pipeline. Phase 10 pour le contenu homelab.
+**Dépendances** : phase 10 pour le contenu. Phase 17 pour le pipeline, si le site est la première application maison, ce qui est recommandé.
 
 - Dépôt versionné, contenus publics seulement.
-- Génération + validation automatiques, puis déploiement. Exposition minimale, HTTPS.
+- Génération et validation automatiques, puis déploiement. Exposition minimale, HTTPS.
 - Trois récits, chacun avec sa limite :
-  1. Une donnée survit à la machine. Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe ; le rollback snapshot et la reprise réelle du volume de prod restent écrits, non joués.
-  2. Un changement a un chemin et un retour arrière. Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : les manifestes se reconstruisent par GitOps ; les LXC suivent le moule de la phase 7, un à la fois.
-  3. L'accès distant est refusé par défaut. Pas de redirection de port, tunnel, Access devant l'admin. Limite : le coffre et le lecteur musique s'authentifient dans l'application.
-- Une colonne homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
-- Lien vers le dépôt public. Aucun lien vers une interface d'admin, ni vers le dépôt privé.
-
-## Jalons
-
-- ⬜ Les trois récits, leurs limites, et la colonne cloud sont sur le site
-- ⬜ Le site pointe le dépôt public de la phase 10, et seulement celui-là
-- ⬜ Première version en ligne, HTTPS
-- ⬜ Un commit valide déclenche le déploiement
-- ⬜ Relecture : rien n'a été copié à la main depuis le labo
+  1. **Une donnée survit à la machine.** Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe, et certaines reprises restent écrites, pas jouées (voir la phase 12).
+  2. **Un changement a un chemin et un retour arrière.** Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : seuls les manifestes se reconstruisent par GitOps ; les LXC suivent leur playbook, mais la production n'en sort pas encore (voir la phase 16).
+  3. **L'accès distant est refusé par défaut.** Pas de redirection de port, tunnel sortant, WireGuard pour l'administration. Limite : le coffre s'authentifie dans l'application.
+- Une correspondance homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
+- Un lien vers le dépôt public. Aucun lien vers une interface d'administration, ni vers le dépôt privé.
 
 **Critère** : le site raconte le homelab, un commit le redéploie, et aucune donnée du labo privé n'y figure.
 
+### Jalons
+
+- ⬜ Les trois récits, leurs limites et la correspondance cloud sont sur le site.
+- ⬜ Le site pointe vers le dépôt public de la phase 10, et seulement vers lui.
+- ⬜ Première version en ligne, en HTTPS.
+- ⬜ Un commit validé déclenche le déploiement.
+- ⬜ Relecture : rien n'a été copié à la main depuis le labo.
+
 ---
 
+## Phase 12 — La reprise se joue, pas seulement s'écrit
 
-# Décisions encore ouvertes
+**Objectif** : chaque scénario de [restauration.md](exploitation/restauration.md) est **joué** au moins une fois, ou explicitement accepté comme non joué, avec la raison. Le temps de reprise est mesuré.
 
-| Sujet | Décision | Quand |
-|-------|----------|-------|
-| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). `homelab` sans copie de travail sur Gitea. Contrôle des manifestes sur ce dépôt GitHub, pas sur le runner. Vert le 6 nov. (Manifestes n° 1, `0a70da8`). Essai rouge joué le 6 nov. (`66f4880`, 10 s, code 1), fichier retiré dans `193e6cd` (vert en 8 s). `ROOT_URL` alignée le 6 nov. (`e2a1837`, `https://gitea.labo.example/`). `essai-deploiement` retiré le 6 nov. (`60a930e`), `root` `Synced`. Archive utile sortie de `k3s-01` le 6 nov. (`<snapshot>`). Phase 6 jouée. | Phase 6 |
-| Stockage personnel | SMB visé (LAN) ; Nextcloud / Syncthing **pas pris** | Phase 1 (partage encore à poser) |
-| Sauvegarde Android | Outils par catégorie | Phase 2 |
-| Hébergement d'un service | VM, LXC, Docker, K3s | Avant **chaque** service |
-| Musique | Navidrome en service (2 nov.), y compris `navidrome.labo.example`. Symfonium **15.1.0** validé. Tempus pas testé | Phase 4 |
-| Accès distant | Tunnel en place. Cinq noms *arr avec Access (2 nov.). Navidrome sans Access. Page de liens abandonnée. Passerelle WireGuard jouée le 9 nov. : CT 115 `wireguard` `<ip-wireguard>/24` reste en service, seul le téléphone a une clé, Proxmox s'ouvre hors Wi-Fi. Le 10 nov., le téléphone ouvre les services hors Wi-Fi. Seul Vaultwarden reste publié. Routines encore ouvertes. | Phase 9 |
-| Supervision | ntfy (5 nov.), joué. Instance publique, sujet hors du dépôt. Cinq contrôles branchés, scrub planifié le 6 déc. Seuil USB et rétention Restic : 14 j, appliqués. Espace : 10 % libres. | Phase 5 |
-| Reconstruction des LXC | Ansible depuis le PC, runner d'abord (4 nov.). Écrit le 7 nov. ([ADR-010](ADR/ADR-010-Ansible-LXC.md)). Playbook `c1a1e07`, secrets hors de Git. CT 108 créé le 7 nov., Essai n° 3 verte en 2 s (`4ce9657`), deuxième passe sans changement, puis retiré (`c8cee20`). Le récit reste sur le 107. Navidrome : CT 109 `navidrome-essai` créé le 8 nov., réponse locale, deuxième passe sans changement, puis retiré. Le récit reste sur le 106. Relancer le playbook recréerait le 109. Jellyfin : CT 110 `jellyfin-essai` créé le 8 nov., `/health` à `Healthy`, deuxième passe sans changement. Le 103 est resté en service, avec `jellyfin-ffmpeg7`. L'essai a `jellyfin-ffmpeg8` **8.1.3-2-trixie**. Puis le 110 a été retiré. Le récit reste sur le 103. Relancer le playbook recréerait le 110. Samba : CT 111 `samba-essai` créé le 8 nov., `smbd` actif, écriture refusée, deuxième passe sans changement. Le 102 est resté en service, en écriture. L'essai lit seulement. Puis le 111 a été retiré. Le récit reste sur le 102. Relancer le playbook recréerait le 111. servarr : CT 112 `servarr-essai` créé le 8 nov., pages locales, écriture refusée, deuxième passe sans changement. Le 105 est resté en service, en écriture. L'essai lisait seulement. Puis le 112 a été retiré. Le récit reste sur le 105. Relancer le playbook recréerait le 112. qBittorrent : CT 113 `qbittorrent-essai` créé le 8 nov., page locale, écriture refusée, sortie du compte coupée, deuxième passe sans changement. Le 104 est resté en service, en écriture, avec sa clé Proton. L'essai lit seulement et n'a pas cette clé. Puis le 113 a été retiré. Le récit reste sur le 104. Relancer le playbook recréerait le 113. Cloudflare : CT 114 `cloudflare-essai` créé le 8 nov., cloudflared **2026.10.7** arrêté, sans le jeton, deuxième passe sans changement. Le 100 est resté en service, encore en **2026.10.4**, avec son jeton. Puis le 114 a été retiré. Le récit reste sur le 100. Relancer le playbook recréerait le 114. Les six essais de la phase 8 sont joués. | Phases 7 et 8 |
-| Dépôt montré | Le labo reste privé et seule source (4 nov.). Une projection rejouable alimente un second dépôt GitHub, public. Les adresses LAN deviennent des rôles, les noms DNS du labo deviennent un exemple, les secrets sortent. Le site CV pointe cette copie. | Phases 10 et 11 |
+**Dépendances** : phases 0 et 6. À jouer avant d'ajouter de nouvelles données importantes.
+
+Aujourd'hui, le tableau de restauration compte plusieurs « jamais joué » : la restauration du coffre sur la production, la reconstruction de `k3s-01`, la perte de `tank`, le remplacement d'un disque, et la perte du NVMe, qui n'est même pas écrite en détail. En entretien, c'est la première question qui suit « j'ai des sauvegardes ».
+
+Règle de prudence : on joue d'abord **à côté** de la production (clone d'un snapshot, VM d'essai), et sur la production seulement dans une fenêtre annoncée, après une sauvegarde fraîche.
+
+**Critère** : chaque ligne du tableau de restauration porte une date de test, ou une décision écrite de ne pas la jouer. Le RTO (temps de reprise) et le RPO (perte de données acceptable) sont notés pour chaque service.
+
+### Jalons
+
+- ⬜ **RTO et RPO écrits** pour chaque service (Vaultwarden, Gitea, médiathèques, données personnelles), et confrontés à la fréquence réelle des sauvegardes. Le disque USB manuel donne aujourd'hui un RPO de 14 jours pour les données personnelles hors `tank`.
+- ⬜ **Rollback d'un snapshot du zvol Vaultwarden.** D'abord sur un clone (`zfs clone`) monté à côté, puis sur la production dans une fenêtre annoncée. Reprend le jalon ouvert de la phase 0.
+- ⬜ **Restauration d'une archive sur le volume Vaultwarden en service** (scénario 3.1). Reprend le jalon ouvert de la phase 0.
+- ⬜ **Reconstruire `k3s-01` à côté de la production** (scénario 3.2) : une VM d'essai, K3s, la clé Sealed Secrets restaurée, Argo CD amorcé depuis Git, et des **clones** des zvols Vaultwarden et Gitea. Vérifier que les deux services démarrent avec leurs données. Mesurer le temps. Aucun risque pour la production.
+- ⬜ **Écrire en détail la perte du NVMe** (scénario 7), puis vérifier que tout ce qu'il faut est sauvegardé : `/etc/pve`, la configuration réseau, `/etc/subuid` et `/etc/subgid`, les scripts et timers installés, les clés SSH de service. Si une pièce manque, l'ajouter à `/tank/backups`, donc au périmètre USB.
+- ⬜ **Remplacement d'un disque de `tank`** (scénario 6) : écrire la procédure, avec l'identification du disque par son numéro de série, et décider s'il faut la répéter (`zpool offline` puis `online`, resilver observé) ou seulement l'écrire.
+- ⬜ **Perte de `tank`** (scénario 3.3) : restaurer depuis l'USB un échantillon représentatif (un dossier personnel, une archive Vaultwarden, la clé Sealed Secrets) vers un emplacement d'essai, et le vérifier.
+- ⬜ **Un exercice complet chronométré**, une fois par an : un scénario tiré au hasard, joué uniquement à partir de la documentation. Ce qui manque à la doc est corrigé.
+
+---
+
+## Phase 13 — Une copie hors du domicile
+
+**Objectif** : la règle **3-2-1** est respectée pour les données irremplaçables : trois copies, sur deux supports, dont une hors du domicile. Un incendie, un vol ou un dégât des eaux ne fait perdre ni le coffre, ni les documents, ni les photos.
+
+**Dépendance** : phase 12 commencée, pour savoir ce qu'on protège et en combien de temps on le récupère.
+
+Aujourd'hui, toutes les copies sont dans la même pièce : `tank`, ses snapshots et le disque USB. Le tableau de [sauvegardes.md](exploitation/sauvegardes.md) marque la « copie chiffrée hors site » comme **prévue**.
+
+Deux familles de solutions, à trancher dans un ADR :
+
+| Solution | Avantage | Limite |
+| --- | --- | --- |
+| Un second disque USB, gardé chez un proche, échangé régulièrement | Aucun abonnement, données hors ligne | Dépend d'un geste humain ; RPO de plusieurs semaines |
+| Un stockage objet ou un espace distant, alimenté par Restic | Automatisable, vérifiable, alertable | Coût mensuel, secret d'accès à protéger, débit montant de la box |
+
+**Critère** : une restauration depuis la copie hors domicile a été jouée, sur une machine qui n'est pas `pve`, en ne s'aidant que de la documentation et du mot de passe Restic.
+
+### Jalons
+
+- ⬜ Volume à protéger mesuré : coffre, `/tank/backups`, dossiers personnels. Les médiathèques restent exclues.
+- ⬜ ADR : destination hors domicile, coût, chiffrement (Restic chiffre déjà côté client), rétention.
+- ⬜ Copie en place. Si elle est automatique : un timer, et son échec passe par ntfy.
+- ⬜ Contrôle d'ancienneté de la copie hors domicile ajouté à `check-sauvegardes.sh`.
+- ⬜ Vérification d'intégrité périodique (`restic check`, avec lecture d'un échantillon de données).
+- ⬜ **Le mot de passe Restic et la procédure existent hors du homelab.** Si `pve` et Vaultwarden disparaissent ensemble, il faut encore pouvoir déchiffrer : une copie papier ou un second gestionnaire, rangé ailleurs.
+- ⬜ Restauration jouée depuis la copie hors domicile, sur une autre machine.
+
+---
+
+## Phase 14 — Exploitation courante et sécurité
+
+**Objectif** : le homelab se met à jour, redémarre et se défend sans improvisation. Les routines sont écrites et ont été jouées.
+
+**Dépendance** : phase 9 jouée.
+
+**Critère** : chaque composant a une politique de mise à jour écrite et appliquée ; un redémarrage complet de `pve` ne demande aucune intervention ; un audit des accès a été fait et ses écarts corrigés.
+
+### Jalons
+
+**Mises à jour**
+
+- ⬜ Une politique écrite par couche : Proxmox, Debian dans les LXC, K3s, images des conteneurs, Gitea, applications des médiathèques. Pour chacune : fréquence, source des annonces de sécurité, procédure, retour arrière.
+- ⬜ Mises à jour de sécurité automatiques dans les LXC Debian (`unattended-upgrades`), décidées conteneur par conteneur.
+- ⬜ Les versions des images dans `kubernetes/` suivies automatiquement : un outil comme Renovate ouvre une demande de fusion à chaque nouvelle version, et le contrôle `kubeconform` la valide.
+- ⬜ Une montée de version de K3s jouée selon la procédure écrite, avec un snapshot de la VM avant.
+
+**Redémarrages**
+
+- ⬜ Ordre et délais de démarrage relus pour chaque VM et LXC (le 100 démarre avec `order=1,up=30`).
+- ⬜ **Redémarrage à froid de `pve` joué** : tout revient sans intervention. Les services sont vérifiés un par un, et le temps de retour est noté.
+- ⬜ **Onduleur** : vérifier si `pve` est prévenu d'une coupure secteur. Sinon, brancher le câble de données et configurer NUT, pour un arrêt propre avant la fin de la batterie et une alerte ntfy. Tester avec une coupure simulée.
+
+**Sécurité**
+
+- ⬜ Inventaire des comptes et des accès : qui se connecte où, avec quoi. Pas de `root@pam` au quotidien dans l'interface Proxmox, mais un compte nominatif.
+- ⬜ Double authentification sur l'interface Proxmox et sur Gitea.
+- ⬜ SSH par clé uniquement, sur `pve` et `k3s-01`, mots de passe désactivés.
+- ⬜ Revue du pare-feu : refus par défaut sur chaque conteneur, seuls les ports utiles ouverts. Vérification par un balayage (`nmap`) depuis le LAN et depuis WireGuard, comparé à la liste attendue.
+- ⬜ Inventaire des secrets, avec leur lieu de stockage et leur procédure de rotation : jeton du tunnel, clé Sealed Secrets, `ADMIN_TOKEN`, jetons Ansible et Gitea, clés WireGuard, clé Proton. Une rotation jouée au moins une fois.
+- ⬜ Surveillance SMART des trois disques (`smartd`), avec une alerte ntfy sur un attribut qui se dégrade.
+
+---
+
+## Phase 15 — Observabilité
+
+**Objectif** : voir l'état du homelab d'un coup d'œil, et être prévenu quand un **service** tombe, pas seulement une sauvegarde.
+
+**Dépendance** : phase 14 commencée. ntfy reste le canal d'alerte.
+
+Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne prévient si Jellyfin, Gitea ou le tunnel ne répondent plus, et aucune métrique n'est conservée.
+
+À trancher dans un ADR : une pile Prometheus et Grafana (standard en entreprise, plus lourde), ou plus léger (Uptime Kuma pour la disponibilité, Netdata pour les métriques). Selon l'[ADR-012](decisions/ADR-012-LXC-ou-K3s.md), une pile dont les données tiennent dans un volume dédié va dans K3s.
+
+**Critère** : un service arrêté volontairement déclenche une alerte en quelques minutes ; un tableau de bord montre CPU, mémoire, disques, pools ZFS et état des services.
+
+### Jalons
+
+- ⬜ ADR : outil de métriques, outil de disponibilité, durée de conservation, emplacement.
+- ⬜ Sonde de disponibilité pour chaque service, interne et externe (Vaultwarden vu depuis Internet).
+- ⬜ Métriques de `pve` (hôte, ZFS, VM et LXC) et de `k3s-01` (nœud, pods).
+- ⬜ Un tableau de bord principal, versionné dans le dépôt.
+- ⬜ Alertes vers ntfy : service injoignable, disque qui se remplit, certificat qui expire, pod qui redémarre en boucle.
+- ⬜ Journaux centralisés (par exemple Loki), au moins pour `pve`, `k3s-01` et le tunnel. Optionnel, à décider dans l'ADR.
+- ⬜ Essai : arrêter volontairement un service, recevoir l'alerte, le redémarrer, voir l'alerte se résoudre.
+
+---
+
+## Phase 16 — La production sort du code
+
+**Objectif** : chaque conteneur **en service** a été recréé par son playbook. Ce qui tourne est ce qui est décrit dans Git, et un écart se détecte.
+
+**Dépendances** : phase 8 jouée, phase 12 commencée (savoir revenir en arrière).
+
+Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai. Mais les conteneurs en service ont été créés à la main, et ils dérivent déjà : `jellyfin-ffmpeg7` sur le 103 au lieu de 8, `cloudflared` 2026.10.4 sur le 100 au lieu de 2026.10.7. De même, les scripts de `pve` sont dans Git, mais leur installation reste manuelle. Tant que la production n'est pas sortie du code, « l'infrastructure est en code » n'est vrai qu'à moitié.
+
+**Critère** : un passage en mode vérification (`ansible-playbook --check --diff`) sur toute la production ne montre aucun écart.
+
+### Jalons
+
+- ⬜ Chaque playbook peut viser le conteneur en service, en mode vérification, sans rien modifier. Les écarts sont relevés.
+- ⬜ Bascule de chaque conteneur en service vers sa version créée par le playbook, un à la fois, du moins risqué au plus risqué (même ordre qu'en phase 8, runner en premier). Pour chacun : sauvegarde de la configuration, bascule, vérification, retour arrière prêt.
+- ⬜ Les scripts et timers de `pve` installés par un playbook, au lieu de copies à la main. Révision de l'ADR-010 sur ce point.
+- ⬜ La VM `k3s-01` décrite en code : création (cloud-init ou playbook) et installation de K3s. Ce jalon rend aussi le scénario 3.2 de la phase 12 plus rapide.
+- ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, en plus de `kubeconform`.
+- ⬜ Un passage de vérification planifié (par exemple chaque semaine), qui signale un écart par ntfy.
+
+---
+
+## Phase 17 — Une application maison, livrée de bout en bout
+
+**Objectif** : une application développée ici passe d'un commit à la production par un pipeline complet (tests, image, analyse, déploiement GitOps, retour arrière) et elle est exposée sur Internet **sans** mettre en danger le reste du homelab.
+
+**Dépendances** : phases 14 et 15. L'**ADR-013** est écrit et appliqué **avant** toute exposition.
+
+Un conteneur seul n'isole pas assez une application publique : une faille dans l'application, ou dans le noyau partagé, peut donner accès au nœud, donc à Vaultwarden et à Gitea. L'ADR-013 doit trancher les protections. Voir l'[ADR-012](decisions/ADR-012-LXC-ou-K3s.md).
+
+Le site CV (phase 11) est le candidat recommandé pour cette première application : peu de données, peu de risque, et il montre le pipeline à ceux qui le lisent.
+
+**Critère** : un commit sur l'application arrive en production sans geste manuel autre que la validation de la demande de fusion ; l'image déployée a été analysée ; un retour arrière se fait en une opération ; l'application ne peut joindre ni Vaultwarden, ni Gitea, ni l'API Kubernetes.
+
+### Jalons
+
+- ⬜ **ADR-013 écrit** : nœud ou VM séparés pour les applications publiques, `NetworkPolicy` qui refuse tout par défaut, Pod Security au niveau `restricted`, pas de jeton de compte de service monté, conteneurs non root avec système de fichiers en lecture seule, limites de ressources.
+- ⬜ Isolation appliquée et **vérifiée** : depuis un pod de l'application, Vaultwarden, Gitea, l'API Kubernetes et le LAN sont injoignables.
+- ⬜ Pipeline sur le runner Gitea : tests, construction de l'image, analyse de vulnérabilités (par exemple Trivy) qui bloque sur une faille critique, publication dans le registre de Gitea.
+- ⬜ Déploiement GitOps : le pipeline propose la nouvelle version de l'image dans les manifestes, Argo CD la déploie après fusion.
+- ⬜ Retour arrière joué : revenir à la version précédente, mesurer le temps.
+- ⬜ Exposition par le tunnel Cloudflare, avec limitation de débit et règles de pare-feu applicatif.
+- ⬜ Supervision de l'application (phase 15) et sauvegarde de ses données, si elle en a.
+
+---
+
+## Décisions encore ouvertes
+
+| Sujet | Où en est la décision | Quand |
+| --- | --- | --- |
+| Adresse de référence de Gitea | `ROOT_URL` pointe vers une route coupée. Adresse LAN, ou nom interne en HTTPS | Phase 9 |
+| Noms et certificats internes | DNS interne et certificats DNS-01 : outil et emplacement à choisir | Phase 9 |
+| Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 13, dans un ADR |
+| Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 15, dans un ADR |
+| Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 16 |
+| Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 17 |
+| Hébergement du site CV | Dans le homelab (phase 17), ou chez un hébergeur de sites statiques | Phase 11 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
 
+### Décisions déjà tranchées
+
+| Sujet | Décision | ADR ou page |
+| --- | --- | --- |
+| Forge Git | Gitea, édition libre (3 nov.). Argo CD lit GitHub (4 nov.). Contrôle des manifestes sur GitHub | [ADR-011](decisions/ADR-011-Gitea.md), [forge-gitea.md](exploitation/forge-gitea.md) |
+| Stockage personnel | SMB sur le LAN ; ni Nextcloud, ni Syncthing | (document privé) |
+| Sauvegarde Android | Outils par type de données | (document privé) |
+| Hébergement d'un service | Un service qui lit ou écrit un dataset de fichiers sur `tank` va en LXC ; un service aux données propres va dans K3s, sur un zvol dédié (11 nov.) | [ADR-012](decisions/ADR-012-LXC-ou-K3s.md) |
+| Musique | Navidrome, client Symfonium (2 nov.) | [navidrome.md](exploitation/mediatheques/navidrome.md) |
+| Accès distant | Seul Vaultwarden reste publié ; WireGuard pour tout le reste (9 et 10 nov.) | [ADR-003](decisions/ADR-003-Cloudflare-Tunnel.md), [cloudflare.md](exploitation/cloudflare.md) |
+| Alerte | ntfy, cinq contrôles, rétention et seuil USB à 14 jours, espace à 10 % (5 nov.) | [ADR-009](decisions/ADR-009-Alerte-ntfy.md) |
+| Reconstruction des LXC | Ansible depuis le PC (4 nov.), six playbooks validés (7 et 8 nov.) | [ADR-010](decisions/ADR-010-Ansible-LXC.md), [ansible.md](exploitation/ansible.md) |
+| Dépôt montré | Le labo reste privé et seule source ; une projection alimente un dépôt public (4 nov.) | Phase 10 |
+
 ---
 
-# Hors phases (plus tard)
+## Hors phases
 
-Idées **gardées**, pas planifiées :
+Idées **gardées**, mais pas planifiées :
 
-- Home Assistant
-- Paperless
-- Immich
-- Page agent sur le téléphone, une fois la forge prête — [plus tard](#page-agent-plus-tard). Absente du récit d'entretien tant que le pod n'existe pas.
+- Home Assistant.
+- Paperless.
+- Immich.
+- Un second NVMe en miroir pour `rpool`, pour que la perte d'un disque système ne coupe plus tout. C'est la principale limite matérielle du homelab.
+- **Page agent** sur le téléphone, une fois la forge prête (idée du 3 nov.). Un pod sur `k3s-01` avec le programme `agent`, et une page maison : la conversation, et des diffs plus lisibles qu'en terminal. Le téléphone ouvre cette page. Le pod ne voit que son volume : ni le disque de la machine, ni le cluster. La clé du compte Cursor reste dans le pod, et le modèle tourne chez Cursor. Le nom n'est pas choisi. Comme toute application exposée, elle attendrait l'ADR-013. Absente du récit d'entretien tant que le pod n'existe pas.
 
-L'onduleur n'est plus un chantier : il est en place et protège le serveur. [Materiel.md](Materiel.md).
+L'onduleur n'est plus un chantier matériel : il est en place et protège le serveur (voir [materiel.md](vue-ensemble/materiel.md)). Son intégration logicielle est un jalon de la phase 14.
 
 ---
 
-# Idées de fonctionnement
+## Idées de fonctionnement
 
-Pas des règles strictes.
+Ce ne sont pas des règles strictes.
 
-1. Un déploiement important à la fois, tant que le précédent n'est pas assez solide. L'étude en parallèle est bienvenue.
-2. Sauvegarder avant une migration ou un changement de structure ; avoir un retour arrière.
-3. Une sauvegarde non restaurée reste une inconnue.
-4. Documenter **après** validation (choix, chemins, incidents).
-5. Ne pas migrer un composant qui marche juste pour « tout mettre pareil ».
-6. Données personnelles et interfaces d'admin : pas exposées « pour que ce soit plus simple ».
-7. Avant un service : RAM, CPU, disque, backups, et le temps de le soigner.
-8. Un LXC d'infra devient reproductible sur le moule déjà prouvé, un à la fois.
+1. Un déploiement important à la fois, tant que le précédent n'est pas solide. L'étude en parallèle est bienvenue.
+2. Sauvegarder avant une migration ou un changement de structure, et prévoir un retour arrière.
+3. Une sauvegarde jamais restaurée reste une inconnue.
+4. Documenter **après** validation : choix, chemins, incidents.
+5. Ne pas migrer un composant qui fonctionne juste pour « tout mettre pareil ».
+6. Ne pas exposer les données personnelles ni les interfaces d'administration « pour que ce soit plus simple ».
+7. Avant un nouveau service, vérifier la RAM, le CPU, le disque, les sauvegardes, et le temps disponible pour le maintenir.
+8. Un LXC devient reproductible sur le moule déjà prouvé, un à la fois.
+9. Jouer à côté de la production avant de jouer sur la production.

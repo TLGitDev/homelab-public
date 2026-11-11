@@ -328,7 +328,9 @@ Hors phases. Pas commencé.
 
 ## Ce qui reste ouvert
 
-- Le reste de l'exploitation (phase 9) : mises à jour, fenêtres de redémarrage, routines écrites.
+- La fin de l'accès distant (phase 9) : `ROOT_URL` de Gitea, SMB par WireGuard, `/admin` de Vaultwarden, noms et HTTPS sur le LAN.
+- L'exploitation courante et la sécurité (phase 14) : mises à jour, redémarrages, onduleur, durcissement, secrets.
+- Les reprises jouées (phase 12), la copie hors domicile (phase 13), l'observabilité (phase 15), la production depuis le code (phase 16) et une application livrée de bout en bout (phase 17).
 - Le dépôt public allégé (phase 10) et le site CV (phase 11).
 - Le remplacement d'un disque, le retour arrière d'un snapshot sur la production, et la reprise réelle du coffre sur son zvol (voir [restauration.md](../exploitation/restauration.md)).
 
