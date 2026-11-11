@@ -1,73 +1,71 @@
-# ADR-008 — Données Vaultwarden sur `tank` (volume bloc)
+# ADR-008 — Données de Vaultwarden sur `tank` (volume bloc)
 
 ## Statut
 
-Accepté. **Appliqué** le 2026-10-14. POC préalable : 2026-10-06.
+Accepté. **Appliqué le 14 oct. 2026**, après une preuve de concept le 6 oct. 2026.
 
 ## Contexte
 
-Vaultwarden tournait sur K3s avec un PVC `local-path` sur le disque système de `k3s-01` (`rpool`). Perdre `rpool` ou la VM, c'était perdre le coffre.
+Vaultwarden tournait sur K3s avec un PVC `local-path`, donc sur le disque système de `k3s-01`, dans `rpool`. Perdre `rpool` ou la VM, c'était perdre le coffre.
 
-`tank/vmdata` est exposé à Proxmox (`zfspool: tank-vmdata`). Le chemin zvol → VM → ext4 → Local PV → PVC → Pod a été validé par un POC, puis le volume de test a été détruit.
+`tank/vmdata` est déclaré dans Proxmox (`zfspool: tank-vmdata`). Une preuve de concept a validé la chaîne zvol → VM → ext4 → Local PV → PVC → Pod, puis le volume de test a été détruit.
 
-Les sauvegardes automatiques n'étaient **pas** en place. On a d'abord déplacé les données, **puis** on automatisera les backups.
+À ce moment-là, les sauvegardes automatiques n'existaient **pas** encore. L'ordre retenu : d'abord mettre les données à l'abri, **puis** automatiser les sauvegardes.
 
 ## Décision
 
 Pour les données persistantes critiques de Vaultwarden :
 
-1. un **volume bloc ZFS** `tank/vmdata/vm-101-vaultwarden-data` (stockage Proxmox `tank-vmdata`, 8 Gio) ;
-2. présenté à la VM `k3s-01` (`scsi1`, `iothread=1`) ;
-3. filesystem Linux ext4, montage par UUID dans `fstab` ;
+1. un **volume bloc ZFS**, `tank/vmdata/vm-101-vaultwarden-data` (stockage Proxmox `tank-vmdata`, 8 Gio) ;
+2. présenté à la VM `k3s-01` en `scsi1`, avec `iothread=1` ;
+3. formaté en ext4 et monté par son UUID dans `fstab` ;
 4. consommé par Kubernetes via le PV statique `vaultwarden-zfs-pv` (`Retain`) et le PVC `vaultwarden-zfs-pvc`.
 
-Pas de NFS sous SQLite. Pas de CSI ZFS à ce stade.
+Pas de NFS sous SQLite, et pas de pilote CSI ZFS à ce stade.
 
 ```
 SQLite → PVC vaultwarden-zfs-pvc → Local PV → ext4 → zvol → VM 101 → tank/vmdata
 ```
 
-Organisation :
+Organisation de `tank` :
 
 ```
 tank
-├── vmdata     ← zfspool Proxmox `tank-vmdata` ; volumes bloc uniquement
+├── vmdata     ← stockage Proxmox « tank-vmdata » : volumes bloc uniquement
 │   └── vm-101-vaultwarden-data
-├── backups    ← rôle éventuel, plus tard
+├── backups
 └── …
 ```
 
-**Pas** de dataset applicatif du type `tank/vmdata/vaultwarden` mélangé aux volumes Proxmox.
-
-Détail : [Stockage.md](../Stockage.md). Service : [Vaultwarden.md](../Vaultwarden.md). Backups : [Sauvegardes.md](../Sauvegardes.md).
+On ne mélange **pas** de dataset applicatif (du type `tank/vmdata/vaultwarden`) avec les volumes de Proxmox.
 
 ## Raisons
 
-- Séparer infra (`rpool`) et données (`tank`) : reconstruire Proxmox / k3s-01 sans recréer le coffre.
-- SQLite reste sur du bloc « local » du point de vue de la VM.
-- Un Local PV évite d'introduire un CSI ZFS alors que le cluster n'a qu'un nœud et que Proxmox gère déjà les zvols.
-- Snapshots ZFS possibles (rollback rapide). **Ce n'est pas** une sauvegarde : perte de `tank` = perte des snapshots.
-- Vaultwarden ne connaît pas ZFS : PVC → K8s → chemin local → VM → Proxmox → ZFS.
-- GitOps conserve le Deployment, le PV et le PVC dans Git (sync manuel).
+- Séparer l'infrastructure (`rpool`) des données (`tank`) : on peut reconstruire Proxmox ou `k3s-01` sans recréer le coffre.
+- SQLite reste sur un stockage bloc, local du point de vue de la VM.
+- Un Local PV évite d'ajouter un pilote CSI ZFS, alors que le cluster n'a qu'un nœud et que Proxmox gère déjà les zvol.
+- Les snapshots ZFS permettent un retour arrière rapide. Ce n'est **pas** une sauvegarde : perdre `tank`, c'est perdre aussi ses snapshots.
+- Vaultwarden ne connaît pas ZFS : il voit un PVC, et la chaîne Kubernetes → VM → Proxmox → ZFS fait le reste.
+- Le Deployment, le PV et le PVC restent dans Git, appliqués par Argo CD en synchronisation manuelle.
 
 ## Alternatives étudiées
 
 | Option | Commentaire |
-|--------|-------------|
-| Rester en `local-path` sur `rpool` | Simple. Les données meurent avec la VM / le NVMe. |
-| NFS (ou similaire) monté dans le Pod pour SQLite | Évite un volume Proxmox. Moins adapté à SQLite que le bloc. NFS reste envisageable plus tard pour du partage ou une destination de backup, pas comme stockage primaire de Vaultwarden. |
-| Dataset fichier `tank/vaultwarden` mélangé à `vmdata` | Possible pour d'autres usages. Ici : volumes VM via `tank/vmdata` seulement. |
-| CSI ZFS | Couche de plus. Un nœud, volumes déjà gérés par Proxmox, besoin actuel couvert par le Local PV. À réévaluer si le cluster devient multi-nœuds ou si le provisioning / les snapshots Kubernetes deviennent un besoin. |
+| --- | --- |
+| Rester en `local-path` sur `rpool` | Simple, mais les données disparaissent avec la VM ou le NVMe |
+| NFS monté dans le Pod pour SQLite | Éviterait un volume Proxmox, mais SQLite est moins adapté au réseau qu'au bloc. NFS reste envisageable plus tard pour du partage ou comme destination de sauvegarde, pas comme stockage principal de Vaultwarden |
+| Dataset de fichiers `tank/vaultwarden` | Possible pour d'autres usages. Ici, les volumes de VM passent uniquement par `tank/vmdata` |
+| Pilote CSI ZFS | Une couche de plus. Avec un seul nœud et des volumes déjà gérés par Proxmox, le Local PV suffit. À réévaluer si le cluster passe à plusieurs nœuds, ou si le provisionnement et les snapshots côté Kubernetes deviennent un besoin |
 
 ## Validation
 
-- POC du **2026-10-06** : volume de test détruit ensuite. [Stockage.md](../Stockage.md#poc-6-octobre-2026).
-- Migration du **2026-10-14** : sauvegarde arrêtée, copie SHA-256 identique, `PRAGMA integrity_check` ok (29 tables), Argo CD Synced/Healthy, HTTP 200, coffre OK. Ancien PVC conservé. [Vaultwarden.md](../Vaultwarden.md#migration-local-path--tank-2026-10-14).
+- **Preuve de concept du 6 oct. 2026**, volume de test détruit ensuite (voir [stockage-zfs.md](../exploitation/stockage-zfs.md), section 6).
+- **Migration du 14 oct. 2026** : sauvegarde à froid, copie aux empreintes SHA-256 identiques, `PRAGMA integrity_check` à `ok` (29 tables), Argo CD `Synced` / `Healthy`, HTTP 200, coffre accessible. L'ancien PVC est conservé (voir [vaultwarden.md](../exploitation/vaultwarden.md), section 9).
 
 ## Conséquences
 
-- Provisioning des volumes **manuel** (Proxmox + PV statique).
-- Le Local PV est lié au nœud `k3s-01`. Pas de HA Kubernetes du stockage — cohérent avec un cluster à un nœud ([ADR-004](ADR-004-K3s.md)).
-- Le volume doit **survivre** à une suppression / recréation de VM : le réattacher, ne pas le détruire par erreur. Procédure : [Vaultwarden.md](../Vaultwarden.md#reprise-réelle--non-testée) (écrite, non exécutée).
-- L'ancien PVC `vaultwarden-pvc` est un rollback **figé** : plus synchronisé depuis la bascule.
-- Miroir + snapshots ≠ backup. Chaîne quotidienne : [Vaultwarden.md](../Vaultwarden.md#sauvegarde). Tars auto 20–21 oct. ; restore isolée OK (login 21 oct.) ; reprise sur le zvol de prod : encore ouverte.
+- Le provisionnement des volumes est **manuel** : création dans Proxmox, puis PV statique.
+- Le Local PV est lié au nœud `k3s-01`. Pas de haute disponibilité du stockage, ce qui est cohérent avec un cluster à un nœud ([ADR-004](ADR-004-K3s.md)).
+- Le volume doit **survivre** à la suppression ou à la recréation de la VM : il faut le rattacher, jamais le détruire par erreur. La procédure est écrite mais n'a jamais été jouée (voir [restauration.md](../exploitation/restauration.md), scénario 3.2).
+- L'ancien PVC `vaultwarden-pvc` n'est plus synchronisé depuis la bascule : ce n'est pas un point de retour.
+- Le miroir et les snapshots ne remplacent pas une sauvegarde. Depuis, la chaîne de sauvegarde est en place : archive quotidienne depuis le 20 oct., restauration isolée réussie le 21 oct. (connexion, 2FA, coffre). La reprise réelle sur le zvol de production reste à jouer (voir [sauvegardes.md](../exploitation/sauvegardes.md)).

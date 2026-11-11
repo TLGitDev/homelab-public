@@ -1,46 +1,56 @@
-# ADR-003 — Choix du Cloudflare Tunnel
+# ADR-003 — Accès distant : Cloudflare Tunnel
 
 ## Statut
 
-Accepté
+Accepté. **Révisé le 10 nov. 2026** : le tunnel ne publie plus que Vaultwarden, et WireGuard est devenu l'accès distant d'administration (voir « Révisions »).
 
 ## Contexte
 
-Les services du homelab doivent être joignables hors du réseau local (administration Proxmox, services futurs) sans exposer le serveur directement sur Internet.
+Les services du homelab doivent être joignables hors du réseau local (administration de Proxmox, services à venir), sans exposer le serveur directement sur Internet.
 
 Contraintes :
 
-- aucun port Proxmox ouvert sur le routeur ;
-- authentification forte ;
+- aucun port de Proxmox ouvert sur le routeur ;
+- une authentification forte ;
 - un seul composant dédié à l'accès distant.
 
 ## Décision
 
-Utiliser **Cloudflare Tunnel** pour le transport, et **Cloudflare Access** (email autorisé + MFA TOTP) pour l'identité.
+Utiliser **Cloudflare Tunnel** pour le transport, et **Cloudflare Access** pour l'identité (une adresse de courriel autorisée, plus un second facteur TOTP).
 
-Le démon `cloudflared` tourne dans un LXC Debian dédié (`cloudflare`, CT 100, `<ip-cloudflare>`). Détail opérationnel : [Cloudflare.md](../Cloudflare.md).
-
-Aucun service n'est installé sur l'hyperviseur lui-même.
+Le démon `cloudflared` tourne dans un LXC Debian dédié : `cloudflare`, CT 100, `<ip-cloudflare>`. Rien n'est installé sur l'hyperviseur lui-même.
 
 ## Raisons
 
-- Connexion **sortante** uniquement : le serveur initie le tunnel.
+- La connexion est **sortante** : c'est le serveur qui ouvre le tunnel.
 - Aucune redirection de port.
-- Intégration Access (politique « refus par défaut »).
-- Chiffrement jusqu'à Cloudflare.
-- Séparation des responsabilités : un LXC = un rôle.
+- Access applique un refus par défaut.
+- Le trafic est chiffré jusqu'à Cloudflare.
+- Les responsabilités sont séparées : un LXC, un rôle.
 
 ## Alternatives étudiées
 
-| Option | Pourquoi écartée (pour l'instant) |
-|--------|-----------------------------------|
-| Redirection de ports | Surface d'attaque directe sur Proxmox. |
-| VPN WireGuard / Tailscale | Valable, mais n'enseigne pas le modèle reverse-proxy + identité en bordure. Peut revenir plus tard pour l'administration. |
-| Exposition HTTPS directe (Let's Encrypt) | Exige un port 443 ouvert et une gestion de certificats sur le LAN. |
+| Option | Pourquoi elle n'est pas retenue (à l'époque) |
+| --- | --- |
+| Redirection de ports | Expose directement Proxmox sur Internet |
+| VPN WireGuard ou Tailscale | Valable, mais n'enseigne pas le modèle reverse proxy + identité en bordure. Pouvait revenir plus tard pour l'administration |
+| HTTPS exposé directement (Let's Encrypt) | Exige un port 443 ouvert et la gestion des certificats sur le LAN |
 
 ## Conséquences
 
-- L'accès distant dépend de Cloudflare (disponibilité tierce).
-- Deux authentifications indépendantes : Access (qui peut entrer) puis Proxmox (quel utilisateur local).
-- Les routes du tunnel pointent vers les IP internes réelles (`<ip-pve>:8006` pour Proxmox, pas `.10`).
-- Les secrets (jeton de tunnel, politique Access) ne sont pas versionnés dans ce dépôt.
+- L'accès distant dépend de la disponibilité de Cloudflare.
+- Deux authentifications indépendantes : Access décide qui peut entrer, puis l'application décide quel utilisateur est connecté.
+- Les routes du tunnel pointent vers les adresses internes réelles (par exemple `<ip-pve>:8006` pour Proxmox, et non `.10`).
+- Le jeton du tunnel et la politique Access ne sont pas versionnés.
+
+## Révisions
+
+**9 et 10 nov. 2026 — WireGuard pour l'administration.** Une passerelle WireGuard (CT 115, `<ip-wireguard>`) est en service depuis le 9 nov. : elle permet au téléphone de joindre tout le LAN. La seule ouverture sur la box est une règle IPv6, UDP 51820, vers ce conteneur. Le 10 nov., **toutes les routes du tunnel ont été désactivées, sauf Vaultwarden** : Proxmox, Argo CD, Gitea, les cinq interfaces *arr et Navidrome se joignent désormais par le LAN ou par WireGuard.
+
+C'est l'alternative que cet ADR avait laissée ouverte (« peut revenir plus tard pour l'administration »). Le résultat combine les deux modèles :
+- **Cloudflare Tunnel** pour le seul service qui doit rester public ;
+- **WireGuard** pour l'administration.
+
+La surface exposée sur Internet se réduit à un nom de domaine. Cloudflare Access n'est plus utilisé par aucune route, mais reste la règle si un outil d'administration devait être republié.
+
+Exploitation : [cloudflare.md](../exploitation/cloudflare.md). Adresses : [adressage.md](../vue-ensemble/adressage.md).

@@ -1,18 +1,18 @@
-# ADR-005 — Secrets Kubernetes (Sealed Secrets)
+# ADR-005 — Secrets Kubernetes : Sealed Secrets
 
 ## Statut
 
-Accepté
+Accepté. Remplace SOPS + age, utilisé jusqu'au sprint 17.
 
 ## Contexte
 
-Les applications GitOps (Argo CD) ont besoin de Secrets Kubernetes. Un Secret n'est pas chiffré au repos dans etcd par défaut (Base64). Le dépôt Git ne doit pas contenir les valeurs en clair.
+Les applications déployées en GitOps par Argo CD ont besoin de Secrets Kubernetes. Or un Secret n'est **pas chiffré** par défaut : il est seulement encodé en Base64, y compris au repos dans etcd. Le dépôt Git ne doit contenir aucune valeur en clair.
 
-Le besoin actuel : petit homelab, peu de secrets, **pas** de gestionnaire externe (Vault, AWS Secrets Manager, 1Password…).
+Le besoin est modeste : un petit homelab, peu de secrets, et **pas** de gestionnaire de secrets externe (Vault, AWS Secrets Manager, 1Password…).
 
 ## Décision
 
-Utiliser **Sealed Secrets** pour les Secrets Kubernetes **gérés par GitOps**.
+Utiliser **Sealed Secrets** pour les Secrets Kubernetes gérés en GitOps.
 
 ```
 Git
@@ -29,30 +29,28 @@ Git
       Application
 ```
 
-Le secret fait partie de l'état GitOps sans que sa valeur en clair soit dans Git. Argo CD applique des manifestes Kubernetes, sans étape `sops --decrypt | kubectl apply`.
+Le secret fait partie de l'état versionné, sans que sa valeur en clair soit dans Git. Argo CD applique des manifestes Kubernetes ordinaires, sans étape `sops --decrypt | kubectl apply`.
 
-Exemple : [Vaultwarden.md](../Vaultwarden.md#sealed-secrets). GitOps : [ArgoCD.md](../ArgoCD.md).
-
-Un SealedSecret est lié au cluster, au namespace et au nom : un changement impose de **resealer**.
+Un SealedSecret est chiffré pour **un cluster, un namespace et un nom** précis : changer l'un des trois oblige à le rechiffrer (*reseal*).
 
 ## Raisons
 
-- Représentation chiffrée versionnable, consommable directement par Argo CD.
-- Le déchiffrement a lieu **dans** le cluster (controller), pas sur le poste ni dans une CI.
+- Une représentation chiffrée qu'on peut versionner, et qu'Argo CD consomme directement.
+- Le déchiffrement a lieu **dans** le cluster, par le controller, jamais sur le poste ni dans une CI.
 
 ## Alternatives étudiées
 
 | Option | Commentaire |
-|--------|-------------|
-| SOPS + age | Utilisé historiquement (sprint 17). Pas « mauvais ». N'est plus le mécanisme des Secrets Kubernetes déployés par Argo CD : il imposait un déchiffrement **externe** au contrôleur GitOps. |
-| External Secrets | Répond à un autre besoin : Kubernetes **consomme** un secret manager externe. Ce besoin n'existe pas aujourd'hui. Sealed Secrets n'est pas « meilleur » ; le périmètre est différent. |
-| Secret en clair dans Git | Inacceptable, même en dépôt privé, surtout en vue d'un portfolio public. |
+| --- | --- |
+| SOPS + age | Utilisé jusqu'au sprint 17. Ce n'est pas un mauvais outil, mais il imposait un déchiffrement **à l'extérieur** du contrôleur GitOps |
+| External Secrets | Répond à un autre besoin : faire consommer à Kubernetes un gestionnaire de secrets externe, qui n'existe pas ici. Sealed Secrets n'est pas « meilleur », le périmètre est différent |
+| Secret en clair dans Git | Inacceptable, même dans un dépôt privé, et encore plus en vue d'un portfolio public |
 
 ## Conséquences
 
-- Git contient des SealedSecrets, jamais le token administrateur, le hash PHC ni le ciphertext en clair dans la doc.
-- Pour Vaultwarden, le Secret cluster contient un hash Argon2id (`$argon2id$…`), pas le token tapé sur `/admin`. Détail : [Vaultwarden.md](../Vaultwarden.md#admin_token-en-argon2id-2026-10-17).
-- Une variable d'environnement issue d'un Secret n'est pas rechargée toute seule : `rollout restart` après un reseal.
-- Le Secret créé dans le cluster reste lisible via l'API (`kubectl get secret`) : ce n'est pas un coffre-fort interne.
-- SOPS peut rester visible dans l'historique Git ; ce n'est plus le flux opérationnel.
-- La **clé** du controller (TLS) est hors Git : k3s-01 `~/backups/sealed-secrets/` (`600`) et copie manuelle `/tank/backups/k3s-01/sealed-secrets/` (puis USB via `backup-usb`). Sans cette clé, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants.
+- Git contient des SealedSecrets, jamais le token d'administration, son hash PHC, ni le texte chiffré recopié dans la doc.
+- Pour Vaultwarden, le Secret contient le hash Argon2id (`$argon2id$…`), pas le token qu'on tape sur `/admin` (voir [vaultwarden.md](../exploitation/vaultwarden.md)).
+- Une variable d'environnement issue d'un Secret n'est pas rechargée toute seule : après un *reseal*, il faut un `rollout restart`.
+- Le Secret créé dans le cluster reste lisible par l'API (`kubectl get secret`) : ce n'est pas un coffre-fort interne.
+- SOPS peut rester visible dans l'historique Git, mais ce n'est plus le mécanisme en service.
+- **La clé du controller est critique** et vit hors de Git : sur `k3s-01` dans `~/backups/sealed-secrets/` (mode `600`), avec une copie manuelle dans `/tank/backups/k3s-01/sealed-secrets/`, puis sur le disque USB par `backup-usb`. Sans elle, un cluster neuf ne peut pas déchiffrer les SealedSecrets existants (voir [restauration.md](../exploitation/restauration.md), scénario 5).

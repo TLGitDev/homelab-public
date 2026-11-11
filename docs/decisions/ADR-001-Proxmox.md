@@ -1,35 +1,32 @@
-# ADR-001 — Choix de Proxmox VE
+# ADR-001 — Hyperviseur : Proxmox VE
 
 ## Statut
 
-Accepté
+Accepté. Appliqué dès l'installation du serveur (août 2026).
 
 ## Contexte
 
-Le homelab doit héberger plusieurs services indépendants :
+Le homelab doit héberger plusieurs services indépendants les uns des autres. La liste envisagée au départ :
 
-- Home Assistant
-- Docker
-- Jellyfin
-- Stack *arr*
-- IA locale
-- Services futurs
+- Home Assistant ;
+- Docker ;
+- Jellyfin ;
+- la stack *arr ;
+- de l'IA locale ;
+- des services à venir.
 
-Le projet a également un objectif pédagogique et professionnel.
+Le projet a aussi un objectif pédagogique et professionnel : la plateforme choisie doit être celle qu'on rencontre en entreprise.
 
 ## Décision
 
-Utiliser Proxmox VE comme hyperviseur principal.
+Utiliser **Proxmox VE** comme hyperviseur principal.
 
 ## Raisons
 
-- Isolation des services.
-- Création de machines virtuelles.
-- Conteneurs LXC.
-- Snapshots.
-- Sauvegardes intégrées.
-- Interface Web.
-- Forte adoption en entreprise et dans les homelabs.
+- Isolation des services, dans des machines virtuelles ou des conteneurs LXC.
+- Snapshots et sauvegardes intégrés.
+- Administration par une interface web.
+- Forte adoption, en entreprise comme dans les homelabs.
 
 ## Alternatives étudiées
 
@@ -37,31 +34,14 @@ Utiliser Proxmox VE comme hyperviseur principal.
 - Ubuntu Server
 - TrueNAS SCALE
 
+La décision d'origine ne détaille pas pourquoi chacune a été écartée. Les raisons ci-dessus, en faveur de Proxmox, sont celles qui ont été écrites.
+
 ## Conséquences
 
-Toute l'infrastructure sera construite au-dessus de Proxmox.
-Les données seront stockées sur un miroir ZFS distinct.
+- Toute l'infrastructure est construite au-dessus de Proxmox.
+- Les données sont stockées sur un miroir ZFS distinct du système (voir l'[ADR-002](ADR-002-ZFS.md)).
+- **Dépôts** : on utilise le dépôt **Proxmox No-Subscription**, gratuit, adapté à un homelab et largement utilisé. Le dépôt Enterprise, réservé aux installations sous souscription, est désactivé.
+- **Mises à jour** : la plateforme a été entièrement mise à jour avant le déploiement des premiers services. Le but est de partir d'une base saine, de corriger les failles connues et d'éviter de changer de version en pleine construction.
+- L'installation de Proxmox reste un mode opératoire manuel. Ansible ne la reproduit pas (voir l'[ADR-010](ADR-010-Ansible-LXC.md)).
 
-## Décisions prises
-
-### Dépôts
-
-Choix du dépôt **Proxmox No-Subscription**.
-
-Justification :
-
-- adapté à un homelab ;
-- gratuit ;
-- largement utilisé par la communauté.
-
-Le dépôt Enterprise est réservé aux environnements de production disposant d'une souscription.
-
-### Mise à jour
-
-La plateforme est entièrement mise à jour avant le déploiement des premiers services.
-
-Objectif :
-
-- disposer d'une base saine ;
-- corriger les éventuelles failles de sécurité ;
-- éviter les migrations de version pendant la construction du homelab.
+Exploitation : [proxmox.md](../exploitation/proxmox.md).
