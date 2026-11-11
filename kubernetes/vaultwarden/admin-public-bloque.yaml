@@ -1,0 +1,31 @@
+# Bloque /admin sur le nom public (tunnel Cloudflare).
+# /admin reste joignable sur le LAN et par WireGuard : https://<ip-k3s-01>/admin
+# (route vaultwarden-lan, qui matche un autre Host).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: refuser-tout
+  namespace: vaultwarden
+spec:
+  # Aucune adresse cliente réelle n'est 127.0.0.1 : Traefik répond 403 à tout le monde.
+  ipAllowList:
+    sourceRange:
+      - 127.0.0.1/32
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vaultwarden-admin-public
+  namespace: vaultwarden
+spec:
+  # Pas d'entryPoints : la route vaut sur web (tunnel, port 80) et websecure.
+  routes:
+    - match: Host(`vaultwarden.labo.example`) && PathPrefix(`/admin`)
+      kind: Rule
+      # Plus prioritaire que l'Ingress public (Host + chemin /).
+      priority: 1000
+      middlewares:
+        - name: refuser-tout
+      services:
+        - name: vaultwarden-service
+          port: 80
