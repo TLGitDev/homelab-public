@@ -1,6 +1,6 @@
 # Glossaire
 
-Définitions utilisées dans le homelab. Les niveaux de maîtrise sont dans [Competences.md](Competences.md).
+Les définitions des termes utilisés dans la documentation du homelab, classées par domaine. Les niveaux de maîtrise sont dans [competences.md](../projet/competences.md). Les cours détaillés sont dans [kubernetes.md](kubernetes.md) et [zfs.md](zfs.md).
 
 ---
 
@@ -22,15 +22,23 @@ Disque système d'un conteneur Linux. Il contient Debian, les fichiers système 
 
 Image d'un système Linux déjà installé servant de modèle pour créer rapidement de nouveaux conteneurs.
 
-### Unprivileged Container
+### Unprivileged Container (conteneur non privilégié)
 
-Conteneur exécuté avec des privilèges réduits afin d'améliorer la sécurité de l'hôte.
+Conteneur exécuté avec des privilèges réduits afin d'améliorer la sécurité de l'hôte. Ses identifiants sont décalés : l'UID 0 (root) du conteneur correspond à l'UID 100000 de l'hôte, qui n'a aucun droit particulier. Tous les LXC du homelab sont non privilégiés.
+
+### Idmap (correspondance d'identifiants)
+
+Table qui fait correspondre les UID et GID d'un conteneur non privilégié à ceux de l'hôte (lignes `lxc.idmap`). Dans le homelab, on fait correspondre un seul groupe : le GID 1000 des conteneurs de médiathèques est le GID 987 (`media`) de l'hôte. Le droit d'utiliser ce GID est accordé dans `/etc/subgid` (`root:987:1`). Exemple détaillé : [jellyfin.md](../exploitation/mediatheques/jellyfin.md), section 3.
+
+### Bind mount (montage direct)
+
+Montage d'un dossier de l'hôte à l'intérieur d'un conteneur (`pct set <id> -mp0 …`), sans copie ni partage réseau. C'est ce qui permet aux LXC de lire `tank` directement, et ce qui les distingue de la VM `k3s-01` ([ADR-012](../decisions/ADR-012-LXC-ou-K3s.md)). Peut être en lecture seule (`ro=1`).
 
 ---
 
 ## Kubernetes
 
-Cours : [Kubernetes.md](Kubernetes.md).
+Cours : [kubernetes.md](kubernetes.md).
 
 ### API Server
 
@@ -58,7 +66,7 @@ Lien de propriété réel entre objets (`metadata.ownerReferences`). Kubernetes 
 
 ### Ingress
 
-Règle de routage HTTP (hostname, chemin) vers un Service. Prise en charge par un Ingress Controller (`ingressClassName`, ex. Traefik). As-built : [Vaultwarden.md](Vaultwarden.md).
+Règle de routage HTTP (hostname, chemin) vers un Service. Prise en charge par un Ingress Controller (`ingressClassName`, ex. Traefik). Exemple réel : [vaultwarden.md](../exploitation/vaultwarden.md).
 
 ### Service
 
@@ -118,7 +126,7 @@ A servi à chiffrer `secret.yaml` dans Git (sprint 17). Remplacé pour Vaultward
 
 ### SealedSecret
 
-Représentation chiffrée d'un Secret, versionnable. Le controller crée le Secret dans le cluster. Lié au namespace et au nom : un changement impose de resealer. As-built : [Vaultwarden.md](Vaultwarden.md#sealed-secrets).
+Représentation chiffrée d'un Secret, versionnable. Le controller crée le Secret dans le cluster. Lié au namespace et au nom : un changement impose de resealer. Exemple réel : [vaultwarden.md](../exploitation/vaultwarden.md), section 4.
 
 ### Namespace
 
@@ -126,7 +134,23 @@ Frontière logique pour les ressources namespacées. Un PVC ne change pas de nam
 
 ### Argo CD
 
-GitOps : compare Git (état désiré) et le cluster. Synced = conforme à Git ; Healthy = appli saine. As-built : [ArgoCD.md](ArgoCD.md).
+Outil de GitOps : il compare Git (état désiré) et le cluster. `Synced` = conforme à Git ; `Healthy` = application saine. Voir [argocd.md](argocd.md).
+
+### GitOps
+
+Méthode où Git est la source de vérité de l'infrastructure : on modifie Git, et un contrôleur (ici Argo CD) applique et surveille l'état du cluster. Une dérive entre Git et le cluster devient visible.
+
+### App of Apps
+
+Modèle Argo CD où une application racine (`root`) ne déploie rien elle-même : elle découvre les autres applications, chacune déployant un service ([ADR-006](../decisions/ADR-006-Argo-CD.md)).
+
+### NetworkPolicy
+
+Règle Kubernetes qui limite les communications réseau entre pods. Sans NetworkPolicy, tous les pods d'un cluster peuvent se joindre. Prévue pour isoler les futures applications exposées ([ADR-012](../decisions/ADR-012-LXC-ou-K3s.md)).
+
+### Pod Security Admission
+
+Mécanisme Kubernetes qui refuse les pods trop permissifs selon un niveau (`privileged`, `baseline`, `restricted`). Le niveau `restricted` interdit notamment les conteneurs root, privilégiés ou avec un montage `hostPath`.
 
 ### data / stringData
 
@@ -150,7 +174,7 @@ Volume réellement disponible, associé à un PVC. Peut représenter un chemin l
 
 ### Local PV
 
-PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Vaultwarden : `vaultwarden-zfs-pv` → `/var/lib/k3s-storage/vaultwarden`. [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+PersistentVolume **statique** dont le `spec.local.path` est un répertoire du nœud, avec `nodeAffinity` (ici : hostname `k3s-01`). Lié à ce nœud. Vaultwarden : `vaultwarden-zfs-pv` → `/var/lib/k3s-storage/vaultwarden`. [stockage-zfs.md](../exploitation/stockage-zfs.md), [ADR-008](../decisions/ADR-008-Vaultwarden-tank.md).
 
 ---
 
@@ -178,7 +202,27 @@ Exemple : `<ip-cloudflare>/24` signifie que le réseau est `<réseau-lan>` avec 
 
 Organisation des adresses IP d'une infrastructure afin que chaque service possède une adresse fixe et facilement identifiable.
 
-Le plan actuel est dans [Proxmox.md](Proxmox.md).
+Le plan actuel est dans [adressage.md](../vue-ensemble/adressage.md).
+
+### WireGuard
+
+Protocole de VPN simple et rapide, fondé sur des paires de clés. Il sert deux fois dans le homelab : la passerelle du téléphone (CT 115), qui donne accès au LAN depuis l'extérieur, et le tunnel de qBittorrent vers Proton VPN (CT 104).
+
+### Kill switch
+
+Mécanisme qui coupe tout trafic quand le VPN tombe, au lieu de le laisser repartir par la connexion normale. Dans le CT 104, c'est nftables qui joue ce rôle pour le seul compte `qbittorrent` ([qbittorrent-vpn.md](../exploitation/mediatheques/qbittorrent-vpn.md)).
+
+### nftables
+
+Pare-feu du noyau Linux, successeur d'iptables. Il peut filtrer selon l'utilisateur qui émet le paquet (`meta skuid`), ce qui permet un kill switch par compte.
+
+### NAT-PMP
+
+Protocole qui permet de demander une ouverture de port à une passerelle. Proton VPN l'utilise pour ouvrir un port entrant, sous forme de bail de 60 secondes à renouveler.
+
+### Reverse proxy
+
+Serveur qui reçoit les requêtes et les transmet au bon service selon le nom demandé. Ici, Traefik joue ce rôle dans K3s.
 
 ---
 
@@ -188,7 +232,7 @@ Le plan actuel est dans [Proxmox.md](Proxmox.md).
 
 Système de fichiers et gestionnaire de volumes. Il regroupe disques, redondance, checksums, snapshots et compression.
 
-Cours et état du homelab : [Stockage.md](Stockage.md).
+Cours : [zfs.md](zfs.md). État du homelab : [stockage-zfs.md](../exploitation/stockage-zfs.md).
 
 ### VDEV (Virtual Device)
 
@@ -222,13 +266,33 @@ Lecture complète du pool pour vérifier tous les checksums et réparer les bloc
 
 Photo d'un dataset à un instant T, stockée sur le même pool. Utile pour revenir en arrière, ce n'est pas une sauvegarde.
 
+### Lien physique (hardlink)
+
+Second nom pour un même fichier, sans copie et sans espace en plus. Sonarr, Radarr et Lidarr s'en servent pour ranger un téléchargement dans la bibliothèque. Un lien physique ne peut pas traverser deux datasets : d'où un seul dataset `tank/mediatheques`.
+
+### setgid (sur un dossier)
+
+Bit de droits (`2770`) qui fait hériter aux nouveaux fichiers le groupe du dossier. Les dossiers de `tank/mediatheques` l'ont : tout fichier créé dedans appartient au groupe `media`.
+
+### umask
+
+Masque qui retire des droits aux fichiers créés par un processus. Avec `UMask=0007`, un fichier sort en `0660` et un dossier en `0770` : aucun droit pour les « autres ».
+
 ---
 
 ## Système
 
 ### Scheduler
 
-Composant du noyau Linux chargé de décider quel processus utilise le processeur à chaque instant.
+Le mot désigne deux choses. Sous Linux, c'est le composant du noyau qui décide quel processus utilise le processeur à chaque instant. Dans Kubernetes, c'est le composant qui choisit sur quel nœud placer un pod.
+
+### Idempotence
+
+Propriété d'une opération qui donne le même résultat qu'on la lance une ou plusieurs fois. Un playbook Ansible idempotent ne change rien à sa deuxième passe (`changed=0`) : c'est le critère de validation de l'[ADR-010](../decisions/ADR-010-Ansible-LXC.md).
+
+### Timer systemd
+
+Équivalent moderne de cron : une unit `.timer` déclenche une unit `.service` à heure fixe. `Persistent=true` rattrape un passage manqué. `OnFailure=` lance une autre unit en cas d'échec (ici, l'alerte ntfy).
 
 ### Oversubscription (CPU)
 
@@ -254,7 +318,7 @@ Mécanisme du noyau Linux qui termine automatiquement un ou plusieurs processus 
 
 Connexion sortante permanente du serveur vers Cloudflare. Permet d'exposer un service sans ouvrir de port sur le routeur.
 
-Détail : [Cloudflare.md](Cloudflare.md).
+Détail : [cloudflare.md](../exploitation/cloudflare.md).
 
 ### Cloudflare Access
 
@@ -291,3 +355,31 @@ Quantité maximale de données que l'on accepte de perdre. Objectif actuel : 24 
 ### RAID / Miroir
 
 Protège contre la panne d'un disque. Ne protège pas contre une suppression, un ransomware ou une erreur humaine. Ce n'est pas une sauvegarde.
+
+### Restic
+
+Logiciel de sauvegarde par snapshots, chiffrée et dédupliquée. Il sauvegarde `/tank/backups` et les dossiers personnels sur le disque USB ([sauvegardes.md](../exploitation/sauvegardes.md)).
+
+### Rétention
+
+Règle qui décide combien de copies garder. Exemples : 24 snapshots horaires et 7 quotidiens pour le zvol de Vaultwarden, 14 jours pour Restic.
+
+### Crash-consistent
+
+Se dit d'une copie prise sans arrêter l'application : elle ressemble à l'état d'un disque après une coupure de courant. Les snapshots du zvol de Vaultwarden le sont ; l'archive de 03:00, prise service arrêté, est cohérente.
+
+---
+
+## Méthode
+
+### ADR (Architecture Decision Record)
+
+Document court qui consigne une décision d'architecture : contexte, décision, raisons, alternatives écartées, conséquences. Quand la réalité change, on ajoute une révision au lieu de réécrire. Voir [les décisions](../decisions/).
+
+### As-built
+
+État réellement installé, par opposition à la cible prévue. La cible est dans la [feuille de route](../FeuilleDeRoute.md), l'as-built dans [architecture.md](../vue-ensemble/architecture.md).
+
+### Infrastructure as Code (IaC)
+
+Décrire l'infrastructure dans des fichiers versionnés plutôt que de la construire à la main. Ici : Ansible pour les LXC, les manifestes Kubernetes pour le cluster.

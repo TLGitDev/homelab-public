@@ -1,9 +1,25 @@
-# Kubernetes
+# Kubernetes — notions
 
-> Cours : pourquoi Kubernetes, modèle déclaratif, ressources.
->
-> Cluster K3s en service ([ADR-004](ADR/ADR-004-K3s.md)). As-built Vaultwarden : [Vaultwarden.md](Vaultwarden.md). Feuille de route : [Architecture.md](Architecture.md).
-> Définitions courtes : [Glossaire.md](Glossaire.md).
+Ce document est un cours : il explique pourquoi Kubernetes existe, son modèle déclaratif, et les ressources qu'on manipule. Le homelab l'applique sur un cluster K3s à un nœud ([ADR-004](../decisions/ADR-004-K3s.md)), qui fait tourner Vaultwarden, Gitea et Argo CD.
+
+Voir aussi : [vaultwarden.md](../exploitation/vaultwarden.md) pour un exemple réel complet, [argocd.md](argocd.md) pour le déploiement GitOps, et le [glossaire](glossaire.md) pour les définitions courtes.
+
+## Dans ce homelab
+
+Correspondance entre les notions de ce cours et les ressources réelles du cluster :
+
+| Notion | Dans le homelab |
+| --- | --- |
+| Cluster | K3s, un seul nœud : la VM `k3s-01` (`<ip-k3s-01>`) |
+| Ingress Controller | Traefik, fourni par K3s. Point d'entrée `web` (port 80) et `websecure` (port 443) |
+| Namespaces applicatifs | `vaultwarden`, `gitea`, `argocd`, `sealed-secrets` |
+| Deployment | `vaultwarden` (image `vaultwarden/server:1.37.3`), Gitea (`docker.gitea.com/gitea:28.3.0`) |
+| Service | `vaultwarden-service` (ClusterIP) ; Gitea en `LoadBalancer` sur le port 3000 |
+| Ingress / IngressRoute | `vaultwarden-ingress`, `vaultwarden-lan`, IngressRoute `argocd` |
+| PV statique (Local PV) | `vaultwarden-zfs-pv`, et celui de Gitea, chacun sur un zvol de `tank` ([ADR-008](../decisions/ADR-008-Vaultwarden-tank.md)) |
+| StorageClass dynamique | `local-path` (K3s), qui ne porte plus que l'ancien PVC figé de Vaultwarden |
+| Secret | Toujours issu d'un SealedSecret dans Git ([ADR-005](../decisions/ADR-005-Sealed-Secrets.md)) |
+| Contrôle des manifestes | `kubeconform` dans la CI GitHub, schéma Kubernetes 1.36.4 |
 
 ---
 
@@ -393,9 +409,9 @@ Pod
 
 L'Ingress pointe vers le **Service**, jamais vers le Pod. `ingressClassName` désigne le contrôleur. `pathType: Prefix` couvre `/` et les chemins en dessous.
 
-Deux Ingress avec le **même hostname** (même dans des namespaces différents) peuvent faire échouer Traefik. `kubectl get ingress -A` avant une migration. Incident : [Vaultwarden.md](Vaultwarden.md#traefik-503).
+Deux Ingress avec le **même hostname** (même dans des namespaces différents) peuvent faire échouer Traefik. `kubectl get ingress -A` avant une migration. Incident : [vaultwarden.md](../exploitation/vaultwarden.md), section 9.
 
-As-built (Cloudflare → Traefik → Vaultwarden) : [Vaultwarden.md](Vaultwarden.md).
+As-built (Cloudflare → Traefik → Vaultwarden) : [vaultwarden.md](../exploitation/vaultwarden.md).
 
 ---
 
@@ -654,7 +670,7 @@ PersistentVolumeClaim
 Pod
 ```
 
-`local-path` (K3s) est du provisionnement **dynamique** sur le disque du nœud. Le patron retenu pour `tank` est un Local PV **statique**. Vaultwarden l'utilise depuis le 2026-10-14. [Stockage.md](Stockage.md), [ADR-008](ADR/ADR-008-Vaultwarden-tank.md).
+`local-path` (K3s) est du provisionnement **dynamique** sur le disque du nœud. Le patron retenu pour `tank` est un Local PV **statique**. Vaultwarden l'utilise depuis le 2026-10-14. [stockage-zfs.md](../exploitation/stockage-zfs.md), [ADR-008](../decisions/ADR-008-Vaultwarden-tank.md).
 
 ## Séparation des responsabilités
 
@@ -756,7 +772,7 @@ Pour un manifeste écrit à la main, `stringData` est généralement plus pratiq
 
 ### Git
 
-Les Secrets ne doivent pas être stockés en clair dans Git. Sur ce homelab, Vaultwarden utilise un **SealedSecret** (`kubernetes/vaultwarden/sealed-secret.yaml`). Les secrets d'infrastructure (SSH perso, Cloudflare) restent hors dépôt. Détail : [Vaultwarden.md](Vaultwarden.md#sealed-secrets), [Architecture.md](Architecture.md).
+Les Secrets ne doivent pas être stockés en clair dans Git. Sur ce homelab, Vaultwarden utilise un **SealedSecret** (`kubernetes/vaultwarden/sealed-secret.yaml`). Les secrets d'infrastructure (SSH perso, Cloudflare) restent hors dépôt. Détail : [vaultwarden.md](../exploitation/vaultwarden.md), section 4, [architecture.md](../vue-ensemble/architecture.md).
 
 ## Injection
 
@@ -788,6 +804,8 @@ Application
 Le Deployment ne contient idéalement aucune donnée métier.
 
 ## Exemple : Vaultwarden
+
+Les exemples de cette section (`DATABASE_HOST: postgres`, `JWT_SECRET`…) sont **pédagogiques**. La configuration réelle de Vaultwarden est plus simple : une base SQLite, trois clés dans le ConfigMap (`DOMAIN`, `DATABASE_URL`, `SIGNUPS_ALLOWED`) et une seule clé secrète, `ADMIN_TOKEN`. Voir [vaultwarden.md](../exploitation/vaultwarden.md), section 3.
 
 | Ressource | Contenu |
 |-----------|---------|
