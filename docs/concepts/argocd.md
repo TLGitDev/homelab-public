@@ -149,7 +149,7 @@ Les applications enfants n'ont **pas** de `syncPolicy.automated` : leur déploie
 
 Ses limites :
 
-- `Application`, `SealedSecret` et `IngressRoute` ne sont pas dans le schéma standard : ils sont ignorés ;
+- `Application`, `SealedSecret`, `IngressRoute` et `Middleware` ne sont pas dans le schéma standard : ils sont ignorés ;
 - une image absente, un mauvais nom de Service, un secret en clair ou un conteneur privilégié passent sans erreur, puisque le schéma les autorise.
 
 **Validation du 6 nov. 2026** :

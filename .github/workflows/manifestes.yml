@@ -1,6 +1,6 @@
 # Lit kubernetes/ et le confronte au schéma Kubernetes 1.36.4,
 # la version de k3s-01 relevée le 6 nov. 2026. Ne déploie rien.
-# Application, SealedSecret et IngressRoute ne sont pas dans ce schéma.
+# Application, SealedSecret, IngressRoute et Middleware ne sont pas dans ce schéma.
 
 name: Manifestes
 
@@ -39,5 +39,5 @@ jobs:
             -kubernetes-version 1.36.4 \
             -strict \
             -summary \
-            -skip Application,SealedSecret,IngressRoute \
+            -skip Application,SealedSecret,IngressRoute,Middleware \
             kubernetes
