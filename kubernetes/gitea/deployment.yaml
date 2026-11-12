@@ -28,7 +28,7 @@ spec:
             - name: GITEA__service__DISABLE_REGISTRATION
               value: "true"
             - name: GITEA__server__ROOT_URL
-              value: http://<ip-k3s-01>:3000/
+              value: https://gitea.lan.labo.example/
             - name: GITEA__server__LOCAL_ROOT_URL
               value: http://<ip-k3s-01>:3000/
           volumeMounts:
