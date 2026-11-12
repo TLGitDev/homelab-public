@@ -30,8 +30,11 @@ acces_portal_port: 80
 # (« Bloquer les connexions sans VPN ») : un DNS public, hors du tunnel,
 # ne répond donc jamais (12 nov.). dnsmasq transmet à la box.
 acces_dns: <ip-wg-serveur>
-# <ip-box> n'est pas dans la liste : c'est la box.
-# La mettre ici enverrait toute son interface dans le tunnel.
+# Le téléphone envoie tout dans le tunnel (AllowedIPs = 0.0.0.0/0) :
+# sans route par défaut, Firefox ne résout aucun nom (12 nov.).
+# Le filtre du 115 reste seul juge : il ne laisse passer que acces_destinations.
+# <ip-box> n'est pas dans la liste : l'interface de la box
+# n'est pas joignable par le tunnel. dnsmasq l'interroge pour le téléphone.
 acces_destinations:
   - { addr: <ip-k3s-01>, proto: tcp, port: "80" }
   - { addr: <ip-k3s-01>, proto: tcp, port: "443" }

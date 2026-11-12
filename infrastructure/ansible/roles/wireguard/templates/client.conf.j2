@@ -6,5 +6,5 @@ DNS = {{ acces_dns }}
 [Peer]
 PublicKey = {{ acces_server_public }}
 Endpoint = {{ acces_endpoint }}
-AllowedIPs = {{ ([acces_dns] + acces_destinations | map(attribute='addr') | unique | list) | join('/32, ') }}/32
+AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
