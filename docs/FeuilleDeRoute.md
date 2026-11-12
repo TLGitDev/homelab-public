@@ -453,7 +453,7 @@ Deux familles de solutions, à trancher dans un ADR :
 - ⬜ Inventaire des comptes et des accès : qui se connecte où, avec quoi. Pas de `root@pam` au quotidien dans l'interface Proxmox, mais un compte nominatif.
 - ⬜ Double authentification sur l'interface Proxmox et sur Gitea.
 - ⬜ SSH par clé uniquement, sur `pve` et `k3s-01`, mots de passe désactivés.
-- ⬜ Revue du pare-feu : refus par défaut sur chaque conteneur, seuls les ports utiles ouverts. Vérification par un balayage (`nmap`) depuis le LAN et depuis WireGuard, comparé à la liste attendue.
+- ⬜ Revue du pare-feu : refus par défaut sur chaque conteneur, seuls les ports utiles ouverts. Vérification par un balayage (`nmap`) depuis le LAN et depuis WireGuard, comparé à la liste attendue. État au 12 nov. : le pare-feu Proxmox est éteint au niveau du datacenter (`disabled/running`), donc les fichiers `103.fw` à `106.fw` et `115.fw` ne filtrent rien. Il n'y a pas de `102.fw` (Samba). Il faut d'abord ouvrir l'accès à Proxmox (8006, SSH) dans les règles du datacenter, puis l'activer.
 - ⬜ Inventaire des secrets, avec leur lieu de stockage et leur procédure de rotation : jeton du tunnel, clé Sealed Secrets, `ADMIN_TOKEN`, jetons Ansible et Gitea, clés WireGuard, clé Proton. Une rotation jouée au moins une fois.
 - ⬜ Surveillance SMART des trois disques (`smartd`), avec une alerte ntfy sur un attribut qui se dégrade.
 
