@@ -334,7 +334,7 @@ Tous joués le 8 nov., du plus simple au plus risqué. Chaque conteneur d'essai 
 - ✅ Partage SMB (`\\<ip-samba>`, CT 102) ouvert à travers WireGuard (12 nov.). TCP 445 vers `<ip-samba>` figurait dans `acces_destinations` depuis la création du 115 : aucun changement de code. Vérifié : la règle est active dans le filtre du 115, `<ip-samba>/32` est dans le fichier du téléphone, et `smbstatus -b` montre `utilisateur` connecté depuis `<ip-wireguard>` en `SMB3_11`, Wi-Fi coupé, depuis Material Files. Le 115 masque les clients du tunnel : `smb.conf` reste à `<réseau-lan>`. Voir [samba.md](exploitation/samba.md), section 4.
 - ✅ `/admin` de Vaultwarden fermé depuis Internet (11 nov.) : route Traefik `vaultwarden-admin-public` et middleware `refuser-tout`, commit `cfebb18`. Vérifié : sur le nom public, `/admin` et `/admin/` répondent `403`, `/` répond `200` ; sur le LAN, `https://<ip-k3s-01>/admin` répond `200`. En 4G, le téléphone affiche « Forbidden » sur `/admin` et le coffre s'ouvre. Voir [vaultwarden.md](exploitation/vaultwarden.md), section 3.
 - ✅ Configuration exposée de Vaultwarden relue (11 nov.) : pas de `/data/config.json`, donc le ConfigMap fait foi. Inscriptions déjà fermées. Invitations et indices de mot de passe fermés, commit `14e7ade` : `INVITATIONS_ALLOWED`, `PASSWORD_HINTS_ALLOWED` et `SHOW_PASSWORD_HINT` à `false`. Vérifié : les quatre variables valent `false` dans le Pod. Voir [vaultwarden.md](exploitation/vaultwarden.md), section 3.
-- ⬜ **Des noms et du HTTPS sur le LAN.** Aujourd'hui, les services se joignent par `IP:port`, en HTTP pour la plupart. Viser un nom par service (par exemple `jellyfin.lan.<domaine>`), résolu par un DNS interne, et un certificat valide obtenu par défi DNS-01 auprès de Cloudflare, sans rien publier. Le reverse proxy existant (Traefik) ou un petit LXC dédié porte les certificats. Vérifier : chaque service s'ouvre par son nom, en HTTPS, sans alerte de certificat, depuis le LAN et par WireGuard. Ce jalon simplifie aussi le `ROOT_URL` de Gitea.
+- ✅ Noms et HTTPS sur le LAN (12 nov.) : `https://<service>.lan.labo.example/`, treize noms. Enregistrement public `*.lan.labo.example` vers `<ip-lan>`, certificat joker obtenu par DNS-01 auprès de Cloudflare, Traefik sur le CT 116 `lan` créé par `playbooks/lan.yml` (`1a2500a`). Le téléphone résout par dnsmasq sur le 115 (`<ip-wg-serveur>`) et envoie tout dans le tunnel (`0.0.0.0/0`), sinon Firefox ne résout aucun nom. Vérifié : les treize noms répondent en HTTPS avec un certificat valide depuis le PC, et depuis le téléphone en 4G (Termux, Firefox, Vanadium). Décision : [ADR-014](decisions/ADR-014-Noms-HTTPS-LAN.md). Détail : [noms-lan.md](exploitation/noms-lan.md). Reste à basculer le `ROOT_URL` de Gitea sur `https://gitea.lan.labo.example/`.
 
 ---
 
@@ -559,8 +559,7 @@ Le site CV (phase 17) est le candidat recommandé pour cette première applicati
 
 | Sujet | Où en est la décision | Quand |
 | --- | --- | --- |
-| Adresse de référence de Gitea | Tranché le 11 nov. : adresse LAN. Un nom interne en HTTPS la remplacera avec le jalon des noms sur le LAN | Phase 9 |
-| Noms et certificats internes | DNS interne et certificats DNS-01 : outil et emplacement à choisir | Phase 9 |
+| Adresse de référence de Gitea | Tranché le 11 nov. : adresse LAN. Le nom `https://gitea.lan.labo.example/` existe depuis le 12 nov. : bascule à faire | Phase 9 |
 | Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 12, dans un ADR |
 | Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 14, dans un ADR |
 | Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 15 |

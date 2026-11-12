@@ -16,6 +16,7 @@ Chaque ADR (*Architecture Decision Record*) consigne une décision : son context
 | [ADR-010](ADR-010-Ansible-LXC.md) | LXC d'infrastructure : Ansible | Appliqué les 7, 8 et 9 nov. 2026 |
 | [ADR-011](ADR-011-Gitea.md) | Forge Git : Gitea | Appliqué le 3 nov. 2026 |
 | [ADR-012](ADR-012-LXC-ou-K3s.md) | Où héberger un service : LXC ou K3s | Accepté le 11 nov. 2026, formalise les choix du 28 oct. au 4 nov. |
+| [ADR-014](ADR-014-Noms-HTTPS-LAN.md) | Noms et HTTPS sur le LAN : joker public, Traefik sur un LXC dédié | Appliqué le 12 nov. 2026 |
 | ADR-013 *(à écrire)* | Isolement des applications maison exposées sur Internet | À rédiger avant la première application publique |
 
 ## Le critère d'hébergement

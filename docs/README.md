@@ -56,6 +56,7 @@ Comment chaque élément est installé, vérifié et entretenu. Les procédures 
 | [forge-gitea.md](exploitation/forge-gitea.md) | La forge Gitea, son runner et la CI |
 | [samba.md](exploitation/samba.md) | Le partage SMB du LAN |
 | [ansible.md](exploitation/ansible.md) | Les LXC décrits en Ansible, et leurs essais |
+| [noms-lan.md](exploitation/noms-lan.md) | Les noms `*.lan.labo.example`, Traefik et le certificat joker |
 | [mediatheques/](exploitation/mediatheques/README.md) | Films, séries et musique : [Jellyfin](exploitation/mediatheques/jellyfin.md), [qBittorrent et VPN](exploitation/mediatheques/qbittorrent-vpn.md), [les *arr](exploitation/mediatheques/servarr.md), [Navidrome](exploitation/mediatheques/navidrome.md) |
 
 ### Décisions — `decisions/`

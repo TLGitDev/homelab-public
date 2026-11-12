@@ -17,6 +17,7 @@ Ce document est la **source de vérité** des adresses IP du homelab. Toutes les
 | `<ip-servarr>` | LXC `servarr` | CT 105 | Prowlarr, Sonarr, Radarr, Bazarr, Lidarr, Recyclarr |
 | `<ip-navidrome>` | LXC `navidrome` | CT 106 | Navidrome, port 4533 |
 | `<ip-runner>` | LXC `runner` | CT 107 | Runner Gitea Actions |
+| `<ip-lan>` | LXC `lan` | CT 116 | Noms et HTTPS sur le LAN (Traefik) |
 
 ## 2. Détail par machine
 
@@ -31,6 +32,7 @@ Cette passerelle est en service depuis le 9 nov. 2026. Elle permet au téléphon
 - Adresse du téléphone dans le tunnel : `<ip-wg-téléphone>/32`.
 - Le PC fixe n'a pas de clé WireGuard.
 - Le conteneur sert aussi la **page des services** (portail « Labo ») : `https://<ip-wireguard>/`, avec un certificat local, et en HTTP sur le port 80. C'est une page statique, installable sur le téléphone (manifeste web et icônes), qui regroupe les liens vers les services du LAN. Elle est servie par `portail.py` et déployée par le rôle Ansible `wireguard`.
+- Le conteneur sert aussi le DNS du téléphone : dnsmasq écoute sur `<ip-wg-serveur>`, l'adresse du 115 dans le tunnel, et transmet à la box.
 - La box porte une seule règle d'ouverture, en IPv6 : UDP 51820 vers l'adresse globale du CT 115. Cette adresse IPv6 n'est volontairement pas écrite dans la documentation. Aucune redirection IPv4 n'existe.
 
 ### `k3s-01` — VM 101
@@ -69,6 +71,10 @@ Navidrome 0.64.2 écoute sur le port 4533 et lit la musique en lecture seule. Il
 
 Ce conteneur exécute les jobs de Gitea Actions. Il a été créé le 4 nov. 2026, non privilégié, avec 2 Gio de RAM et 16 Go de disque. Il ne monte pas `tank`, pour ne jamais voir les données. Le runner `gitea-runner` `v5.2.0` porte l'étiquette `host`. Voir [forge-gitea.md](../exploitation/forge-gitea.md).
 
+### `lan` — CT 116
+
+Ce conteneur est en service depuis le 12 nov. 2026. Traefik y porte le certificat joker `*.lan.labo.example` et relaie chaque nom vers son service. L'enregistrement public `*.lan.labo.example` pointe vers `<ip-lan>`. Cette adresse n'est pas joignable depuis Internet. Voir [noms-lan.md](../exploitation/noms-lan.md).
+
 ## 3. Adresses réservées aux essais
 
 Chaque LXC est d'abord recréé par Ansible sur un conteneur d'essai, avant de toucher au conteneur en service. Le conteneur d'essai prend l'adresse du conteneur en service **plus un**. Ces conteneurs ont été retirés après l'essai, mais relancer leur playbook les recréerait aux mêmes adresses. Voir l'[ADR-010](../decisions/ADR-010-Ansible-LXC.md).
@@ -82,6 +88,7 @@ Chaque LXC est d'abord recréé par Ansible sur un conteneur d'essai, avant de t
 | `<ip-servarr-ct112>` | CT 112 `servarr-essai` | CT 105 |
 | `<ip-navidrome-ct109>` | CT 109 `navidrome-essai` | CT 106 |
 | `<ip-runner-ct108>` | CT 108 `runner-essai` | CT 107 |
+| `<ip-lan-essai>` | aucun conteneur d'essai | CT 116 |
 
 ## 4. Adresses abandonnées
 
