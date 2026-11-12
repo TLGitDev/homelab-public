@@ -31,7 +31,7 @@ Cette passerelle est en service depuis le 9 nov. 2026. Elle permet au téléphon
 
 - Adresse du téléphone dans le tunnel : `<ip-wg-téléphone>/32`.
 - Le PC fixe n'a pas de clé WireGuard.
-- Le conteneur sert aussi la **page des services** (portail « Labo ») : `https://<ip-wireguard>/`, avec un certificat local, et en HTTP sur le port 80. C'est une page statique, installable sur le téléphone (manifeste web et icônes), qui regroupe les liens vers les services du LAN. Elle est servie par `portail.py` et déployée par le rôle Ansible `wireguard`.
+- Le conteneur sert aussi la **page des services** (portail « Labo »). Son adresse de référence est `https://accueil.lan.labo.example/`, relayée par le CT 116 avec un certificat valide. Elle reste joignable en `https://<ip-wireguard>/`, avec un certificat local, et en HTTP sur le port 80. Ses liens pointent vers les noms `*.lan.labo.example`. C'est une page statique, installable sur le téléphone (manifeste web et icônes), qui regroupe les liens vers les services du LAN. Elle est servie par `portail.py` et déployée par le rôle Ansible `wireguard`.
 - Le conteneur sert aussi le DNS du téléphone : dnsmasq écoute sur `<ip-wg-serveur>`, l'adresse du 115 dans le tunnel, et transmet à la box.
 - La box porte une seule règle d'ouverture, en IPv6 : UDP 51820 vers l'adresse globale du CT 115. Cette adresse IPv6 n'est volontairement pas écrite dans la documentation. Aucune redirection IPv4 n'existe.
 
