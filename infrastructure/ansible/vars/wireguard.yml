@@ -25,6 +25,11 @@ acces_server_address: <ip-wg-serveur>/24
 acces_phone_address: <ip-wg-téléphone>/32
 acces_endpoint: <ip-wireguard>:51820
 acces_portal_port: 80
+# DNS du téléphone : dnsmasq sur le 115, à l'adresse du tunnel.
+# Le téléphone bloque tout ce qui ne passe pas dans le VPN actif
+# (« Bloquer les connexions sans VPN ») : un DNS public, hors du tunnel,
+# ne répond donc jamais (12 nov.). dnsmasq transmet à la box.
+acces_dns: <ip-wg-serveur>
 # <ip-box> n'est pas dans la liste : c'est la box.
 # La mettre ici enverrait toute son interface dans le tunnel.
 acces_destinations:

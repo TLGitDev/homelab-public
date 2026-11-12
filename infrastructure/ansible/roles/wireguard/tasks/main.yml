@@ -28,6 +28,7 @@
       - wireguard-tools
       - nftables
       - openssl
+      - dnsmasq
     state: present
     update_cache: true
     cache_valid_time: 86400
@@ -309,3 +310,29 @@
   ansible.builtin.command: dpkg-query -W wireguard-tools nftables
   register: acces_versions
   changed_when: false
+
+# Le DNS du téléphone. Il n'écoute que sur wg0 (bind-dynamic : wg0 peut
+# apparaître après dnsmasq) et transmet tout à la box.
+- name: DNS du tunnel
+  ansible.builtin.copy:
+    dest: /etc/dnsmasq.d/tunnel.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Posé par Ansible (rôle wireguard). Pas de DHCP.
+      interface=wg0
+      except-interface=lo
+      bind-dynamic
+      no-resolv
+      server={{ acces_nameserver }}
+      domain-needed
+      bogus-priv
+      cache-size=1000
+  notify: Relancer dnsmasq
+
+- name: Démarrer dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    enabled: true
+    state: started
