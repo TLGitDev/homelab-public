@@ -42,3 +42,6 @@ acces_destinations:
   - { addr: <ip-servarr>, proto: tcp, port: "9696" }
   - { addr: <ip-navidrome>, proto: tcp, port: "4533" }
   - { addr: <ip-wireguard>, proto: tcp, port: "80" }
+  # CT 116 : noms et HTTPS sur le LAN (Traefik).
+  - { addr: <ip-lan>, proto: tcp, port: "80" }
+  - { addr: <ip-lan>, proto: tcp, port: "443" }

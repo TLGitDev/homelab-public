@@ -1,0 +1,43 @@
+# Noms et HTTPS sur le LAN (phase 9).
+# Le 116, <ip-lan>. Créé directement : aucun service en place à protéger.
+# Traefik y porte un certificat joker *.lan.labo.example,
+# obtenu par défi DNS-01 auprès de Cloudflare. Rien n'est publié.
+# Le jeton Cloudflare (DNS:Edit sur labo.example) est dans secrets.yml,
+# sous le nom cloudflare_dns_token. Il n'est pas dans Git.
+
+lan_vmid: 116
+lan_hostname: lan
+lan_address: <ip-lan>/24
+lan_gateway: <ip-box>
+lan_nameserver: <ip-box>
+lan_cores: 1
+lan_memory: 256
+lan_swap: 256
+lan_disk: local-zfs:4
+lan_ostemplate: local:vztmpl/debian-13-standard_13.1-2_amd64.tar.zst
+lan_node: pve
+proxmox_api_host: <ip-pve>
+
+lan_domain: lan.labo.example
+lan_traefik_version: v3.7.18
+
+# DNS interne (dnsmasq) : à trancher selon la box.
+# false : le nom est résolu par un enregistrement joker chez Cloudflare.
+lan_dns_interne: false
+
+# Un nom par service. pass_host: false réécrit l'en-tête Host
+# avec l'adresse de la cible : le Traefik de K3s ne connaît que <ip-k3s-01>.
+lan_services:
+  - { nom: accueil, url: "http://<ip-wireguard>:80" }
+  - { nom: proxmox, url: "https://<ip-pve>:8006" }
+  - { nom: gitea, url: "http://<ip-k3s-01>:3000" }
+  - { nom: argocd, url: "http://<ip-k3s-01>:80", pass_host: false }
+  - { nom: vaultwarden, url: "https://<ip-k3s-01>:443", pass_host: false }
+  - { nom: jellyfin, url: "http://<ip-jellyfin>:8096" }
+  - { nom: qbittorrent, url: "http://<ip-qbittorrent>:8080" }
+  - { nom: prowlarr, url: "http://<ip-servarr>:9696" }
+  - { nom: sonarr, url: "http://<ip-servarr>:8989" }
+  - { nom: radarr, url: "http://<ip-servarr>:7878" }
+  - { nom: lidarr, url: "http://<ip-servarr>:8686" }
+  - { nom: bazarr, url: "http://<ip-servarr>:6767" }
+  - { nom: navidrome, url: "http://<ip-navidrome>:4533" }

@@ -1,0 +1,11 @@
+# DNS interne, posé par Ansible (rôle lan).
+# Tout *.{{ lan_domain }} répond <ip-lan> ; le reste part vers la box.
+# Pas de DHCP : la box le garde.
+no-resolv
+server={{ lan_nameserver }}
+address=/{{ lan_domain }}/{{ lan_address.split('/')[0] }}
+interface=eth0
+bind-interfaces
+domain-needed
+bogus-priv
+cache-size=1000

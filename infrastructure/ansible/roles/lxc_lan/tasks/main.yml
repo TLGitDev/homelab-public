@@ -1,0 +1,100 @@
+# Crée le CT 116. Refuse les CT déjà pris, de 100 à 115.
+# Ports 80 et 443 depuis le LAN ; 53 aussi si le DNS interne est choisi.
+# Les clients WireGuard arrivent masqués en <ip-wireguard> : la règle LAN les couvre.
+
+- name: Refuser les CT déjà pris
+  ansible.builtin.fail:
+    msg: Ce playbook ne touche pas aux CT 100 à 115.
+  when: lan_vmid | int in range(100, 116) | list
+
+- name: Voir si le CT existe déjà
+  ansible.builtin.command:
+    argv:
+      - ssh
+      - -o
+      - BatchMode=yes
+      - root@{{ proxmox_api_host }}
+      - pct
+      - config
+      - "{{ lan_vmid }}"
+  register: ct_existant
+  changed_when: false
+  failed_when: false
+
+- name: Refuser un CT qui n'est pas le bon
+  ansible.builtin.fail:
+    msg: Le CT {{ lan_vmid }} existe et ce n'est pas {{ lan_hostname }}.
+  when:
+    - ct_existant.rc == 0
+    - lan_hostname not in ct_existant.stdout
+
+- name: Créer le CT
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ lan_node }}"
+    vmid: "{{ lan_vmid }}"
+    hostname: "{{ lan_hostname }}"
+    ostemplate: "{{ lan_ostemplate }}"
+    ostype: debian
+    password: "{{ runner_root_password }}"
+    unprivileged: true
+    onboot: true
+    cores: "{{ lan_cores }}"
+    memory: "{{ lan_memory }}"
+    swap: "{{ lan_swap }}"
+    disk: "{{ lan_disk }}"
+    nameserver: "{{ lan_nameserver }}"
+    netif:
+      net0: "name=eth0,bridge=vmbr0,firewall=1,gw={{ lan_gateway }},ip={{ lan_address }},type=veth"
+    update: false
+    state: present
+  no_log: true
+
+# Le pare-feu Proxmox est éteint au niveau du datacenter (phase 13) :
+# ce fichier est prêt pour le jour où il sera allumé.
+- name: Poser le pare-feu du CT
+  ansible.builtin.shell: |
+    ssh -o BatchMode=yes root@{{ proxmox_api_host }} python3 - <<'PY'
+    from pathlib import Path
+    p = Path("/etc/pve/firewall/{{ lan_vmid }}.fw")
+    rules = [
+        "[OPTIONS]",
+        "enable: 1",
+        "policy_in: DROP",
+        "policy_out: ACCEPT",
+        "[RULES]",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 80",
+        "IN ACCEPT -source <réseau-lan> -p tcp -dport 443",
+    ]
+    if {{ lan_dns_interne | bool }}:
+        rules += [
+            "IN ACCEPT -source <réseau-lan> -p udp -dport 53",
+            "IN ACCEPT -source <réseau-lan> -p tcp -dport 53",
+        ]
+    new = "\n".join(rules + [""])
+    text = p.read_text() if p.exists() else ""
+    if text == new:
+        print("ok")
+    else:
+        p.write_text(new)
+        print("changed")
+    PY
+  register: firewall_result
+  changed_when: firewall_result.stdout == "changed"
+
+- name: Démarrer le CT
+  community.proxmox.proxmox:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: root@pam
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    validate_certs: false
+    node: "{{ lan_node }}"
+    hostname: "{{ lan_hostname }}"
+    vmid: "{{ lan_vmid }}"
+    state: started
+  no_log: true

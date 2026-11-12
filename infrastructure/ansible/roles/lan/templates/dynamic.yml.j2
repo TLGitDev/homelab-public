@@ -1,0 +1,30 @@
+# Routes de Traefik, posées par Ansible (rôle lan) depuis lan_services.
+# Un nom par service : <nom>.{{ lan_domain }}.
+
+http:
+  routers:
+{% for s in lan_services %}
+    {{ s.nom }}:
+      rule: "Host(`{{ s.nom }}.{{ lan_domain }}`)"
+      entryPoints:
+        - websecure
+      service: {{ s.nom }}
+{% endfor %}
+
+  services:
+{% for s in lan_services %}
+    {{ s.nom }}:
+      loadBalancer:
+        passHostHeader: {{ (s.pass_host | default(true)) | string | lower }}
+{% if s.url.startswith('https://') %}
+        serversTransport: certificat-local
+{% endif %}
+        servers:
+          - url: "{{ s.url }}"
+{% endfor %}
+
+  # Proxmox et le Traefik de K3s présentent un certificat auto-signé.
+  # Le trafic reste sur le LAN : on ne vérifie pas ce certificat-là.
+  serversTransports:
+    certificat-local:
+      insecureSkipVerify: true

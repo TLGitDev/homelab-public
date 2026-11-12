@@ -1,0 +1,27 @@
+# Playbook des noms et du HTTPS sur le LAN.
+# À lancer depuis infrastructure/ansible :
+#   ansible-playbook playbooks/lan.yml
+#
+# Deux étapes : créer le conteneur, puis y poser Traefik.
+# Le 116, <ip-lan>. Le certificat joker vient de Cloudflare (DNS-01).
+# Les jetons Proxmox et Cloudflare sont dans secrets.yml, ignoré par Git.
+
+# 1. Depuis le PC, créer le CT 116 et le démarrer.
+- name: Créer le CT des noms
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../vars/lan.yml
+    - ../secrets.yml
+  roles:
+    - lxc_lan
+
+# 2. Entrer dans le CT et y poser Traefik.
+- name: Poser Traefik dans le CT
+  hosts: lan
+  gather_facts: false
+  vars_files:
+    - ../vars/lan.yml
+    - ../secrets.yml
+  roles:
+    - lan

@@ -1,0 +1,157 @@
+# Pose Traefik dans le CT 116, et dnsmasq si le DNS interne est choisi.
+# Traefik tourne sous l'utilisateur traefik, avec le seul droit
+# d'écouter sur 80 et 443. Le jeton Cloudflare vit dans
+# /etc/traefik/traefik.env (0600), lu par systemd au démarrage.
+
+- name: Voir si Python est là
+  ansible.builtin.raw: sh -c 'command -v python3'
+  register: python3_present
+  changed_when: false
+  failed_when: false
+
+- name: Installer Python
+  ansible.builtin.raw: sh -c 'DEBIAN_FRONTEND=noninteractive apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y python3'
+  when: python3_present.rc != 0
+
+- name: Résolveur de la box
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: "nameserver {{ lan_nameserver }}\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Installer les paquets
+  ansible.builtin.apt:
+    name: "{{ ['ca-certificates', 'curl'] + (['dnsmasq'] if lan_dns_interne | bool else []) }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 86400
+
+- name: Utilisateur traefik
+  ansible.builtin.user:
+    name: traefik
+    system: true
+    shell: /usr/sbin/nologin
+    home: /var/lib/traefik
+    create_home: false
+
+- name: Dossiers de Traefik
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner }}"
+    group: "{{ item.owner }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /etc/traefik, owner: root, mode: "0755" }
+    - { path: /var/lib/traefik, owner: traefik, mode: "0700" }
+    - { path: "/opt/traefik/{{ lan_traefik_version }}", owner: root, mode: "0755" }
+
+# L'archive est vérifiée contre le fichier de sommes publié avec la version.
+- name: Télécharger Traefik {{ lan_traefik_version }}
+  ansible.builtin.get_url:
+    url: "https://github.com/traefik/traefik/releases/download/{{ lan_traefik_version }}/traefik_{{ lan_traefik_version }}_linux_amd64.tar.gz"
+    dest: "/opt/traefik/traefik_{{ lan_traefik_version }}_linux_amd64.tar.gz"
+    checksum: "sha256:https://github.com/traefik/traefik/releases/download/{{ lan_traefik_version }}/traefik_{{ lan_traefik_version }}_checksums.txt"
+    mode: "0644"
+
+- name: Extraire le binaire
+  ansible.builtin.unarchive:
+    src: "/opt/traefik/traefik_{{ lan_traefik_version }}_linux_amd64.tar.gz"
+    dest: "/opt/traefik/{{ lan_traefik_version }}"
+    remote_src: true
+    include:
+      - traefik
+    creates: "/opt/traefik/{{ lan_traefik_version }}/traefik"
+  notify: Relancer Traefik
+
+- name: Pointer /usr/local/bin/traefik sur cette version
+  ansible.builtin.file:
+    src: "/opt/traefik/{{ lan_traefik_version }}/traefik"
+    dest: /usr/local/bin/traefik
+    state: link
+  notify: Relancer Traefik
+
+- name: Jeton Cloudflare
+  ansible.builtin.copy:
+    dest: /etc/traefik/traefik.env
+    content: "CF_DNS_API_TOKEN={{ cloudflare_dns_token }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Relancer Traefik
+
+- name: Configuration de Traefik
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/traefik/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - traefik.yml
+    - dynamic.yml
+  notify: Relancer Traefik
+
+- name: Unité de Traefik
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/traefik.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Traefik, noms et HTTPS sur le LAN
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      User=traefik
+      Group=traefik
+      EnvironmentFile=/etc/traefik/traefik.env
+      ExecStart=/usr/local/bin/traefik --configFile=/etc/traefik/traefik.yml
+      AmbientCapabilities=CAP_NET_BIND_SERVICE
+      CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+      NoNewPrivileges=true
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+  notify: Relancer Traefik
+
+# Appliquer les relances avant de démarrer : sinon Traefik démarre,
+# commence une demande de certificat, puis la relance la coupe et laisse
+# des TXT orphelins chez Cloudflare (12 nov.).
+- name: Appliquer les relances en attente
+  ansible.builtin.meta: flush_handlers
+
+- name: Démarrer Traefik
+  ansible.builtin.systemd:
+    name: traefik
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: DNS interne
+  ansible.builtin.template:
+    src: dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/lan.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: lan_dns_interne | bool
+  notify: Relancer dnsmasq
+
+- name: Démarrer dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    enabled: true
+    state: started
+  when: lan_dns_interne | bool
+
+- name: Attendre que Traefik écoute sur 443
+  ansible.builtin.wait_for:
+    port: 443
+    timeout: 30

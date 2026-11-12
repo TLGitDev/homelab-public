@@ -57,3 +57,9 @@ all:
       ansible_user: root
       ansible_connection: community.proxmox.proxmox_pct_remote
       proxmox_vmid: 115
+    # Le CT 116, même chemin. Noms et HTTPS sur le LAN.
+    lan:
+      ansible_host: <ip-pve>
+      ansible_user: root
+      ansible_connection: community.proxmox.proxmox_pct_remote
+      proxmox_vmid: 116

@@ -1,0 +1,10 @@
+- name: Relancer Traefik
+  ansible.builtin.systemd:
+    name: traefik
+    state: restarted
+    daemon_reload: true
+
+- name: Relancer dnsmasq
+  ansible.builtin.systemd:
+    name: dnsmasq
+    state: restarted

@@ -1,0 +1,46 @@
+# Configuration statique de Traefik, posée par Ansible (rôle lan).
+# Le port 80 renvoie vers 443. Le certificat joker couvre *.{{ lan_domain }}.
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+    http:
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "{{ lan_domain }}"
+            sans:
+              - "*.{{ lan_domain }}"
+
+# Défi DNS-01 : Traefik pose un enregistrement TXT chez Cloudflare,
+# Let's Encrypt le lit, puis Traefik le retire. Aucun port ouvert vers Internet.
+# Le jeton arrive par CF_DNS_API_TOKEN (fichier /etc/traefik/traefik.env).
+certificatesResolvers:
+  cloudflare:
+    acme:
+      storage: /var/lib/traefik/acme.json
+      dnsChallenge:
+        provider: cloudflare
+        # Laisser aux TXT le temps d'être publiés avant la validation.
+        propagation:
+          delayBeforeChecks: 30s
+        resolvers:
+          - "1.1.1.1:53"
+          - "1.0.0.1:53"
+
+providers:
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+log:
+  level: INFO
+
+accessLog: {}
