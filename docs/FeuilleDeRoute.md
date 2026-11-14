@@ -24,7 +24,7 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 | 6 | Forge et GitOps tenables | ✅ Jouée (6 nov.) |
 | 7 | Un LXC se reconstruit | ✅ Jouée (7 nov.) |
 | 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
-| 9 | Accès distant | 🟡 En cours |
+| 9 | Accès distant | ✅ Jouée (14 nov.) |
 | 10 | Dépôt public allégé | ⬜ À faire, **à commencer tout de suite**, puis mis à jour à chaque phase |
 | 11 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
 | 12 | Une copie hors du domicile | ⬜ À faire |
@@ -36,9 +36,8 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 
 ```mermaid
 flowchart LR
-    P0["0–8<br/>Fondations<br/>jouées"] --> P9["9<br/>Accès distant"]
+    P0["0–9<br/>Fondations et<br/>accès distant<br/>jouées"] --> P11["11<br/>Reprise jouée"]
     P0 --> P10["10<br/>Dépôt public"]
-    P9 --> P11["11<br/>Reprise jouée"]
     P11 --> P12["12<br/>Hors domicile"]
     P12 --> P13["13<br/>Exploitation<br/>et sécurité"]
     P13 --> P14["14<br/>Observabilité"]
@@ -50,11 +49,11 @@ flowchart LR
 
 ### La logique de l'ordre
 
-Les phases 0 à 8 ont posé les fondations. Les phases restantes suivent une progression simple : **protéger, puis exploiter, puis industrialiser, puis livrer et montrer.**
+Les phases 0 à 8 ont posé les fondations, et la phase 9 l'accès distant. Les phases restantes suivent une progression simple : **protéger, puis exploiter, puis industrialiser, puis livrer et montrer.**
 
 | Étape | Phases | Pourquoi à ce moment-là |
 | --- | --- | --- |
-| Finir l'existant | 9 | Clore la phase en cours avant d'en ouvrir d'autres |
+| Finir l'existant | 9 | Clore la phase en cours avant d'en ouvrir d'autres. Jouée le 14 nov. |
 | Montrer tôt | 10 | Le dépôt public est ce qu'un recruteur verra en premier. Une première version maintenant, mise à jour à chaque phase, vaut mieux qu'une version parfaite dans trois mois. Elle avance **en parallèle** de tout le reste |
 | Protéger | 11, 12 | Avant d'ajouter quoi que ce soit, prouver qu'on sait tout récupérer (11), y compris après un sinistre au domicile (12). La reprise jouée dit aussi quoi copier hors du domicile |
 | Exploiter | 13, 14 | Une fois les données à l'abri : mises à jour, redémarrages, durcissement (13), puis la supervision (14), qui surveille un système déjà stabilisé et durci |
