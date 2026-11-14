@@ -178,7 +178,7 @@ Internet → Cloudflare → tunnel → LXC cloudflare → Traefik (<ip-k3s-01>:8
 | Vaultwarden | `vaultwarden.labo.example`, sans Access | `https://<ip-k3s-01>` (port 443, IngressRoute `vaultwarden-lan`, ajoutée le 10 nov. 2026) |
 | Proxmox | Non | `https://<ip-pve>:8006` |
 | Argo CD | Non | Par Traefik sur `k3s-01` |
-| Gitea | Non | `http://<ip-k3s-01>:3000` |
+| Gitea | Non | `https://gitea.lan.labo.example/` (`ROOT_URL`), ou en direct `http://<ip-k3s-01>:3000` |
 | Jellyfin | Non | `http://<ip-jellyfin>:8096` |
 | qBittorrent | Non | `http://<ip-qbittorrent>:8080` |
 | Prowlarr, Sonarr, Radarr, Lidarr, Bazarr | Non | `http://<ip-servarr>:<port>` (voir [adressage.md](adressage.md)) |
