@@ -27,8 +27,8 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 | 7 | Un LXC se reconstruit | ✅ Jouée (7 nov.) |
 | 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
 | 9 | Accès distant | ✅ Jouée (14 nov.) |
-| 10 | Dépôt public allégé | ⬜ À faire, **à commencer tout de suite**, puis mis à jour à chaque phase |
-| 11 | La création passe à OpenTofu | ⬜ À faire, **prochaine phase** |
+| 10 | Dépôt public allégé | ⬜ À faire, **prochaine phase** : une première version avant la phase 11, puis mise à jour à chaque phase |
+| 11 | La création passe à OpenTofu | ⬜ À faire, après la première version de la phase 10 |
 | 12 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
 | 13 | Une copie hors du domicile | ⬜ À faire |
 | 14 | Exploitation courante et sécurité | ⬜ À faire |
@@ -58,7 +58,7 @@ Les phases 0 à 8 ont posé les fondations, et la phase 9 l'accès distant. Les 
 | Étape | Phases | Pourquoi à ce moment-là |
 | --- | --- | --- |
 | Finir l'existant | 9 | Clore la phase en cours avant d'en ouvrir d'autres. Jouée le 14 nov. |
-| Montrer tôt | 10 | Le dépôt public est ce qu'un recruteur verra en premier. Une première version maintenant, mise à jour à chaque phase, vaut mieux qu'une version parfaite dans trois mois. Elle avance **en parallèle** de tout le reste |
+| Montrer tôt | 10 | Le dépôt public est ce qu'un recruteur verra en premier. Une première version maintenant, mise à jour à chaque phase, vaut mieux qu'une version parfaite dans trois mois. Elle passe avant la phase 11 : son contrôle automatique bloquera une fuite dans le code OpenTofu (adresses, identifiants Cloudflare). Elle avance ensuite **en parallèle** de tout le reste |
 | Fixer l'outillage | 11 | La reprise (12) et la bascule de la production (16) s'appuient sur l'outil qui crée les machines. Le choisir avant elles évite de les rejouer après un changement d'outil |
 | Protéger | 12, 13 | Avant d'ajouter quoi que ce soit, prouver qu'on sait tout récupérer (12), y compris après un sinistre au domicile (13). La reprise jouée dit aussi quoi copier hors du domicile |
 | Exploiter | 14, 15 | Une fois les données à l'abri : mises à jour, redémarrages, durcissement (14), puis la supervision (15), qui surveille un système déjà stabilisé et durci |
@@ -380,7 +380,7 @@ La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime 
 
 **Objectif** : OpenTofu crée les ressources (chaque LXC d'infrastructure, la VM `k3s-01`, les réglages Cloudflare). Ansible configure l'intérieur des machines. Chaque objet est décrit par un seul outil.
 
-**Dépendances** : phases 8 et 9 jouées. À jouer **avant** la phase 12.
+**Dépendances** : phases 8 et 9 jouées, première version de la phase 10 publiée. À jouer **avant** la phase 12.
 
 ### Pourquoi ce changement
 
