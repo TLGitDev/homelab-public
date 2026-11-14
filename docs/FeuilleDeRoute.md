@@ -366,7 +366,7 @@ La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime 
 
 ### Jalons
 
-- ⬜ La règle ci-dessus écrite à côté du script, avec un exemple avant et après.
+- ✅ La règle ci-dessus écrite à côté du script, avec un exemple avant et après (14 nov.) : (document privé), dans le dépôt privé seulement.
 - ⬜ Une projection rejouable. Une deuxième passe ne change la copie publique que si le labo a changé.
 - ⬜ Un contrôle automatique sur l'arbre produit, en plus de la relecture : recherche d'adresses `192.168.`, `10.`, d'empreintes, de noms DNS du labo, de mots-clés de secret, et un outil de détection de secrets (par exemple Gitleaks). Le push est refusé si le contrôle trouve quelque chose.
 - ⬜ Relecture humaine de l'arbre produit.
