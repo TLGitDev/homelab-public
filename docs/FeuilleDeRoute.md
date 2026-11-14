@@ -4,6 +4,8 @@ Cette page décrit la **cible** et l'**ordre de travail**. Elle ne décrit pas c
 
 Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. Un jalon est coché ✅ seulement quand il a réellement été joué et vérifié.
 
+> **Renumérotation du 14 nov. 2026.** Une phase 11, « La création passe à OpenTofu », a été insérée avant la reprise jouée. Les anciennes phases 11 à 17 sont devenues les phases 12 à 18. Le journal écrit avant cette date garde les anciens numéros.
+
 ## Principes
 
 - **Avancer par étapes réversibles.** On construit sur une base fiable, sans multiplier les services avant de maîtriser le stockage, les sauvegardes et le déploiement.
@@ -15,7 +17,7 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 
 | Phase | Sujet | État |
 | --- | --- | --- |
-| 0 | Fiabiliser l'existant | ✅ Jouée. Deux reprises sur la production restent à jouer, reprises en phase 11 |
+| 0 | Fiabiliser l'existant | ✅ Jouée. Deux reprises sur la production restent à jouer, reprises en phase 12 |
 | 1 | Organiser les données personnelles | ✅ Jouée (24 oct.) |
 | 2 | Sauvegarde Android | ✅ Close (25 oct.) |
 | 3 | Forge Git et CI/CD | ✅ Jouée (4 nov.) |
@@ -26,40 +28,43 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 | 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
 | 9 | Accès distant | ✅ Jouée (14 nov.) |
 | 10 | Dépôt public allégé | ⬜ À faire, **à commencer tout de suite**, puis mis à jour à chaque phase |
-| 11 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
-| 12 | Une copie hors du domicile | ⬜ À faire |
-| 13 | Exploitation courante et sécurité | ⬜ À faire |
-| 14 | Observabilité | ⬜ À faire |
-| 15 | La production sort du code | ⬜ À faire |
-| 16 | Une application maison, livrée de bout en bout | ⬜ À faire |
-| 17 | Site CV public | ⬜ À faire |
+| 11 | La création passe à OpenTofu | ⬜ À faire, **prochaine phase** |
+| 12 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
+| 13 | Une copie hors du domicile | ⬜ À faire |
+| 14 | Exploitation courante et sécurité | ⬜ À faire |
+| 15 | Observabilité | ⬜ À faire |
+| 16 | La production sort du code | ⬜ À faire |
+| 17 | Une application maison, livrée de bout en bout | ⬜ À faire |
+| 18 | Site CV public | ⬜ À faire |
 
 ```mermaid
 flowchart LR
-    P0["0–9<br/>Fondations et<br/>accès distant<br/>jouées"] --> P11["11<br/>Reprise jouée"]
+    P0["0–9<br/>Fondations et<br/>accès distant<br/>jouées"] --> P11["11<br/>Création par<br/>OpenTofu"]
     P0 --> P10["10<br/>Dépôt public"]
-    P11 --> P12["12<br/>Hors domicile"]
-    P12 --> P13["13<br/>Exploitation<br/>et sécurité"]
-    P13 --> P14["14<br/>Observabilité"]
-    P14 --> P15["15<br/>Production<br/>depuis le code"]
-    P15 --> P16["16<br/>Application<br/>maison"]
-    P16 --> P17["17<br/>Site CV"]
-    P10 -.->|"contenu"| P17
+    P11 --> P12["12<br/>Reprise jouée"]
+    P12 --> P13["13<br/>Hors domicile"]
+    P13 --> P14["14<br/>Exploitation<br/>et sécurité"]
+    P14 --> P15["15<br/>Observabilité"]
+    P15 --> P16["16<br/>Production<br/>depuis le code"]
+    P16 --> P17["17<br/>Application<br/>maison"]
+    P17 --> P18["18<br/>Site CV"]
+    P10 -.->|"contenu"| P18
 ```
 
 ### La logique de l'ordre
 
-Les phases 0 à 8 ont posé les fondations, et la phase 9 l'accès distant. Les phases restantes suivent une progression simple : **protéger, puis exploiter, puis industrialiser, puis livrer et montrer.**
+Les phases 0 à 8 ont posé les fondations, et la phase 9 l'accès distant. Les phases restantes suivent une progression simple : **fixer l'outillage, puis protéger, puis exploiter, puis industrialiser, puis livrer et montrer.**
 
 | Étape | Phases | Pourquoi à ce moment-là |
 | --- | --- | --- |
 | Finir l'existant | 9 | Clore la phase en cours avant d'en ouvrir d'autres. Jouée le 14 nov. |
 | Montrer tôt | 10 | Le dépôt public est ce qu'un recruteur verra en premier. Une première version maintenant, mise à jour à chaque phase, vaut mieux qu'une version parfaite dans trois mois. Elle avance **en parallèle** de tout le reste |
-| Protéger | 11, 12 | Avant d'ajouter quoi que ce soit, prouver qu'on sait tout récupérer (11), y compris après un sinistre au domicile (12). La reprise jouée dit aussi quoi copier hors du domicile |
-| Exploiter | 13, 14 | Une fois les données à l'abri : mises à jour, redémarrages, durcissement (13), puis la supervision (14), qui surveille un système déjà stabilisé et durci |
-| Industrialiser | 15 | La production sort du code. Elle s'appuie sur la reprise (11) pour revenir en arrière, et sur la supervision (14) pour voir qu'une bascule s'est bien passée |
-| Livrer | 16 | Une application exposée sur Internet arrive en dernier, sur une base protégée, durcie, supervisée et reproductible |
-| Montrer | 17 | Le site CV est la première application livrée par le pipeline de la phase 16, et il raconte le homelab à partir du dépôt public de la phase 10 |
+| Fixer l'outillage | 11 | La reprise (12) et la bascule de la production (16) s'appuient sur l'outil qui crée les machines. Le choisir avant elles évite de les rejouer après un changement d'outil |
+| Protéger | 12, 13 | Avant d'ajouter quoi que ce soit, prouver qu'on sait tout récupérer (12), y compris après un sinistre au domicile (13). La reprise jouée dit aussi quoi copier hors du domicile |
+| Exploiter | 14, 15 | Une fois les données à l'abri : mises à jour, redémarrages, durcissement (14), puis la supervision (15), qui surveille un système déjà stabilisé et durci |
+| Industrialiser | 16 | La production sort du code. Elle s'appuie sur la reprise (12) pour revenir en arrière, et sur la supervision (15) pour voir qu'une bascule s'est bien passée |
+| Livrer | 17 | Une application exposée sur Internet arrive en dernier, sur une base protégée, durcie, supervisée et reproductible |
+| Montrer | 18 | Le site CV est la première application livrée par le pipeline de la phase 17, et il raconte le homelab à partir du dépôt public de la phase 10 |
 
 ---
 
@@ -81,16 +86,16 @@ Un snapshot ZFS **n'est pas** une sauvegarde : il faut une copie distincte, idé
 
 ### Jalons
 
-La phase a été jugée assez solide pour démarrer la phase 1. Le rollback par snapshot et la reprise sur le zvol de production sont écrits, mais volontairement **pas joués** : ils passent en phase 11.
+La phase a été jugée assez solide pour démarrer la phase 1. Le rollback par snapshot et la reprise sur le zvol de production sont écrits, mais volontairement **pas joués** : ils passent en phase 12.
 
 - ✅ Snapshots horaires du zvol Vaultwarden : script et timers, rétention de 24. Premiers passages automatiques à 12:00 et 13:00 le 21 oct.
 - ✅ Snapshots quotidiens, rétention de 7. Le 6 nov. à 04:00, `@auto-daily-2026-11-06` a été créé, `@auto-daily-2026-10-26` détruit, 7 conservés. Le passage du 22 oct. n'a pas été relu, et il est déjà sorti de la fenêtre. Celui du 21 oct. était manuel.
 - ✅ Rétention horaire de 24 vérifiée le 6 nov. à 15:00 : 24 snapshots `auto-hourly`, du 5 nov. 15:00 au 6 nov. 15:00, avec un trou de 4 h. À 13:00, 14:00 et 15:00, le journal détruit l'heure en trop et affiche `24 conservé(s), plafond 24`. Plus aucun horaire d'octobre.
-- ⬜ Restauration par rollback d'un snapshot, sur la production. **Reprise en phase 11.**
+- ⬜ Restauration par rollback d'un snapshot, sur la production. **Reprise en phase 12.**
 - ✅ Sauvegarde USB avec Restic : `backup-usb` (20 oct.), restauration d'une archive testée.
 - ✅ Rétention des snapshots Restic : 14 jours, appliquée le 5 nov. (passage `<snapshot>`).
 - ✅ Restauration isolée de Vaultwarden : technique le 20 oct., connexion le 21 oct. Voir [vaultwarden.md](exploitation/vaultwarden.md).
-- ⬜ Reprise réelle sur le zvol de production : [écrite](exploitation/restauration.md), jamais exécutée. **Reprise en phase 11.**
+- ⬜ Reprise réelle sur le zvol de production : [écrite](exploitation/restauration.md), jamais exécutée. **Reprise en phase 12.**
 - ✅ Clé Sealed Secrets copiée sous `/tank/backups`, donc dans le périmètre USB.
 - ✅ État du stockage documenté : voir [stockage-zfs.md](exploitation/stockage-zfs.md).
 - ✅ Opérations déjà faites documentées : sauvegarde, restauration isolée, USB.
@@ -311,7 +316,7 @@ Tous joués le 8 nov., du plus simple au plus risqué. Chaque conteneur d'essai 
 - ✅ qBittorrent : CT 113 `qbittorrent-essai`, sortie du compte coupée (`000`), sans la clé Proton.
 - ✅ Cloudflare : CT 114 `cloudflare-essai`, `cloudflared` 2026.10.7 arrêté, sans le jeton. Le 100 en service a encore 2026.10.4.
 
-> **Limite** : les conteneurs **en service** restent ceux créés à la main. Les playbooks sont prouvés, mais la production n'en sort pas encore, et des écarts existent déjà (versions de `jellyfin-ffmpeg` et de `cloudflared`). C'est l'objet de la phase 15.
+> **Limite** : les conteneurs **en service** restent ceux créés à la main. Les playbooks sont prouvés, mais la production n'en sort pas encore, et des écarts existent déjà (versions de `jellyfin-ffmpeg` et de `cloudflared`). C'est l'objet de la phase 16.
 
 ---
 
@@ -371,11 +376,50 @@ La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime 
 
 ---
 
-## Phase 11 — La reprise se joue, pas seulement s'écrit
+## Phase 11 — La création passe à OpenTofu
+
+**Objectif** : OpenTofu crée les ressources (chaque LXC d'infrastructure, la VM `k3s-01`, les réglages Cloudflare). Ansible configure l'intérieur des machines. Chaque objet est décrit par un seul outil.
+
+**Dépendances** : phases 8 et 9 jouées. À jouer **avant** la phase 12.
+
+### Pourquoi ce changement
+
+Décision du 14 nov. 2026, qui révise en partie l'[ADR-010](decisions/ADR-010-Ansible-LXC.md).
+
+Les phases 7 et 8 ont prouvé qu'Ansible sait créer un conteneur, puis le configurer. Mais le module Proxmox d'Ansible crée surtout ce qui n'existe pas encore. Trois choses lui manquent :
+
+- **Un plan avant d'agir.** Il ne montre pas, pour l'ensemble des ressources, ce qui sera créé, modifié ou détruit.
+- **Une référence à laquelle comparer.** Il ne garde pas d'état. Une ressource modifiée à la main se voit mal.
+- **La suppression.** Une ressource retirée du code reste en place, sauf si une tâche la détruit explicitement.
+
+OpenTofu garde un **fichier d'état** : la liste des ressources qu'il a créées, avec leurs réglages. `tofu plan` compare ce fichier, le code et la réalité, puis montre chaque écart avant d'agir. C'est ce que demande le critère de la phase 16 : « un écart se détecte ». Le partage « OpenTofu crée, Ansible configure » est aussi le schéma le plus courant en entreprise.
+
+Ce n'est pas une migration pour « tout mettre pareil » (idée de fonctionnement n° 5). Le changement apporte le plan, la comparaison à un état et la suppression, qu'Ansible n'offre pas. Les rôles Ansible restent : seule leur tâche de création passe à OpenTofu.
+
+**Pourquoi maintenant.** La phase 12 rejoue la recréation d'un LXC (scénario 4 de [restauration.md](exploitation/restauration.md)), et la phase 16 bascule la production sur l'outillage. Changer d'outil après ces deux phases obligerait à les rejouer.
+
+**Limite connue.** Proxmox refuse un *bind mount* demandé avec un jeton d'API, même un jeton de `root@pam`. OpenTofu se heurte au même refus. Les montages de `tank` restent donc posés par Ansible avec `pct`, et OpenTofu les ignore (`lifecycle { ignore_changes }`). Ce partage est à confirmer par l'essai.
+
+**Critère** : chaque conteneur d'essai est recréé par `tofu apply`, puis par son playbook, et une deuxième passe donne « No changes » côté OpenTofu et `changed=0` côté Ansible. Pour Cloudflare, `tofu plan` ne montre aucun changement après l'import de l'existant.
+
+### Jalons
+
+- ⬜ **ADR-015 écrit** : partage entre OpenTofu et Ansible, fournisseurs (`bpg/proxmox`, `cloudflare/cloudflare`), jeton d'API utilisé, emplacement du fichier d'état hors du dépôt, chiffrement de l'état, sauvegarde par Restic, traitement des montages de `tank`. L'ADR-010 est marqué comme révisé en partie.
+- ⬜ **Preuve sur un runner d'essai**, comme en phase 7 : code dans `infrastructure/opentofu/`, conteneur créé par `tofu apply`, configuré par le rôle Ansible sans sa tâche de création, runner enregistré, CI d'essai verte. Deuxième passe sans changement des deux côtés. Conteneur retiré par `tofu destroy`.
+- ⬜ **Les autres conteneurs**, un à la fois, sur un conteneur d'essai, dans l'ordre de la phase 8 : Navidrome, Jellyfin, Samba, servarr, qBittorrent, Cloudflare. Les montages de `tank` sont vérifiés en lecture seule.
+- ⬜ **CT 115 `wireguard` et CT 116 `lan`**, déjà créés par leur playbook et en service : importés dans l'état (`tofu import`), puis `tofu plan` ne montre aucun changement. Aucun conteneur n'est recréé.
+- ⬜ **La VM `k3s-01` décrite en code** : une VM d'essai créée par OpenTofu (modèle Debian avec cloud-init), K3s installé par Ansible. Ce code sert ensuite à reconstruire `k3s-01` en phase 12 (scénario 3.2).
+- ⬜ **Les réglages Cloudflare en OpenTofu** : enregistrements DNS (dont `A *.lan`), routes du tunnel `homelab`, politique Access de Vaultwarden. L'existant est importé, puis `tofu plan` ne montre aucun changement. L'adresse de courriel de la politique et les jetons restent hors du dépôt.
+- ⬜ `tofu fmt -check` et `tofu validate` dans le workflow GitHub.
+- ⬜ Doc à jour : une page `opentofu.md`, [ansible.md](exploitation/ansible.md), le scénario 4 de [restauration.md](exploitation/restauration.md) (recréer un LXC, c'est `tofu apply` puis le playbook), [architecture.md](vue-ensemble/architecture.md).
+
+---
+
+## Phase 12 — La reprise se joue, pas seulement s'écrit
 
 **Objectif** : chaque scénario de [restauration.md](exploitation/restauration.md) est **joué** au moins une fois, ou explicitement accepté comme non joué, avec la raison. Le temps de reprise est mesuré.
 
-**Dépendances** : phases 0 et 6, phase 9 jouée. À jouer avant d'ajouter de nouvelles données importantes.
+**Dépendances** : phases 0 et 6, phases 9 et 11 jouées. À jouer avant d'ajouter de nouvelles données importantes.
 
 Aujourd'hui, le tableau de restauration compte plusieurs « jamais joué » : la restauration du coffre sur la production, la reconstruction de `k3s-01`, la perte de `tank`, le remplacement d'un disque, et la perte du NVMe, qui n'est même pas écrite en détail. En entretien, c'est la première question qui suit « j'ai des sauvegardes ».
 
@@ -388,7 +432,7 @@ Règle de prudence : on joue d'abord **à côté** de la production (clone d'un 
 - ⬜ **RTO et RPO écrits** pour chaque service (Vaultwarden, Gitea, médiathèques, données personnelles), et confrontés à la fréquence réelle des sauvegardes. Le disque USB manuel donne aujourd'hui un RPO de 14 jours pour les données personnelles hors `tank`.
 - ⬜ **Rollback d'un snapshot du zvol Vaultwarden.** D'abord sur un clone (`zfs clone`) monté à côté, puis sur la production dans une fenêtre annoncée. Reprend le jalon ouvert de la phase 0.
 - ⬜ **Restauration d'une archive sur le volume Vaultwarden en service** (scénario 3.1). Reprend le jalon ouvert de la phase 0.
-- ⬜ **Reconstruire `k3s-01` à côté de la production** (scénario 3.2) : une VM d'essai, K3s, la clé Sealed Secrets restaurée, Argo CD amorcé depuis Git, et des **clones** des zvols Vaultwarden et Gitea. Vérifier que les deux services démarrent avec leurs données. Mesurer le temps. Aucun risque pour la production.
+- ⬜ **Reconstruire `k3s-01` à côté de la production** (scénario 3.2) : une VM d'essai créée par le code de la phase 11, K3s, la clé Sealed Secrets restaurée, Argo CD amorcé depuis Git, et des **clones** des zvols Vaultwarden et Gitea. Vérifier que les deux services démarrent avec leurs données. Mesurer le temps. Aucun risque pour la production.
 - ⬜ **Écrire en détail la perte du NVMe** (scénario 7), puis vérifier que tout ce qu'il faut est sauvegardé : `/etc/pve`, la configuration réseau, `/etc/subuid` et `/etc/subgid`, les scripts et timers installés, les clés SSH de service. Si une pièce manque, l'ajouter à `/tank/backups`, donc au périmètre USB.
 - ⬜ **Remplacement d'un disque de `tank`** (scénario 6) : écrire la procédure, avec l'identification du disque par son numéro de série, et décider s'il faut la répéter (`zpool offline` puis `online`, resilver observé) ou seulement l'écrire.
 - ⬜ **Perte de `tank`** (scénario 3.3) : restaurer depuis l'USB un échantillon représentatif (un dossier personnel, une archive Vaultwarden, la clé Sealed Secrets) vers un emplacement d'essai, et le vérifier.
@@ -396,11 +440,11 @@ Règle de prudence : on joue d'abord **à côté** de la production (clone d'un 
 
 ---
 
-## Phase 12 — Une copie hors du domicile
+## Phase 13 — Une copie hors du domicile
 
 **Objectif** : la règle **3-2-1** est respectée pour les données irremplaçables : trois copies, sur deux supports, dont une hors du domicile. Un incendie, un vol ou un dégât des eaux ne fait perdre ni le coffre, ni les documents, ni les photos.
 
-**Dépendance** : phase 11 commencée, pour savoir ce qu'on protège et en combien de temps on le récupère.
+**Dépendance** : phase 12 commencée, pour savoir ce qu'on protège et en combien de temps on le récupère.
 
 Aujourd'hui, toutes les copies sont dans la même pièce : `tank`, ses snapshots et le disque USB. Le tableau de [sauvegardes.md](exploitation/sauvegardes.md) marque la « copie chiffrée hors site » comme **prévue**.
 
@@ -425,11 +469,11 @@ Deux familles de solutions, à trancher dans un ADR :
 
 ---
 
-## Phase 13 — Exploitation courante et sécurité
+## Phase 14 — Exploitation courante et sécurité
 
 **Objectif** : le homelab se met à jour, redémarre et se défend sans improvisation. Les routines sont écrites et ont été jouées.
 
-**Dépendances** : phase 9 jouée, phases 11 et 12 jouées (les données sont à l'abri avant de toucher aux mises à jour).
+**Dépendances** : phase 9 jouée, phases 12 et 13 jouées (les données sont à l'abri avant de toucher aux mises à jour).
 
 **Critère** : chaque composant a une politique de mise à jour écrite et appliquée ; un redémarrage complet de `pve` ne demande aucune intervention ; un audit des accès a été fait et ses écarts corrigés.
 
@@ -459,11 +503,11 @@ Deux familles de solutions, à trancher dans un ADR :
 
 ---
 
-## Phase 14 — Observabilité
+## Phase 15 — Observabilité
 
 **Objectif** : voir l'état du homelab d'un coup d'œil, et être prévenu quand un **service** tombe, pas seulement une sauvegarde.
 
-**Dépendance** : phase 13 commencée. ntfy reste le canal d'alerte.
+**Dépendance** : phase 14 commencée. ntfy reste le canal d'alerte.
 
 Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne prévient si Jellyfin, Gitea ou le tunnel ne répondent plus, et aucune métrique n'est conservée.
 
@@ -483,40 +527,39 @@ Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne
 
 ---
 
-## Phase 15 — La production sort du code
+## Phase 16 — La production sort du code
 
-**Objectif** : chaque conteneur **en service** a été recréé par son playbook. Ce qui tourne est ce qui est décrit dans Git, et un écart se détecte.
+**Objectif** : chaque conteneur **en service** a été recréé par OpenTofu et son playbook. Ce qui tourne est ce qui est décrit dans Git, et un écart se détecte.
 
-**Dépendances** : phase 8 jouée, phase 11 jouée (savoir revenir en arrière), phase 14 en place (voir qu'une bascule s'est bien passée).
+**Dépendances** : phases 8 et 11 jouées, phase 12 jouée (savoir revenir en arrière), phase 15 en place (voir qu'une bascule s'est bien passée).
 
-Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai. Mais les conteneurs en service ont été créés à la main, et ils dérivent déjà : `jellyfin-ffmpeg7` sur le 103 au lieu de 8, `cloudflared` 2026.10.4 sur le 100 au lieu de 2026.10.7. De même, les scripts de `pve` sont dans Git, mais leur installation reste manuelle. Tant que la production n'est pas sortie du code, « l'infrastructure est en code » n'est vrai qu'à moitié.
+Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai, et la phase 11 la création par OpenTofu. Mais les conteneurs en service ont été créés à la main, et ils dérivent déjà : `jellyfin-ffmpeg7` sur le 103 au lieu de 8, `cloudflared` 2026.10.4 sur le 100 au lieu de 2026.10.7. De même, les scripts de `pve` sont dans Git, mais leur installation reste manuelle. Tant que la production n'est pas sortie du code, « l'infrastructure est en code » n'est vrai qu'à moitié.
 
 **Critère** : un passage en mode vérification (`ansible-playbook --check --diff`) sur toute la production ne montre aucun écart, et `tofu plan` annonce « No changes ».
 
-Répartition visée (14 nov.) : **OpenTofu** fait exister les ressources d'API (réglages Cloudflare, VM `k3s-01`). **Ansible** configure l'intérieur des machines et garde les LXC, comme le fixe l'[ADR-010](decisions/ADR-010-Ansible-LXC.md). Un même objet n'est jamais décrit par les deux outils.
+Répartition fixée en phase 11 : **OpenTofu** crée les ressources, **Ansible** configure l'intérieur des machines. Un même objet n'est jamais décrit par les deux outils.
 
 ### Jalons
 
 - ⬜ Chaque playbook peut viser le conteneur en service, en mode vérification, sans rien modifier. Les écarts sont relevés.
-- ⬜ Bascule de chaque conteneur en service vers sa version créée par le playbook, un à la fois, du moins risqué au plus risqué (même ordre qu'en phase 8, runner en premier). Pour chacun : sauvegarde de la configuration, bascule, vérification, retour arrière prêt.
+- ⬜ Les conteneurs créés à la main (100 à 107) entrent dans le code : recréés par OpenTofu, ou importés dans l'état s'ils sont jugés conformes. Choix fait conteneur par conteneur.
+- ⬜ Bascule de chaque conteneur en service vers sa version créée par OpenTofu et le playbook, un à la fois, du moins risqué au plus risqué (même ordre qu'en phase 8, runner en premier). Pour chacun : sauvegarde de la configuration, bascule, vérification, retour arrière prêt.
 - ⬜ Les scripts et timers de `pve` installés par un playbook, au lieu de copies à la main. Révision de l'ADR-010 sur ce point.
-- ⬜ ADR d'OpenTofu : périmètre exact, fournisseurs (`cloudflare/cloudflare`, `bpg/proxmox`), rangement du fichier d'état hors du dépôt, chiffrement de l'état, sauvegarde par Restic.
-- ⬜ Les réglages Cloudflare décrits en OpenTofu : enregistrements DNS (dont `A *.lan`), routes du tunnel `homelab`, politique Access de Vaultwarden. L'existant est importé, puis `tofu plan` ne montre aucun changement.
-- ⬜ La VM `k3s-01` décrite en code : création par OpenTofu (VM Proxmox avec cloud-init), installation de K3s par Ansible. Ce jalon rend aussi le scénario 3.2 de la phase 11 plus rapide.
-- ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, `tofu fmt -check` et `tofu validate`, en plus de `kubeconform`.
+- ⬜ La VM `k3s-01` en service entre dans le code : importée dans l'état d'OpenTofu, ou remplacée par une VM créée par le code de la phase 11. Choix fait après la reconstruction jouée en phase 12.
+- ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, en plus de `kubeconform` et des contrôles OpenTofu de la phase 11.
 - ⬜ Un passage de vérification planifié (par exemple chaque semaine), qui signale un écart par ntfy. Il lance `ansible-playbook --check` et `tofu plan`.
 
 ---
 
-## Phase 16 — Une application maison, livrée de bout en bout
+## Phase 17 — Une application maison, livrée de bout en bout
 
 **Objectif** : une application développée ici passe d'un commit à la production par un pipeline complet (tests, image, analyse, déploiement GitOps, retour arrière) et elle est exposée sur Internet **sans** mettre en danger le reste du homelab.
 
-**Dépendances** : phases 13, 14 et 15. L'**ADR-013** est écrit et appliqué **avant** toute exposition.
+**Dépendances** : phases 14, 15 et 16. L'**ADR-013** est écrit et appliqué **avant** toute exposition.
 
 Un conteneur seul n'isole pas assez une application publique : une faille dans l'application, ou dans le noyau partagé, peut donner accès au nœud, donc à Vaultwarden et à Gitea. L'ADR-013 doit trancher les protections. Voir l'[ADR-012](decisions/ADR-012-LXC-ou-K3s.md).
 
-Le site CV (phase 17) est le candidat recommandé pour cette première application : peu de données, peu de risque, et il montre le pipeline à ceux qui le lisent.
+Le site CV (phase 18) est le candidat recommandé pour cette première application : peu de données, peu de risque, et il montre le pipeline à ceux qui le lisent.
 
 **Critère** : un commit sur l'application arrive en production sans geste manuel autre que la validation de la demande de fusion ; l'image déployée a été analysée ; un retour arrière se fait en une opération ; l'application ne peut joindre ni Vaultwarden, ni Gitea, ni l'API Kubernetes.
 
@@ -528,21 +571,21 @@ Le site CV (phase 17) est le candidat recommandé pour cette première applicati
 - ⬜ Déploiement GitOps : le pipeline propose la nouvelle version de l'image dans les manifestes, Argo CD la déploie après fusion.
 - ⬜ Retour arrière joué : revenir à la version précédente, mesurer le temps.
 - ⬜ Exposition par le tunnel Cloudflare, avec limitation de débit et règles de pare-feu applicatif.
-- ⬜ Supervision de l'application (phase 14) et sauvegarde de ses données, si elle en a.
+- ⬜ Supervision de l'application (phase 15) et sauvegarde de ses données, si elle en a.
 
 ---
 
-## Phase 17 — Site CV public
+## Phase 18 — Site CV public
 
 **Objectif** : un site qui présente le profil, les projets et le homelab. Le homelab y est raconté à partir du dépôt public, jamais à partir du labo.
 
-**Dépendances** : phase 10 pour le contenu. Phase 16 pour le pipeline, si le site est la première application maison, ce qui est recommandé.
+**Dépendances** : phase 10 pour le contenu. Phase 17 pour le pipeline, si le site est la première application maison, ce qui est recommandé.
 
 - Dépôt versionné, contenus publics seulement.
 - Génération et validation automatiques, puis déploiement. Exposition minimale, HTTPS.
 - Trois récits, chacun avec sa limite :
-  1. **Une donnée survit à la machine.** Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe, et certaines reprises restent écrites, pas jouées (voir la phase 11).
-  2. **Un changement a un chemin et un retour arrière.** Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : seuls les manifestes se reconstruisent par GitOps ; les LXC suivent leur playbook, mais la production n'en sort pas encore (voir la phase 15).
+  1. **Une donnée survit à la machine.** Miroir, copie externe, restauration jouée. Limite : le système est sur un seul NVMe, et certaines reprises restent écrites, pas jouées (voir la phase 12).
+  2. **Un changement a un chemin et un retour arrière.** Branche protégée, secret chiffré, runner hors du nœud du coffre, Argo CD. Limite : seuls les manifestes se reconstruisent par GitOps ; les LXC suivent leur playbook, mais la production n'en sort pas encore (voir la phase 16).
   3. **L'accès distant est refusé par défaut.** Pas de redirection de port, tunnel sortant, WireGuard pour l'administration. Limite : le coffre s'authentifie dans l'application.
 - Une correspondance homelab → cloud : hyperviseur, isolation, stockage et instantanés, accès sans port ouvert, GitOps, secrets versionnés, copie externe.
 - Un lien vers le dépôt public. Aucun lien vers une interface d'administration, ni vers le dépôt privé.
@@ -564,12 +607,12 @@ Le site CV (phase 17) est le candidat recommandé pour cette première applicati
 | Sujet | Où en est la décision | Quand |
 | --- | --- | --- |
 | Adresse de référence de Gitea | Tranché le 11 nov. : adresse LAN. Basculé le 14 nov. sur le nom `https://gitea.lan.labo.example/` (`fe337e4`) | Phase 9 |
-| Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 12, dans un ADR |
-| Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 14, dans un ADR |
-| Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 15 |
-| Portée d'OpenTofu | Retenu le 14 nov. pour les ressources d'API, pas pour les LXC. Visé : Cloudflare, puis la VM `k3s-01`. Fichier d'état à ranger | Phase 15, dans un ADR |
-| Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 16 |
-| Hébergement du site CV | Dans le homelab (phase 16), ou chez un hébergeur de sites statiques | Phase 17 |
+| Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 13, dans un ADR |
+| Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 15, dans un ADR |
+| Portée d'Ansible | Les scripts de `pve` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 16 |
+| Détails d'OpenTofu | Partage tranché le 14 nov. (voir « Décisions déjà tranchées »). Restent : emplacement et chiffrement du fichier d'état, jeton d'API, montages de `tank` | Phase 11, dans l'ADR-015 |
+| Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 17 |
+| Hébergement du site CV | Dans le homelab (phase 17), ou chez un hébergeur de sites statiques | Phase 18 |
 
 Pas d'ADR tant que le choix n'est pas tranché.
 
@@ -584,7 +627,7 @@ Pas d'ADR tant que le choix n'est pas tranché.
 | Musique | Navidrome, client Symfonium (2 nov.) | [navidrome.md](exploitation/mediatheques/navidrome.md) |
 | Accès distant | Seul Vaultwarden reste publié ; WireGuard pour tout le reste (9 et 10 nov.) | [ADR-003](decisions/ADR-003-Cloudflare-Tunnel.md), [cloudflare.md](exploitation/cloudflare.md) |
 | Alerte | ntfy, cinq contrôles, rétention et seuil USB à 14 jours, espace à 10 % (5 nov.) | [ADR-009](decisions/ADR-009-Alerte-ntfy.md) |
-| Reconstruction des LXC | Ansible depuis le PC (4 nov.), six playbooks validés (7 et 8 nov.) | [ADR-010](decisions/ADR-010-Ansible-LXC.md), [ansible.md](exploitation/ansible.md) |
+| Reconstruction des LXC | Ansible depuis le PC (4 nov.), six playbooks validés (7 et 8 nov.). Le 14 nov. : la création passe à OpenTofu, Ansible garde la configuration (phase 11, ADR-015 à écrire) | [ADR-010](decisions/ADR-010-Ansible-LXC.md), [ansible.md](exploitation/ansible.md) |
 | Dépôt montré | Le labo reste privé et seule source ; une projection alimente un dépôt public (4 nov.) | Phase 10 |
 
 ---
@@ -599,7 +642,7 @@ Idées **gardées**, mais pas planifiées :
 - Un second NVMe en miroir pour `rpool`, pour que la perte d'un disque système ne coupe plus tout. C'est la principale limite matérielle du homelab.
 - **Page agent** sur le téléphone, une fois la forge prête (idée du 3 nov.). Un pod sur `k3s-01` avec le programme `agent`, et une page maison : la conversation, et des diffs plus lisibles qu'en terminal. Le téléphone ouvre cette page. Le pod ne voit que son volume : ni le disque de la machine, ni le cluster. La clé du compte Cursor reste dans le pod, et le modèle tourne chez Cursor. Le nom n'est pas choisi. Comme toute application exposée, elle attendrait l'ADR-013. Absente du récit d'entretien tant que le pod n'existe pas.
 
-L'onduleur n'est plus un chantier matériel : il est en place et protège le serveur (voir [materiel.md](vue-ensemble/materiel.md)). Son intégration logicielle est un jalon de la phase 13.
+L'onduleur n'est plus un chantier matériel : il est en place et protège le serveur (voir [materiel.md](vue-ensemble/materiel.md)). Son intégration logicielle est un jalon de la phase 14.
 
 ---
 

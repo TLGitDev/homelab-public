@@ -61,6 +61,6 @@ Le playbook parle à l'API de `pve`, puis entre dans le conteneur par `pct`. Il 
 - Les montages de `tank` en lecture seule sont posés par `pct` sur `pve`, car l'API refuse un *bind mount* demandé avec un jeton.
 - Le jeton d'API Proxmox et le jeton d'enregistrement Gitea sont dans `infrastructure/ansible/secrets.yml`, hors du dépôt.
 
-OpenTofu reste un candidat pour ce qui n'est **pas** un conteneur : les réglages Cloudflare et la VM `k3s-01`. Ce sont des ressources d'API, où Ansible est le moins à l'aise. Décision prévue en phase 15 (14 nov.).
+**Révision prévue (décision du 14 nov.)** : la **création** des conteneurs passe à OpenTofu, qui garde un état, montre un plan avant d'agir et sait supprimer. Ansible garde la configuration de l'intérieur des machines et les montages de `tank`. OpenTofu décrira aussi la VM `k3s-01` et les réglages Cloudflare. Voir la phase 11 de la [feuille de route](../FeuilleDeRoute.md). L'ADR-015 remplacera cette page sur ces points.
 
 Exploitation : [ansible.md](../exploitation/ansible.md).

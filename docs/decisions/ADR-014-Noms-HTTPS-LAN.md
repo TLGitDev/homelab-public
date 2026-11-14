@@ -55,7 +55,7 @@ Trois contraintes pèsent sur la première question :
 - **Le CT 116 devient un point de passage** pour les noms. Les adresses `IP:port` restent valables en secours.
 - **Le tunnel homelab du téléphone ne donne pas accès à Internet.** On bascule sur le tunnel Proton pour le reste.
 - **Ajouter un service** demande une ligne dans `lan_services` (`vars/lan.yml`), et une destination dans `acces_destinations` s'il doit être joignable par WireGuard. Rien ne change sur le téléphone.
-- **Le renouvellement est automatique.** Traefik renouvelle le certificat 30 jours avant son expiration. Aucune alerte ne signale encore un échec : c'est à prévoir avec l'observabilité (phase 14).
+- **Le renouvellement est automatique.** Traefik renouvelle le certificat 30 jours avant son expiration. Aucune alerte ne signale encore un échec : c'est à prévoir avec l'observabilité (phase 15).
 
 ## Quand revoir cette décision
 

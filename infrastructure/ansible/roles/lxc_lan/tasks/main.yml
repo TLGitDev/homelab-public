@@ -54,7 +54,7 @@
     state: present
   no_log: true
 
-# Le pare-feu Proxmox est éteint au niveau du datacenter (phase 13) :
+# Le pare-feu Proxmox est éteint au niveau du datacenter (phase 14) :
 # ce fichier est prêt pour le jour où il sera allumé.
 - name: Poser le pare-feu du CT
   ansible.builtin.shell: |

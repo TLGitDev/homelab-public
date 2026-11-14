@@ -330,10 +330,11 @@ Hors phases. Pas commencé.
 
 - La fin de l'accès distant (phase 9) : `ROOT_URL` de Gitea, SMB par WireGuard, `/admin` de Vaultwarden, noms et HTTPS sur le LAN.
 - Le dépôt public allégé (phase 10), à mener en parallèle du reste.
-- Les reprises jouées (phase 11) et la copie hors du domicile (phase 12).
-- L'exploitation courante et la sécurité (phase 13), puis l'observabilité (phase 14).
-- La production recréée depuis le code (phase 15).
-- Une application maison livrée de bout en bout (phase 16), puis le site CV (phase 17).
+- La création des machines par OpenTofu, Ansible gardant la configuration (phase 11).
+- Les reprises jouées (phase 12) et la copie hors du domicile (phase 13).
+- L'exploitation courante et la sécurité (phase 14), puis l'observabilité (phase 15).
+- La production recréée depuis le code (phase 16).
+- Une application maison livrée de bout en bout (phase 17), puis le site CV (phase 18).
 - Le remplacement d'un disque, le retour arrière d'un snapshot sur la production, et la reprise réelle du coffre sur son zvol (voir [restauration.md](../exploitation/restauration.md)).
 
 ## Points à réévaluer

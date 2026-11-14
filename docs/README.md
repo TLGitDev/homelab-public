@@ -80,7 +80,7 @@ Le suivi du travail.
 
 | Fichier | Contenu |
 | --- | --- |
-| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Les phases 0 à 11, dans l'ordre de travail, avec leurs jalons |
+| [FeuilleDeRoute.md](FeuilleDeRoute.md) | Les phases 0 à 18, dans l'ordre de travail, avec leurs jalons |
 | [journal/](projet/journal/README.md) | Le récit des séances, un fichier par mois |
 | [competences.md](projet/competences.md) | Les niveaux de maîtrise par domaine |
 
