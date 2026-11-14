@@ -491,16 +491,20 @@ Aujourd'hui, la supervision se limite aux cinq contrôles de la phase 5. Rien ne
 
 Les phases 7 et 8 ont prouvé les playbooks sur des conteneurs d'essai. Mais les conteneurs en service ont été créés à la main, et ils dérivent déjà : `jellyfin-ffmpeg7` sur le 103 au lieu de 8, `cloudflared` 2026.10.4 sur le 100 au lieu de 2026.10.7. De même, les scripts de `pve` sont dans Git, mais leur installation reste manuelle. Tant que la production n'est pas sortie du code, « l'infrastructure est en code » n'est vrai qu'à moitié.
 
-**Critère** : un passage en mode vérification (`ansible-playbook --check --diff`) sur toute la production ne montre aucun écart.
+**Critère** : un passage en mode vérification (`ansible-playbook --check --diff`) sur toute la production ne montre aucun écart, et `tofu plan` annonce « No changes ».
+
+Répartition visée (14 nov.) : **OpenTofu** fait exister les ressources d'API (réglages Cloudflare, VM `k3s-01`). **Ansible** configure l'intérieur des machines et garde les LXC, comme le fixe l'[ADR-010](decisions/ADR-010-Ansible-LXC.md). Un même objet n'est jamais décrit par les deux outils.
 
 ### Jalons
 
 - ⬜ Chaque playbook peut viser le conteneur en service, en mode vérification, sans rien modifier. Les écarts sont relevés.
 - ⬜ Bascule de chaque conteneur en service vers sa version créée par le playbook, un à la fois, du moins risqué au plus risqué (même ordre qu'en phase 8, runner en premier). Pour chacun : sauvegarde de la configuration, bascule, vérification, retour arrière prêt.
 - ⬜ Les scripts et timers de `pve` installés par un playbook, au lieu de copies à la main. Révision de l'ADR-010 sur ce point.
-- ⬜ La VM `k3s-01` décrite en code : création (cloud-init ou playbook) et installation de K3s. Ce jalon rend aussi le scénario 3.2 de la phase 11 plus rapide.
-- ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, en plus de `kubeconform`.
-- ⬜ Un passage de vérification planifié (par exemple chaque semaine), qui signale un écart par ntfy.
+- ⬜ ADR d'OpenTofu : périmètre exact, fournisseurs (`cloudflare/cloudflare`, `bpg/proxmox`), rangement du fichier d'état hors du dépôt, chiffrement de l'état, sauvegarde par Restic.
+- ⬜ Les réglages Cloudflare décrits en OpenTofu : enregistrements DNS (dont `A *.lan`), routes du tunnel `homelab`, politique Access de Vaultwarden. L'existant est importé, puis `tofu plan` ne montre aucun changement.
+- ⬜ La VM `k3s-01` décrite en code : création par OpenTofu (VM Proxmox avec cloud-init), installation de K3s par Ansible. Ce jalon rend aussi le scénario 3.2 de la phase 11 plus rapide.
+- ⬜ Contrôles automatiques sur GitHub pour le code d'infrastructure : `ansible-lint`, `yamllint`, `shellcheck`, `tofu fmt -check` et `tofu validate`, en plus de `kubeconform`.
+- ⬜ Un passage de vérification planifié (par exemple chaque semaine), qui signale un écart par ntfy. Il lance `ansible-playbook --check` et `tofu plan`.
 
 ---
 
@@ -563,6 +567,7 @@ Le site CV (phase 17) est le candidat recommandé pour cette première applicati
 | Copie hors du domicile | Second disque échangé, ou stockage distant alimenté par Restic | Phase 12, dans un ADR |
 | Outils de supervision | Prometheus et Grafana, ou plus léger | Phase 14, dans un ADR |
 | Portée d'Ansible | Les scripts de `pve` et la VM `k3s-01` entrent-ils dans Ansible ? Révision de l'ADR-010 | Phase 15 |
+| Portée d'OpenTofu | Retenu le 14 nov. pour les ressources d'API, pas pour les LXC. Visé : Cloudflare, puis la VM `k3s-01`. Fichier d'état à ranger | Phase 15, dans un ADR |
 | Applications maison exposées | K3s visé, mais un conteneur n'isole pas assez à lui seul. À trancher dans l'ADR-013 | Avant la **première** application publique, phase 16 |
 | Hébergement du site CV | Dans le homelab (phase 16), ou chez un hébergeur de sites statiques | Phase 17 |
 

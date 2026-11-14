@@ -29,6 +29,7 @@ Le playbook parle à l'API de `pve`, puis entre dans le conteneur par `pct`. Il 
 ## Raisons
 
 - Un seul outil pour décrire les conteneurs. Le choix du 4 nov. avait déjà écarté un second outil pour un seul conteneur.
+- OpenTofu ne suffit pas seul. Il sait créer un conteneur par l'API de Proxmox, mais pas configurer son intérieur : paquets, binaire du runner, fichiers de configuration. Il aurait donc fallu Ansible en plus. Ansible, lui, fait les deux : il crée le conteneur par l'API, puis il entre dedans par `pct`.
 - Le runner exécute le code que le dépôt vient de recevoir. Lancer le playbook depuis le PC évite de lui donner de quoi recréer l'hyperviseur.
 - Argo CD est déjà la source des applications du cluster. Les redécrire en Ansible créerait deux sources pour le même objet.
 - Recréer Proxmox suppose une machine déjà en place pour lancer la commande : son installation reste donc un mode opératoire.
@@ -37,7 +38,7 @@ Le playbook parle à l'API de `pve`, puis entre dans le conteneur par `pct`. Il 
 
 | Option | Commentaire |
 | --- | --- |
-| Terraform ou OpenTofu | Décrit aussi un conteneur, mais c'est un second outil, écarté le 4 nov. |
+| Terraform ou OpenTofu | Crée aussi un conteneur, mais ne configure pas son intérieur. Il aurait fallu Ansible en plus : un second outil pour le même objet, écarté le 4 nov. |
 | Continuer les `pct create` à la main | Chaque conteneur reste un récit, et on ne peut pas constater qu'une deuxième passe ne change rien |
 | Lancer le playbook sur le runner | Un job de CI aurait alors un chemin vers l'hyperviseur |
 
@@ -59,5 +60,7 @@ Le playbook parle à l'API de `pve`, puis entre dans le conteneur par `pct`. Il 
 - **Le CT 115 `wireguard`** a été créé directement par son playbook, le 9 nov., et il est resté en service.
 - Les montages de `tank` en lecture seule sont posés par `pct` sur `pve`, car l'API refuse un *bind mount* demandé avec un jeton.
 - Le jeton d'API Proxmox et le jeton d'enregistrement Gitea sont dans `infrastructure/ansible/secrets.yml`, hors du dépôt.
+
+OpenTofu reste un candidat pour ce qui n'est **pas** un conteneur : les réglages Cloudflare et la VM `k3s-01`. Ce sont des ressources d'API, où Ansible est le moins à l'aise. Décision prévue en phase 15 (14 nov.).
 
 Exploitation : [ansible.md](../exploitation/ansible.md).
