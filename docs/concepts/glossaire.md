@@ -196,7 +196,7 @@ Identifiant matériel unique d'une interface réseau. Il est utilisé au niveau 
 
 Notation indiquant la taille du réseau IP.
 
-Exemple : `<ip-cloudflare>/24` signifie que le réseau est `<réseau-lan>` avec un masque `255.255.255.0`.
+Exemple : `192.0.2.20/24` signifie que le réseau est `192.0.2.0` avec un masque `255.255.255.0`.
 
 ### Plan d'adressage
 
