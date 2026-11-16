@@ -4,7 +4,7 @@ Ce document mesure ce que le projet m'a appris, domaine par domaine. Il sert à 
 
 **Une compétence est acquise** quand je sais l'expliquer, la mettre en œuvre et diagnostiquer un problème courant, sans tutoriel. L'avoir faite une fois ne suffit pas.
 
-Relevé au **5 nov. 2026**, après les phases 0 à 5. Les niveaux n'ont pas été revus depuis : voir la section « Points à réévaluer » en fin de document. Les jalons sont dans la [feuille de route](../FeuilleDeRoute.md), l'état installé dans [architecture.md](../vue-ensemble/architecture.md).
+Relevé au **16 nov. 2026**, après les phases 0 à 9. Les niveaux sont fixés par moi, à la fin de chaque grande étape. Les jalons sont dans la [feuille de route](../FeuilleDeRoute.md), l'état installé dans [architecture.md](../vue-ensemble/architecture.md).
 
 ---
 
@@ -253,6 +253,7 @@ As-built : [médiathèques](../exploitation/mediatheques/README.md). Jellyfin, q
 | Secret hors Git (Sealed Secret, fichier en 600) | 🟢 |
 | Hash Argon2id | 🟢 |
 | API Kubernetes non publiée | 🟢 |
+| Kill switch par compte (nftables) | 🟡 |
 
 ---
 
@@ -280,8 +281,9 @@ Hors phases. Pas commencé.
 | Analyse de cause racine | 🟢 |
 | Lecture des logs et messages système | 🟢 |
 | Supervision | 🔲 |
-| Alertes | 🔲 |
+| Alertes | 🟢 |
 | Mises à jour et fenêtres de redémarrage | 🔲 |
+| Ansible, infrastructure as code (playbooks rejouables) | 🟡 |
 
 ---
 
@@ -324,30 +326,18 @@ Hors phases. Pas commencé.
 | 6 | Forge tenable (sauvegarde, CI des manifestes) | 6 nov. 2026 |
 | 7 | Runner reconstruit par Ansible (essai sur le CT 108) | 7 nov. 2026 |
 | 8 | Navidrome, Jellyfin, Samba, servarr, qBittorrent et Cloudflare recréés par Ansible sur des conteneurs d'essai (CT 109 à 114) ; les conteneurs en service (100 à 106) restent ceux créés à la main | 8 nov. 2026 |
-| 9 (en partie) | Passerelle WireGuard (CT 115) : le téléphone ouvre les services hors Wi-Fi. Routes Cloudflare réduites à Vaultwarden | 9 et 10 nov. 2026 |
+| 9 | Accès distant : passerelle WireGuard (CT 115), routes Cloudflare réduites à Vaultwarden, SMB par WireGuard, noms `*.lan` en HTTPS (certificat joker DNS-01, Traefik), `ROOT_URL` de Gitea | 9 au 14 nov. 2026 |
+| 10 (en cours) | Dépôt public allégé : projection, contrôle automatique, historique rejoué et relu. Publication à venir | Depuis le 14 nov. 2026 |
 
 ## Ce qui reste ouvert
 
-- La fin de l'accès distant (phase 9) : `ROOT_URL` de Gitea, SMB par WireGuard, `/admin` de Vaultwarden, noms et HTTPS sur le LAN.
-- Le dépôt public allégé (phase 10), à mener en parallèle du reste.
+- La fin de la phase 10 : le README public et la création du dépôt GitHub. Ensuite, la copie publique se met à jour à chaque phase.
 - La création des machines par OpenTofu, Ansible gardant la configuration (phase 11).
 - Les reprises jouées (phase 12) et la copie hors du domicile (phase 13).
 - L'exploitation courante et la sécurité (phase 14), puis l'observabilité (phase 15).
 - La production recréée depuis le code (phase 16).
 - Une application maison livrée de bout en bout (phase 17), puis le site CV (phase 18).
 - Le remplacement d'un disque, le retour arrière d'un snapshot sur la production, et la reprise réelle du coffre sur son zvol (voir [restauration.md](../exploitation/restauration.md)).
-
-## Points à réévaluer
-
-Ces lignes semblent en retard sur ce qui a été fait depuis le 5 nov. Le niveau reste à fixer par moi :
-
-| Compétence | Niveau noté | Ce qui a changé |
-| --- | --- | --- |
-| Alertes (Administration) | 🔲 | ntfy en place le 5 nov., et validé par une vraie alerte |
-| VPN de sortie (WireGuard), WireGuard pour l'accès privé distant | 🟡 | Passerelle du téléphone en service le 9 nov. ; passage de Mullvad à Proton, avec port NAT-PMP, le 29 oct. |
-| Workflow Actions (Git et forge) | 🟡 | CI des manifestes (kubeconform) en place et testée en échec volontaire le 6 nov. |
-| *(absente)* Ansible, infrastructure as code | — | Huit playbooks validés sur des conteneurs d'essai, deuxième passe sans changement (ADR-010). Une ligne mérite d'être ajoutée |
-| *(absente)* Kill switch par compte (nftables) | — | Validé sur le CT 104, et revérifié le 11 nov. |
 
 Les définitions (hyperviseur, LXC, ZFS, CIDR…) sont dans le [glossaire](../concepts/glossaire.md).
 
