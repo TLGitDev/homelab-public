@@ -327,11 +327,11 @@ Hors phases. Pas commencé.
 | 7 | Runner reconstruit par Ansible (essai sur le CT 108) | 7 nov. 2026 |
 | 8 | Navidrome, Jellyfin, Samba, servarr, qBittorrent et Cloudflare recréés par Ansible sur des conteneurs d'essai (CT 109 à 114) ; les conteneurs en service (100 à 106) restent ceux créés à la main | 8 nov. 2026 |
 | 9 | Accès distant : passerelle WireGuard (CT 115), routes Cloudflare réduites à Vaultwarden, SMB par WireGuard, noms `*.lan` en HTTPS (certificat joker DNS-01, Traefik), `ROOT_URL` de Gitea | 9 au 14 nov. 2026 |
-| 10 (en cours) | Dépôt public allégé : projection, contrôle automatique, historique rejoué et relu. Publication à venir | Depuis le 14 nov. 2026 |
+| 10 | Dépôt public allégé, première version : projection, contrôle automatique, historique rejoué et relu, publié sur GitHub (`TLGitDev/homelab-public`) ; mis à jour à chaque phase | 14 au 16 nov. 2026 |
 
 ## Ce qui reste ouvert
 
-- La fin de la phase 10 : le README public et la création du dépôt GitHub. Ensuite, la copie publique se met à jour à chaque phase.
+- La mise à jour de la copie publique à chaque phase (phase 10).
 - La création des machines par OpenTofu, Ansible gardant la configuration (phase 11).
 - Les reprises jouées (phase 12) et la copie hors du domicile (phase 13).
 - L'exploitation courante et la sécurité (phase 14), puis l'observabilité (phase 15).

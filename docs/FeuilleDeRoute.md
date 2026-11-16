@@ -27,8 +27,8 @@ Chaque phase a un objectif, ses dépendances, des jalons et un critère de fin. 
 | 7 | Un LXC se reconstruit | ✅ Jouée (7 nov.) |
 | 8 | Le même moule, un LXC à la fois | ✅ Jouée (8 nov.) |
 | 9 | Accès distant | ✅ Jouée (14 nov.) |
-| 10 | Dépôt public allégé | ⬜ À faire, **prochaine phase** : une première version avant la phase 11, puis mise à jour à chaque phase |
-| 11 | La création passe à OpenTofu | ⬜ À faire, après la première version de la phase 10 |
+| 10 | Dépôt public allégé | ✅ Première version publiée (16 nov.) : [TLGitDev/homelab-public](https://github.com/TLGitDev/homelab-public). Mise à jour à chaque phase |
+| 11 | La création passe à OpenTofu | ⬜ À faire, **prochaine phase** |
 | 12 | La reprise se joue, pas seulement s'écrit | ⬜ À faire |
 | 13 | Une copie hors du domicile | ⬜ À faire |
 | 14 | Exploitation courante et sécurité | ⬜ À faire |
@@ -369,11 +369,11 @@ La projection garde le plus possible. Elle remplace plutôt qu'elle ne supprime 
 - ✅ La règle ci-dessus écrite à côté du script, avec un exemple avant et après (14 nov.) : (document privé), dans le dépôt privé seulement.
 - ✅ Une projection rejouable. Une deuxième passe ne change la copie publique que si le labo a changé (14 nov.) : `outils/projection/projeter.py` et sa table `table.tsv`, dans le dépôt privé seulement. Sur le commit `615b4c0` : 167 fichiers publiés, 2 SealedSecrets vidés, 21 liens réécrits, 839 remplacements, aucun reste ; deux passes donnent le même arbre.
 - ✅ Un contrôle automatique sur l'arbre produit, en plus de la relecture : recherche d'adresses `192.168.`, `10.`, d'empreintes, de noms DNS du labo, de mots-clés de secret, et un outil de détection de secrets (par exemple Gitleaks). Le push est refusé si le contrôle trouve quelque chose. Écrit le 14 nov. : `outils/projection/controler.py`, sa liste d'autorisation `autorise.tsv`, `gitleaks.toml` et le crochet `pre-push` du clone public (règle, section 9). Essayé avec un Gitleaks factice : l'arbre réel passe, chaque fuite ajoutée est trouvée, le crochet refuse le push. Premier passage avec le vrai Gitleaks le 16 nov. : Gitleaks 8.30.1 ne trouve rien sur l'historique projeté.
-- ⬜ L'historique privé rejoué dans la copie publique, un commit public par commit privé, avec sa date (décision du 16 nov.) : un recruteur voit le travail dans la durée. Règle, section 10. Diagnostic fait le 16 nov. sur les 154 commits, valeurs trouvées classées. Mode historique du script écrit et essayé le 16 nov. (règle, 10.6 et 10.7) : 151 commits publics, 4 sautés, 2 fusions, aucune trouvaille, deux passes identiques. Rejoué dans un dépôt local le 16 nov. : 152 commits publics, contrôle propre avec Gitleaks 8.30.1. Relu le 16 nov., puis rejoué dans un dépôt local neuf : 155 commits publics, contrôle propre avec Gitleaks 8.30.1. Reste : la publication.
+- ✅ L'historique privé rejoué dans la copie publique, un commit public par commit privé, avec sa date (décision du 16 nov.) : un recruteur voit le travail dans la durée. Règle, section 10. Diagnostic fait le 16 nov. sur les 154 commits, valeurs trouvées classées. Mode historique du script écrit et essayé le 16 nov. (règle, 10.6 et 10.7) : 151 commits publics, 4 sautés, 2 fusions, aucune trouvaille, deux passes identiques. Rejoué dans un dépôt local le 16 nov. : 152 commits publics, contrôle propre avec Gitleaks 8.30.1. Relu le 16 nov., puis rejoué dans un dépôt local neuf : 155 commits publics, contrôle propre avec Gitleaks 8.30.1. Publié le 16 nov. : 159 commits publics jusqu'à `3426ce3`, dernier `6dab31a`.
 - ✅ Relecture humaine de l'arbre produit, de la liste des valeurs trouvées sur l'historique et des messages publics (16 nov., règle 10.9). Messages relus par Théo ; renommages conformes ; dernier arbre relu par recherches de sens. Trois trouvailles masquées dans tout l'historique : liste des applications du téléphone, numéros de série des disques, opérateur et modèle de la box.
 - ✅ `competences.md` relu : une ligne n'est publique que si un jalon a été joué (16 nov.). En-tête et tableau des phases mis à jour (phases 0 à 9), niveaux fixés par Théo (Alertes 🟢 ; lignes Ansible et kill switch ajoutées en 🟡), section « Points à réévaluer » supprimée.
 - ✅ Un `README` public pensé pour un lecteur pressé : ce que fait le homelab, un schéma, les choix et leurs raisons, ce qui reste à faire. Il assume les limites (un seul nœud, un seul NVMe). Écrit et relu le 16 nov. : les médiathèques y sont réduites à Jellyfin et Navidrome ; le schéma montre la seule entrée IPv6 (UDP 51820 vers la passerelle WireGuard).
-- ⬜ Le dépôt GitHub public, créé et alimenté par la projection.
+- ✅ Le dépôt GitHub public, créé et alimenté par la projection (16 nov.) : [TLGitDev/homelab-public](https://github.com/TLGitDev/homelab-public). Premier push à travers le crochet `pre-push` : 159 commits contrôlés (arbre, message, auteur), Gitleaks 8.30.1 « rien trouvé ». Mise à jour à chaque phase : règle, 10.10.
 
 ---
 
